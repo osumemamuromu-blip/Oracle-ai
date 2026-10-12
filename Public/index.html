@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oracle AI — Your Writing Assistant</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0b0b0f;
+      color: #f5f5f7;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 22px;
+      border-bottom: 1px solid #292930;
+      font-size: 23px;
+      font-weight: bold;
+    }
+    header span { color: #a78bfa; }
+    main {
+      width: min(720px, 92%);
+      margin: auto;
+      padding: 55px 0;
+      text-align: center;
+    }
+    h1 { font-size: clamp(30px, 6vw, 46px); }
+    .subtitle { color: #a1a1aa; line-height: 1.6; }
+    textarea {
+      width: 100%;
+      min-height: 170px;
+      margin-top: 24px;
+      padding: 17px;
+      border: 1px solid #383842;
+      border-radius: 14px;
+      background: #17171f;
+      color: white;
+      font: inherit;
+      resize: vertical;
+    }
+    select, button {
+      padding: 13px 16px;
+      margin-top: 12px;
+      border-radius: 10px;
+      font-size: 15px;
+    }
+    select {
+      background: #17171f;
+      color: white;
+      border: 1px solid #383842;
+    }
+    button {
+      background: #8b5cf6;
+      color: white;
+      border: 0;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #result {
+      display: none;
+      margin-top: 22px;
+      padding: 18px;
+      border-radius: 12px;
+      background: #17171f;
+      text-align: left;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.6;
+    }
+    footer {
+      padding: 22px;
+      text-align: center;
+      color: #777783;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <header><span>✦</span> Oracle AI</header>
+  <main>
+    <h1>Your ideas, <span style="color:#a78bfa">written better.</span></h1>
+    <p class="subtitle">Improve your writing, correct mistakes, summarize text, and express yourself with confidence.</p>
+    <textarea id="essay" placeholder="Paste your essay or enter your text here..."></textarea>
+    <br>
+    <select id="task">
+      <option value="correct">Correct grammar and spelling</option>
+      <option value="improve">Improve my writing</option>
+      <option value="essay">Help me write an essay</option>
+      <option value="explain">Explain my mistakes</option>
+      <option value="summarize">Summarize this text</option>
+      <option value="rewrite">Rewrite in a formal tone</option>
+    </select>
+    <br>
+    <button id="go" onclick="runOracle()">Continue</button>
+    <div id="result"></div>
+  </main>
+  <footer>© 2026 Campus Creative · Oracle AI</footer>
+  <script>
+    function runOracle() {
+      const text = document.getElementById('essay').value.trim();
+      const result = document.getElementById('result');
+      if (!text) {
+        alert('Please enter some text first.');
+        return;
+      }
+      result.style.display = 'block';
+      result.textContent = 'Your text is ready. AI processing will be enabled after the secure backend is connected.';
+    }
+  </script>
+</body>
+    </html>

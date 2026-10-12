@@ -1,1067 +1,377 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#10111b">
-  <title>Malie AI — Your AI Writing Partner</title>
-  <meta name="description" content="Malie AI helps you write, learn, create, and think clearly.">
-
-  <style>
-    :root {
-      color-scheme: dark;
-      --bg: #10111b;
-      --panel: #191b29;
-      --panel2: #222437;
-      --text: #f5f5fc;
-      --muted: #a5a8bd;
-      --accent: #a78bfa;
-      --border: #303248;
-      --green: #86efac;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-
-    button, input, textarea, select { font: inherit; }
-    button { cursor: pointer; }
-
-    .hidden { display: none !important; }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 11px;
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -.7px;
-    }
-
-    .logo {
-      display: grid;
-      place-items: center;
-      width: 42px;
-      height: 42px;
-      border-radius: 14px;
-      color: white;
-      background: linear-gradient(135deg, #8b5cf6, #6366f1);
-      font-size: 23px;
-    }
-
-    .muted { color: var(--muted); }
-    .small { font-size: 13px; }
-
-    button:disabled {
-      opacity: .55;
-      cursor: not-allowed;
-    }
-
-    input, textarea, select {
-      width: 100%;
-      color: var(--text);
-      background: #111320;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 13px 14px;
-      outline: none;
-    }
-
-    input:focus, textarea:focus, select:focus {
-      border-color: var(--accent);
-    }
-
-    .primary {
-      background: linear-gradient(135deg, #8b5cf6, #6366f1);
-      color: white;
-      border: 0;
-      border-radius: 12px;
-      padding: 13px 17px;
-      font-weight: 700;
-    }
-
-    .secondary {
-      background: var(--panel2);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 15px;
-    }
-
-    .full { width: 100%; }
-
-    /* Authentication screen */
-    #authScreen {
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 24px 16px;
-      background:
-        radial-gradient(ellipse at top, #292044 0, transparent 55%),
-        var(--bg);
-    }
-
-    .auth-card {
-      width: 100%;
-      max-width: 440px;
-      padding: 28px;
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      background: rgba(25, 27, 41, .96);
-      box-shadow: 0 24px 90px #0005;
-    }
-
-    .auth-card .brand { justify-content: center; }
-    .auth-intro { text-align: center; margin: 26px 0; }
-    .auth-intro h1 { font-size: 28px; margin: 0 0 9px; }
-    .auth-intro p { line-height: 1.6; margin: 0; }
-
-    .field { margin-bottom: 15px; }
-    .field label {
-      display: block;
-      margin-bottom: 7px;
-      font-size: 13px;
-      color: #d4d5e5;
-    }
-
-    .auth-actions { display: grid; gap: 11px; margin-top: 20px; }
-
-    .divider {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      color: var(--muted);
-      font-size: 12px;
-      margin: 19px 0;
-    }
-
-    .divider::before, .divider::after {
-      content: "";
-      height: 1px;
-      flex: 1;
-      background: var(--border);
-    }
-
-    .auth-switch { text-align: center; margin-top: 20px; font-size: 14px; }
-    .text-button {
-      background: none;
-      border: 0;
-      color: #c4b5fd;
-      font-weight: 700;
-      padding: 4px;
-    }
-
-    .notice {
-      padding: 11px 12px;
-      border-radius: 10px;
-      background: #24263a;
-      color: #ddd6fe;
-      font-size: 13px;
-      line-height: 1.5;
-      margin-top: 14px;
-      overflow-wrap: anywhere;
-    }
-
-    /* Main application */
-    #appScreen { min-height: 100vh; }
-
-    header {
-      min-height: 76px;
-      padding: 14px 22px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      background: #141521;
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    #userEmail {
-      max-width: 200px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 245px minmax(0, 1fr);
-      min-height: calc(100vh - 76px);
-    }
-
-    aside {
-      padding: 23px 15px;
-      border-right: 1px solid var(--border);
-      background: #141521;
-    }
-
-    .side-label {
-      margin: 8px 10px 12px;
-      font-size: 11px;
-      letter-spacing: 1.5px;
-      color: var(--muted);
-      text-transform: uppercase;
-    }
-
-    .tool {
-      width: 100%;
-      text-align: left;
-      color: #c7c9db;
-      background: transparent;
-      border: 1px solid transparent;
-      border-radius: 12px;
-      padding: 12px;
-      margin-bottom: 5px;
-    }
-
-    .tool.active {
-      background: #29223f;
-      border-color: #514078;
-      color: #ddd6fe;
-    }
-
-    .tool span { margin-right: 9px; }
-
-    .side-note {
-      margin: 35px 7px 0;
-      padding: 14px;
-      border-radius: 13px;
-      background: var(--panel);
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.7;
-    }
-
-    main {
-      width: 100%;
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 35px 26px 24px;
-      min-width: 0;
-    }
-
-    .welcome { text-align: center; margin: 8px auto 30px; }
-    .welcome .spark { font-size: 31px; }
-    .welcome h1 {
-      margin: 12px 0 10px;
-      font-size: clamp(27px, 5vw, 39px);
-      letter-spacing: -1.3px;
-    }
-    .welcome p { color: var(--muted); line-height: 1.7; }
-
-    .mode-label {
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 9px;
-    }
-
-    .composer {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 19px;
-      padding: 13px;
-      box-shadow: 0 14px 45px #0002;
-    }
-
-    #prompt {
-      min-height: 125px;
-      resize: vertical;
-      border: 0;
-      background: transparent;
-      line-height: 1.7;
-      padding: 8px;
-    }
-
-    .composer-bottom {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding-top: 9px;
-      border-top: 1px solid var(--border);
-    }
-
-    .composer-bottom .muted { font-size: 12px; }
-
-    .options {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 13px;
-    }
-
-    .option label {
-      display: block;
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 7px;
-    }
-
-    .option select { padding: 10px 7px; font-size: 13px; }
-
-    .results { margin-top: 26px; }
-
-    .result-card {
-      padding: 20px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 17px;
-      margin-bottom: 14px;
-    }
-
-    .result-heading {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-
-    .result-heading strong { color: #ddd6fe; }
-
-    .result-text {
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      line-height: 1.85;
-      font-size: 15px;
-    }
-
-    .result-text.user-text { color: #c4c7da; }
-
-    .empty-hints {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 11px;
-      margin-top: 24px;
-    }
-
-    .hint {
-      text-align: left;
-      border: 1px solid var(--border);
-      border-radius: 13px;
-      background: #171925;
-      padding: 15px;
-      color: var(--text);
-      line-height: 1.5;
-    }
-
-    .hint strong { display: block; margin-bottom: 5px; }
-    .hint span { font-size: 12px; color: var(--muted); }
-
-    .status {
-      color: var(--muted);
-      font-size: 13px;
-      margin-top: 12px;
-      white-space: pre-wrap;
-      line-height: 1.6;
-    }
-
-    footer {
-      text-align: center;
-      color: #777b92;
-      font-size: 11px;
-      line-height: 1.7;
-      padding: 28px 8px 10px;
-    }
-
-    @media (max-width: 720px) {
-      header { padding: 13px 14px; }
-      .brand { font-size: 19px; }
-      .logo { width: 37px; height: 37px; }
-      #userEmail { display: none; }
-
-      .layout { grid-template-columns: 1fr; }
-
-      aside {
-        border-right: 0;
-        border-bottom: 1px solid var(--border);
-        padding: 12px;
-      }
-
-      .side-label, .side-note { display: none; }
-
-      .tool-list {
-        display: flex;
-        gap: 7px;
-        overflow-x: auto;
-      }
-
-      .tool {
-        width: auto;
-        flex: 0 0 auto;
-        margin: 0;
-        white-space: nowrap;
-        padding: 10px 12px;
-      }
-
-      main { padding: 25px 14px; }
-      .options { grid-template-columns: 1fr; }
-      .auth-card { padding: 23px 18px; }
-      .empty-hints { grid-template-columns: 1fr; }
-      .composer-bottom .muted { max-width: 52%; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Malie AI — Think Clearly. Create Boldly.</title>
+<style>
+:root{
+  --bg:#050509;--card:#11111a;--card2:#191927;--text:#f6f5ff;
+  --muted:#a5a4bb;--line:#29283b;--accent:#a78bfa;--cyan:#67e8f9;
+  --good:#6ee7b7;--bad:#fda4af;
+}
+[data-theme="light"]{
+  --bg:#f5f6fc;--card:#fff;--card2:#eceefa;--text:#18172b;
+  --muted:#65647c;--line:#dedff0;--accent:#7953e8;--cyan:#087f96;
+  --good:#087f5b;--bad:#c3344d;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;transition:.25s}
+button,input,textarea,select{font:inherit}
+button,a{cursor:pointer}
+a{color:inherit;text-decoration:none}
+button{border:1px solid var(--line);background:var(--card2);color:var(--text);border-radius:12px;padding:11px 15px;font-weight:700}
+button:hover{border-color:var(--accent)}
+button:disabled{opacity:.5}
+.primary{background:linear-gradient(110deg,#9067f7,#437ce9,#12b8cc);color:white;border:0}
+.wrap{width:min(1120px,calc(100% - 30px));margin:auto}
+header{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--line)}
+nav{height:72px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:900}
+.logo{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(135deg,#a78bfa,#38cfe2);color:white;font-size:24px}
+.brand small{display:block;font-size:10px;color:var(--muted);letter-spacing:1px}
+.navbuttons{display:flex;gap:8px;align-items:center}
+.hero{padding:65px 0 55px;display:grid;grid-template-columns:1.2fr .8fr;gap:35px;align-items:center}
+.eyebrow{color:var(--cyan);font-weight:700;font-size:13px}
+h1{font-size:clamp(42px,7vw,76px);letter-spacing:-3px;line-height:1.02;margin:18px 0}
+.gradient{background:linear-gradient(100deg,#b8a1ff,#67e8f9);background-clip:text;color:transparent}
+p{line-height:1.75}
+.muted{color:var(--muted)}
+.hero p{max-width:580px;color:var(--muted);font-size:17px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.art{min-height:300px;display:grid;place-items:center;position:relative}
+.orbit{width:260px;height:260px;border:1px solid #a78bfa66;border-radius:50%;display:grid;place-items:center;box-shadow:0 0 70px #8b5cf622}
+.orbit:before{content:"";position:absolute;width:205px;height:205px;border:1px solid #67e8f955;border-radius:50%}
+.core{width:125px;height:125px;display:grid;place-items:center;border-radius:35px;background:linear-gradient(135deg,#a78bfa,#16bfd5);color:white;font-size:65px;font-weight:950;transform:rotate(-8deg);box-shadow:0 0 60px #a78bfa55}
+.float{position:absolute;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 10px 35px #0002;font-size:13px}
+.f1{top:20px;left:0}.f2{right:0;top:110px}.f3{bottom:15px;left:10px}
+section{padding:35px 0}
+h2{font-size:clamp(26px,4vw,38px);letter-spacing:-1px;margin:0 0 8px}
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:22px}
+.feature,.panel,.sidebar,.authbox{background:var(--card);border:1px solid var(--line);border-radius:20px}
+.feature{padding:23px}
+.feature .emoji{font-size:30px}
+.feature h3{margin-bottom:6px}
+.feature p{font-size:14px;color:var(--muted);margin-bottom:0}
+.workspace{display:grid;grid-template-columns:205px 1fr;gap:15px;margin-top:24px}
+.sidebar{padding:10px;height:max-content}
+.tab{display:block;width:100%;text-align:left;margin:3px 0;background:transparent;border-color:transparent}
+.tab.active{background:var(--card2);border-color:var(--line);color:var(--cyan)}
+.panel{padding:clamp(16px,3vw,28px);min-width:0}
+.panel h3{margin-top:0}
+input,textarea,select{width:100%;padding:13px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:11px}
+textarea{min-height:160px;resize:vertical;line-height:1.6}
+label{display:block;color:var(--muted);font-size:13px;font-weight:700;margin-bottom:8px}
+.field{margin:16px 0}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.output{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;background:var(--card2);border:1px solid var(--line);padding:15px;border-radius:12px;min-height:75px}
+.status{font-size:13px;color:var(--muted);margin:12px 0;line-height:1.6}
+.hidden{display:none!important}
+.pill{border:1px solid var(--line);border-radius:50px;padding:7px 10px;font-size:12px;color:var(--muted)}
+.quiztop{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.timer{color:var(--cyan);font-weight:900;font-size:20px}
+.progress{height:6px;background:var(--card2);border-radius:20px;margin:18px 0;overflow:hidden}
+.progress div{height:100%;background:linear-gradient(90deg,#a78bfa,#67e8f9);width:0}
+.option{display:flex;gap:10px;align-items:flex-start;padding:13px;border:1px solid var(--line);border-radius:12px;margin:9px 0;cursor:pointer}
+.option input{width:auto;margin-top:5px}
+.score{font-size:50px;font-weight:900;color:var(--cyan)}
+.review{padding:14px 0;border-bottom:1px solid var(--line);line-height:1.7}
+.authbox{padding:20px;margin-top:20px}
+footer{border-top:1px solid var(--line);padding:25px 0;color:var(--muted);font-size:12px;margin-top:25px}
+@media(max-width:760px){
+ .hero{grid-template-columns:1fr;padding-top:42px}.art{min-height:280px}
+ .features{grid-template-columns:1fr}.workspace{grid-template-columns:1fr}
+ .sidebar{display:flex;overflow-x:auto;gap:5px}.tab{white-space:nowrap;width:auto}
+}
+@media(max-width:480px){
+ .wrap{width:calc(100% - 22px)}nav{height:65px}.brand small{display:none}
+ .navbuttons button{padding:9px;font-size:12px}.hero{gap:0}
+ h1{letter-spacing:-2px}.orbit{width:220px;height:220px}
+ .orbit:before{width:175px;height:175px}.core{width:100px;height:100px;font-size:52px}
+ .float{font-size:11px;padding:9px}.row{grid-template-columns:1fr;gap:0}
+}
+</style>
 </head>
-
 <body>
-  <section id="authScreen">
-    <div class="auth-card">
-      <div class="brand">
-        <div class="logo">M</div>
-        <span>Malie AI</span>
-      </div>
+<header>
+ <nav class="wrap">
+  <a class="brand" href="#home"><span class="logo">M</span><span>Malie AI<small>THINK CLEARLY. CREATE BOLDLY.</small></span></a>
+  <div class="navbuttons">
+   <button id="theme" aria-label="Switch theme">☀️</button>
+   <button id="signInNav">Sign in</button>
+  </div>
+ </nav>
+</header>
 
-      <div class="auth-intro">
-        <h1 id="authTitle">Your ideas, elevated.</h1>
-        <p class="muted" id="authDescription">
-          Sign in to write, learn, create, and think clearly.
-        </p>
-      </div>
+<main id="home">
+ <div class="wrap hero">
+  <div>
+   <div class="eyebrow">✦ YOUR AI STUDY & WRITING COMPANION</div>
+   <h1>Think clearer.<br><span class="gradient">Create boldly.</span></h1>
+   <p>Meet Malie AI: improve your writing, turn study notes into quizzes, and explore ideas in one beautifully designed workspace.</p>
+   <div class="actions"><a href="#workspace"><button class="primary">Open workspace →</button></a><a href="#features"><button>Explore features</button></a></div>
+   <p class="muted">✓ Writing help &nbsp; ✓ PDF quiz practice &nbsp; ✓ Night mode</p>
+  </div>
+  <div class="art">
+   <div class="orbit"><div class="core">M</div></div>
+   <div class="float f1">✍️ <b>Writing Checker</b></div>
+   <div class="float f2">🧠 <b>Quiz Mode</b></div>
+   <div class="float f3">🌙 <b>Your workspace</b></div>
+  </div>
+ </div>
 
-      <form id="authForm">
-        <div class="field">
-          <label for="email">Email address</label>
-          <input id="email" type="email" autocomplete="email"
-                 placeholder="you@example.com" required>
-        </div>
+ <section id="features" class="wrap">
+  <h2>One space. More possibilities.</h2>
+  <p class="muted">Tools designed to help you learn and express yourself.</p>
+  <div class="features">
+   <article class="feature"><div class="emoji">✍️</div><h3>Writing Checker</h3><p>Correct grammar, improve clarity, change tone and copy your polished result.</p></article>
+   <article class="feature"><div class="emoji">📚</div><h3>PDF Quiz Mode</h3><p>Upload your notes, choose the question count, take a timed quiz and review your score.</p></article>
+   <article class="feature"><div class="emoji">🌙</div><h3>Night & Light Mode</h3><p>Switch between true-black night mode and a bright light theme.</p></article>
+  </div>
+ </section>
 
-        <div class="field">
-          <label for="password">Password</label>
-          <input id="password" type="password"
-                 autocomplete="current-password"
-                 minlength="6" placeholder="At least 6 characters"
-                 required>
-        </div>
-
-        <div id="authNotice" class="notice hidden" role="status"></div>
-
-        <div class="auth-actions">
-          <button class="primary full" id="emailButton" type="submit">
-            Sign in
-          </button>
-          <button class="secondary full" id="googleButton" type="button">
-            Continue with Google
-          </button>
-        </div>
-      </form>
-
-      <div class="auth-switch">
-        <span class="muted" id="switchLabel">New to Malie AI?</span>
-        <button class="text-button" id="switchMode" type="button">
-          Create account
-        </button>
-      </div>
-
-      <div class="auth-switch">
-        <button class="text-button" id="forgotPassword" type="button">
-          Forgot password?
-        </button>
-      </div>
-
-      <p class="muted small" style="text-align:center;line-height:1.7;margin-top:23px">
-        By continuing, you agree to use Malie AI responsibly.
-      </p>
+ <section id="workspace" class="wrap">
+  <h2>Your workspace</h2>
+  <p class="muted">Choose a tool below to get started.</p>
+  <div class="workspace">
+   <aside class="sidebar">
+    <button class="tab active" data-panel="writing">✍️ Writing Checker</button>
+    <button class="tab" data-panel="quiz">🧠 Quiz Mode</button>
+    <button class="tab" data-panel="chat">✦ Ask Malie</button>
+   </aside>
+   <div class="panel">
+    <div id="writing" class="tool">
+     <h3>Writing Checker</h3><p class="muted">Paste your text and choose how you want to improve it.</p>
+     <div class="field"><label for="mode">ACTION</label><select id="mode">
+      <option value="correct">Correct grammar and spelling</option><option value="improve">Improve clarity</option>
+      <option value="tone">Change tone</option><option value="summarize">Summarize</option>
+      <option value="explain">Explain this text</option><option value="generate">Generate a draft</option>
+     </select></div>
+     <div class="row">
+      <div class="field"><label for="tone">TONE</label><select id="tone"><option>Professional</option><option>Friendly</option><option>Academic</option><option>Confident</option><option>Simple</option></select></div>
+      <div class="field"><label for="length">LENGTH</label><select id="length"><option>Keep similar length</option><option>Short</option><option>Medium</option><option>Detailed</option></select></div>
+     </div>
+     <div class="field"><label for="writingInput">YOUR TEXT</label><textarea id="writingInput" placeholder="Paste or write your essay, message, assignment or email here..."></textarea></div>
+     <div class="actions"><button class="primary" id="check">Improve my writing ✨</button><button id="clearWriting">Clear</button></div>
+     <div class="status" id="writingStatus"></div>
+     <div class="field"><label>RESULT</label><div id="writingOutput" class="output">Your corrected text will appear here.</div><div class="actions"><button id="copyWriting">Copy result</button></div></div>
     </div>
-  </section>
 
-  <section id="appScreen" class="hidden">
-    <header>
-      <div class="brand">
-        <div class="logo">M</div>
-        <span>Malie AI</span>
+    <div id="quiz" class="tool hidden">
+     <h3>Quiz Mode</h3><p class="muted">Upload a text-based PDF and create a practice quiz from your study material.</p>
+     <div id="quizSetup">
+      <div class="field"><label for="pdf">UPLOAD YOUR PDF</label><input id="pdf" type="file" accept="application/pdf"></div>
+      <div class="row">
+       <div class="field"><label for="count">NUMBER OF QUESTIONS</label><select id="count"><option>5</option><option selected>10</option><option>15</option><option>20</option></select></div>
+       <div class="field"><label for="seconds">TIME PER QUESTION</label><select id="seconds"><option value="15">15 seconds</option><option value="30" selected>30 seconds</option><option value="45">45 seconds</option><option value="60">60 seconds</option><option value="0">No timer</option></select></div>
       </div>
-
-      <div class="header-right">
-        <span id="userEmail"></span>
-        <button class="secondary" id="signOutButton">Sign out</button>
-      </div>
-    </header>
-
-    <div class="layout">
-      <aside>
-        <div class="side-label">Workspace</div>
-        <div class="tool-list">
-          <button class="tool active" data-mode="chat">
-            <span>✦</span> AI Chat
-          </button>
-          <button class="tool" data-mode="correct">
-            <span>✎</span> Correct writing
-          </button>
-          <button class="tool" data-mode="improve">
-            <span>↗</span> Improve writing
-          </button>
-          <button class="tool" data-mode="generate">
-            <span>✧</span> Generate text
-          </button>
-          <button class="tool" data-mode="explain">
-            <span>◎</span> Explain mistakes
-          </button>
-          <button class="tool" data-mode="summarize">
-            <span>≡</span> Summarize
-          </button>
-          <button class="tool" data-mode="tone">
-            <span>❝</span> Change tone
-          </button>
-        </div>
-
-        <div class="side-note">
-          <strong style="color:#ddd6fe">A little more clarity.</strong>
-          <br>
-          Use Malie AI to explore ideas, polish writing, and get help with
-          everyday tasks.
-        </div>
-      </aside>
-
-      <main>
-        <div class="welcome">
-          <div class="spark">✦</div>
-          <h1 id="welcomeTitle">What can we create today?</h1>
-          <p id="welcomeDescription">
-            Ask a question or bring an idea to life.
-          </p>
-        </div>
-
-        <div class="mode-label" id="modeLabel">AI CHAT</div>
-
-        <div class="composer">
-          <textarea id="prompt" maxlength="30000"
-            placeholder="Ask Malie AI anything..."></textarea>
-
-          <div class="composer-bottom">
-            <span class="muted">Clear ideas start here.</span>
-            <button class="primary" id="sendButton">Send ↗</button>
-          </div>
-        </div>
-
-        <div id="writingOptions" class="options hidden">
-          <div class="option">
-            <label for="tone">Tone</label>
-            <select id="tone">
-              <option>Professional</option>
-              <option>Friendly</option>
-              <option>Formal</option>
-              <option>Academic</option>
-              <option>Casual</option>
-              <option>Persuasive</option>
-              <option>Confident</option>
-              <option>Simple</option>
-            </select>
-          </div>
-
-          <div class="option">
-            <label for="length">Length</label>
-            <select id="length">
-              <option>Balanced</option>
-              <option>Very short</option>
-              <option>Short</option>
-              <option>Detailed</option>
-              <option>Very detailed</option>
-            </select>
-          </div>
-
-          <div class="option">
-            <label for="audience">Audience</label>
-            <select id="audience">
-              <option>General audience</option>
-              <option>Students</option>
-              <option>Professionals</option>
-              <option>Business clients</option>
-              <option>Teachers</option>
-              <option>Friends and family</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="status" class="status" role="status" aria-live="polite"></div>
-        <div id="results" class="results"></div>
-
-        <div id="hints" class="empty-hints">
-          <button class="hint" data-prompt="Explain a difficult topic to me in simple terms.">
-            <strong>✦ Learn something</strong>
-            <span>Break down a difficult topic.</span>
-          </button>
-          <button class="hint" data-prompt="Help me write a professional email.">
-            <strong>✎ Write with confidence</strong>
-            <span>Create a clear professional email.</span>
-          </button>
-          <button class="hint" data-prompt="Give me five creative business ideas and explain each one.">
-            <strong>✧ Explore ideas</strong>
-            <span>Brainstorm something new.</span>
-          </button>
-          <button class="hint" data-prompt="Help me improve the clarity of this sentence: ">
-            <strong>↗ Improve a sentence</strong>
-            <span>Make your writing clearer.</span>
-          </button>
-        </div>
-
-        <footer>
-          Malie AI · Made to help you think, write, and create.<br>
-          AI can make mistakes. Check important information.
-        </footer>
-      </main>
+      <div class="field"><label for="focus">OPTIONAL TOPIC</label><input id="focus" placeholder="e.g. Chapter 2 or all main ideas"></div>
+      <button class="primary" id="makeQuiz">Generate my quiz ✨</button>
+      <div class="status" id="quizStatus">Choose a PDF to begin. Scanned PDFs may not contain selectable text.</div>
+     </div>
+     <div id="quizPlay" class="hidden">
+      <div class="quiztop"><span class="pill" id="qNumber"></span><span class="timer" id="timer">00:30</span></div>
+      <div class="progress"><div id="bar"></div></div>
+      <h3 id="qText"></h3><div id="options"></div>
+      <div class="actions"><button id="quitQuiz">Quit</button><button class="primary" id="next">Submit answer →</button></div>
+      <div class="status" id="answerStatus"></div>
+     </div>
+     <div id="quizResult" class="hidden">
+      <h3>Quiz complete!</h3><div class="score" id="score"></div><p id="summary" class="muted"></p>
+      <div id="review"></div><div class="actions"><button class="primary" id="again">Create another quiz</button></div>
+     </div>
     </div>
-  </section>
 
-  <script type="module">
-    import { initializeApp } from
-      "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-
-    import {
-      getAuth,
-      onAuthStateChanged,
-      createUserWithEmailAndPassword,
-      signInWithEmailAndPassword,
-      GoogleAuthProvider,
-      signInWithPopup,
-      signInWithRedirect,
-      getRedirectResult,
-      sendPasswordResetEmail,
-      signOut
-    } from
-      "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-
-    // Your Malie AI Auth project configuration.
-    const firebaseConfig = {
-      apiKey: "AIzaSyAbHz_yfiQrPNuODTrKujQ9kNcR4sbpNfQ",
-      authDomain: "malie-ai-auth.firebaseapp.com",
-      projectId: "malie-ai-auth",
-      storageBucket: "malie-ai-auth.firebasestorage.app",
-      messagingSenderId: "334163694573",
-      appId: "1:334163694573:web:1d82c54f057ad74e2ecde4",
-      measurementId: "G-7FHDD141B5"
-    };
-
-    // Existing Cloudflare Worker. Worker.js remains unchanged.
-    const API_BASE = "https://oracle-ai.osumemamuromu.workers.dev";
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const googleProvider = new GoogleAuthProvider();
-    googleProvider.setCustomParameters({ prompt: "select_account" });
-
-    const $ = id => document.getElementById(id);
-
-    let isRegistering = false;
-    let mode = "chat";
-    let busy = false;
-
-    const writingModes = new Set([
-      "correct", "improve", "generate",
-      "explain", "summarize", "tone"
-    ]);
-
-    const modeInfo = {
-      chat: {
-        title: "What can we create today?",
-        description: "Ask a question or bring an idea to life.",
-        label: "AI CHAT",
-        placeholder: "Ask Malie AI anything..."
-      },
-      correct: {
-        title: "Let's polish your writing.",
-        description: "Fix grammar, spelling, punctuation, and sentence errors.",
-        label: "CORRECT WRITING",
-        placeholder: "Paste the writing you want corrected..."
-      },
-      improve: {
-        title: "Make your writing stronger.",
-        description: "Improve clarity, flow, structure, and readability.",
-        label: "IMPROVE WRITING",
-        placeholder: "Paste the writing you want to improve..."
-      },
-      generate: {
-        title: "Bring your ideas to life.",
-        description: "Create a useful first draft from your instructions.",
-        label: "GENERATE TEXT",
-        placeholder: "Describe what you want Malie AI to write..."
-      },
-      explain: {
-        title: "Learn from your mistakes.",
-        description: "Understand grammar, punctuation, and style.",
-        label: "EXPLAIN MISTAKES",
-        placeholder: "Paste your writing for an explanation..."
-      },
-      summarize: {
-        title: "Get to the main point.",
-        description: "Turn long writing into a clear summary.",
-        label: "SUMMARIZE",
-        placeholder: "Paste the text you want summarized..."
-      },
-      tone: {
-        title: "Find the right words.",
-        description: "Rewrite your text in the tone you need.",
-        label: "CHANGE TONE",
-        placeholder: "Paste your text and describe the desired tone..."
-      }
-    };
-
-    function showNotice(message) {
-      $("authNotice").textContent = message;
-      $("authNotice").classList.remove("hidden");
-    }
-
-    function hideNotice() {
-      $("authNotice").textContent = "";
-      $("authNotice").classList.add("hidden");
-    }
-
-    function friendlyError(error) {
-      const messages = {
-        "auth/email-already-in-use":
-          "That email already has an account. Try signing in.",
-        "auth/invalid-email":
-          "Please enter a valid email address.",
-        "auth/weak-password":
-          "Choose a stronger password with at least 6 characters.",
-        "auth/invalid-credential":
-          "Your email or password is incorrect. Please try again.",
-        "auth/user-not-found":
-          "No account was found. Try creating an account.",
-        "auth/wrong-password":
-          "Incorrect password. Try again or reset your password.",
-        "auth/popup-closed-by-user":
-          "The Google sign-in window was closed before completion.",
-        "auth/popup-blocked":
-          "Your browser blocked the Google sign-in window. Please allow pop-ups and try again.",
-        "auth/unauthorized-domain":
-          "This website domain is not authorized in Firebase Authentication yet. See the setup instructions below.",
-        "auth/network-request-failed":
-          "Network error. Check your internet connection and try again."
-      };
-
-      return messages[error?.code] ||
-        error?.message ||
-        "Something went wrong. Please try again.";
-    }
-
-    function showAuthScreen() {
-      $("authScreen").classList.remove("hidden");
-      $("appScreen").classList.add("hidden");
-    }
-
-    function showAppScreen(user) {
-      $("authScreen").classList.add("hidden");
-      $("appScreen").classList.remove("hidden");
-      $("userEmail").textContent = user.email || "Signed in with Google";
-      $("status").textContent = "";
-    }
-
-    function setAuthMode(registering) {
-      isRegistering = registering;
-      hideNotice();
-
-      $("authTitle").textContent = registering
-        ? "Create your account."
-        : "Your ideas, elevated.";
-
-      $("authDescription").textContent = registering
-        ? "Join Malie AI and start creating."
-        : "Sign in to write, learn, create, and think clearly.";
-
-      $("emailButton").textContent = registering
-        ? "Create account"
-        : "Sign in";
-
-      $("switchLabel").textContent = registering
-        ? "Already have an account?"
-        : "New to Malie AI?";
-
-      $("switchMode").textContent = registering
-        ? "Sign in"
-        : "Create account";
-
-      $("forgotPassword").classList.toggle("hidden", registering);
-      $("password").autocomplete = registering
-        ? "new-password"
-        : "current-password";
-    }
-
-    $("switchMode").addEventListener("click", () => {
-      setAuthMode(!isRegistering);
-    });
-
-    $("authForm").addEventListener("submit", async event => {
-      event.preventDefault();
-      hideNotice();
-
-      const email = $("email").value.trim();
-      const password = $("password").value;
-
-      $("emailButton").disabled = true;
-      $("emailButton").textContent = "Please wait...";
-
-      try {
-        if (isRegistering) {
-          await createUserWithEmailAndPassword(auth, email, password);
-        } else {
-          await signInWithEmailAndPassword(auth, email, password);
-        }
-      } catch (error) {
-        showNotice(friendlyError(error));
-      } finally {
-        $("emailButton").disabled = false;
-        $("emailButton").textContent = isRegistering
-          ? "Create account"
-          : "Sign in";
-      }
-    });
-
-    $("googleButton").addEventListener("click", async () => {
-      hideNotice();
-      $("googleButton").disabled = true;
-      $("googleButton").textContent = "Connecting to Google...";
-
-      try {
-        await signInWithPopup(auth, googleProvider);
-      } catch (error) {
-        if (
-          error.code === "auth/popup-blocked" ||
-          error.code === "auth/cancelled-popup-request"
-        ) {
-          try {
-            await signInWithRedirect(auth, googleProvider);
-            return;
-          } catch (redirectError) {
-            showNotice(friendlyError(redirectError));
-          }
-        } else {
-          showNotice(friendlyError(error));
-        }
-      } finally {
-        $("googleButton").disabled = false;
-        $("googleButton").textContent = "Continue with Google";
-      }
-    });
-
-    $("forgotPassword").addEventListener("click", async () => {
-      hideNotice();
-      const email = $("email").value.trim();
-
-      if (!email) {
-        showNotice("Enter your email address first, then tap Forgot password again.");
-        $("email").focus();
-        return;
-      }
-
-      try {
-        await sendPasswordResetEmail(auth, email);
-        showNotice("If an account exists for this email, a password-reset email has been sent.");
-      } catch (error) {
-        showNotice(friendlyError(error));
-      }
-    });
-
-    $("signOutButton").addEventListener("click", async () => {
-      try {
-        await signOut(auth);
-        $("results").replaceChildren();
-        $("prompt").value = "";
-      } catch (error) {
-        $("status").textContent = friendlyError(error);
-      }
-    });
-
-    // Complete any Google redirect sign-in.
-    getRedirectResult(auth).catch(error => {
-      showNotice(friendlyError(error));
-    });
-
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        showAppScreen(user);
-      } else {
-        showAuthScreen();
-      }
-    });
-
-    function selectMode(nextMode) {
-      if (!modeInfo[nextMode]) return;
-
-      mode = nextMode;
-      const info = modeInfo[mode];
-
-      $("welcomeTitle").textContent = info.title;
-      $("welcomeDescription").textContent = info.description;
-      $("modeLabel").textContent = info.label;
-      $("prompt").placeholder = info.placeholder;
-
-      $("writingOptions").classList.toggle(
-        "hidden", !writingModes.has(mode)
-      );
-
-      document.querySelectorAll(".tool").forEach(button => {
-        button.classList.toggle("active", button.dataset.mode === mode);
-      });
-
-      $("status").textContent = "";
-    }
-
-    document.querySelectorAll(".tool").forEach(button => {
-      button.addEventListener("click", () => {
-        selectMode(button.dataset.mode);
-        $("prompt").focus();
-      });
-    });
-
-    document.querySelectorAll(".hint").forEach(button => {
-      button.addEventListener("click", () => {
-        $("prompt").value = button.dataset.prompt;
-        $("prompt").focus();
-      });
-    });
-
-    function addResultCard(title, text, isUser = false) {
-      const card = document.createElement("section");
-      card.className = "result-card";
-
-      const heading = document.createElement("div");
-      heading.className = "result-heading";
-
-      const label = document.createElement("strong");
-      label.textContent = title;
-
-      heading.appendChild(label);
-
-      if (!isUser) {
-        const copy = document.createElement("button");
-        copy.className = "secondary";
-        copy.textContent = "Copy";
-
-        copy.addEventListener("click", async () => {
-          try {
-            await navigator.clipboard.writeText(text);
-            copy.textContent = "Copied!";
-            setTimeout(() => { copy.textContent = "Copy"; }, 1500);
-          } catch {
-            const area = document.createElement("textarea");
-            area.value = text;
-            document.body.appendChild(area);
-            area.select();
-            document.execCommand("copy");
-            area.remove();
-            copy.textContent = "Copied!";
-            setTimeout(() => { copy.textContent = "Copy"; }, 1500);
-          }
-        });
-
-        heading.appendChild(copy);
-      }
-
-      const content = document.createElement("div");
-      content.className = "result-text" + (isUser ? " user-text" : "");
-      content.textContent = text;
-
-      card.append(heading, content);
-      $("results").appendChild(card);
-      return card;
-    }
-
-    $("sendButton").addEventListener("click", sendMessage);
-
-    $("prompt").addEventListener("keydown", event => {
-      if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        sendMessage();
-      }
-    });
-
-    async function sendMessage() {
-      if (busy) return;
-
-      if (!auth.currentUser) {
-        showAuthScreen();
-        return;
-      }
-
-      const text = $("prompt").value.trim();
-      if (!text) {
-        $("status").textContent = "Please enter a message first.";
-        $("prompt").focus();
-        return;
-      }
-
-      if (text.length > 30000) {
-        $("status").textContent =
-          "Please keep each request under 30,000 characters.";
-        return;
-      }
-
-      busy = true;
-      $("sendButton").disabled = true;
-      $("sendButton").textContent = "Thinking...";
-      $("status").textContent = "Malie AI is working on your request...";
-      $("hints").classList.add("hidden");
-
-      const selectedMode = mode;
-      const selectedOptions = {
-        tone: $("tone").value,
-        length: $("length").value,
-        audience: $("audience").value
-      };
-
-      $("prompt").value = "";
-      addResultCard("You", text, true);
-
-      const endpoint = selectedMode === "chat"
-        ? "/api/chat"
-        : "/api/write";
-
-      const body = selectedMode === "chat"
-        ? { message: text }
-        : { mode: selectedMode, text, options: selectedOptions };
-
-      try {
-        const response = await fetch(API_BASE + endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body)
-        });
-
-        let data;
-        try {
-          data = await response.json();
-        } catch {
-          throw new Error("The AI server returned an unexpected response.");
-        }
-
-        if (!response.ok) {
-          throw new Error(data.error || "The AI request failed.");
-        }
-
-        const answer = selectedMode === "chat"
-          ? data.reply
-          : data.result;
-
-        if (typeof answer !== "string" || !answer.trim()) {
-          throw new Error("The AI returned an empty response. Please try again.");
-        }
-
-        addResultCard("Malie AI", answer);
-        $("status").textContent = "";
-      } catch (error) {
-        $("status").textContent =
-          "Could not complete your request: " +
-          (error.message || "Network error. Please try again.");
-      } finally {
-        busy = false;
-        $("sendButton").disabled = false;
-        $("sendButton").textContent = "Send ↗";
-      }
-    }
-  </script>
+    <div id="chat" class="tool hidden">
+     <h3>Ask Malie</h3><p class="muted">Ask questions, brainstorm, or get a topic explained simply.</p>
+     <div class="field"><label for="chatInput">YOUR QUESTION</label><textarea id="chatInput" placeholder="What would you like help with?"></textarea></div>
+     <button class="primary" id="ask">Ask Malie ✨</button><div class="status" id="chatStatus"></div>
+     <div class="field"><label>RESPONSE</label><div id="chatOutput" class="output">Your answer will appear here.</div><div class="actions"><button id="copyChat">Copy response</button></div></div>
+    </div>
+   </div>
+  </div>
+
+  <div class="authbox" id="authBox">
+   <h3 id="authHeading">Sign in to Malie AI</h3>
+   <p class="muted">Sign in with email or Google.</p>
+   <div id="authForm">
+    <div class="row">
+     <div class="field"><label for="email">EMAIL</label><input id="email" type="email" autocomplete="email" placeholder="you@example.com"></div>
+     <div class="field"><label for="password">PASSWORD</label><input id="password" type="password" autocomplete="current-password" placeholder="At least 6 characters"></div>
+    </div>
+    <div class="actions"><button class="primary" id="emailButton">Sign in</button><button id="createAccount">Create account</button><button id="google">Continue with Google</button><button id="reset">Forgot password?</button></div>
+    <div class="status" id="authStatus"></div>
+   </div>
+   <div id="signedIn" class="hidden"><p id="userEmail"></p><button id="logout">Sign out</button></div>
+  </div>
+ </section>
+</main>
+<footer><div class="wrap">© <span id="year"></span> Malie AI · Think clearly. Create boldly.</div></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,GoogleAuthProvider,signInWithPopup,sendPasswordResetEmail,signOut} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+
+const firebaseConfig={
+ apiKey:"AIzaSyAbHz_yfiQrPNuODTrKujQ9kNcR4sbpNfQ",
+ authDomain:"malie-ai-auth.firebaseapp.com",
+ projectId:"malie-ai-auth",
+ storageBucket:"malie-ai-auth.firebasestorage.app",
+ messagingSenderId:"334163694573",
+ appId:"1:334163694573:web:1d82c54f057ad74e2ecde4",
+ measurementId:"G-7FHDD141B5"
+};
+const API="https://oracle-ai.osumemamuromu.workers.dev";
+const $=id=>document.getElementById(id);
+$("year").textContent=new Date().getFullYear();
+if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const saved=localStorage.getItem("malie-theme")||"dark";
+document.documentElement.dataset.theme=saved;
+function updateTheme(){ $("theme").textContent=document.documentElement.dataset.theme==="dark"?"☀️":"🌙"; }
+updateTheme();
+$("theme").onclick=()=>{const next=document.documentElement.dataset.theme==="dark"?"light":"dark";document.documentElement.dataset.theme=next;localStorage.setItem("malie-theme",next);updateTheme();};
+
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));
+ document.querySelectorAll(".tool").forEach(x=>x.classList.add("hidden"));
+ $(b.dataset.panel).classList.remove("hidden");
+});
+$("signInNav").onclick=()=>$("authBox").scrollIntoView({behavior:"smooth",block:"center"});
+
+async function api(path,payload){
+ const res=await fetch(API+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+ const raw=await res.text();let data;try{data=JSON.parse(raw)}catch{throw Error(raw||"Unreadable server response")}
+ if(!res.ok)throw Error(data.error||data.message||"Request failed ("+res.status+")");
+ return data;
+}
+function busy(button,on,label){if(on){button.dataset.old=button.textContent;button.textContent=label;button.disabled=true}else{button.textContent=button.dataset.old||button.textContent;button.disabled=false}}
+async function copy(id){const value=$(id).textContent;if(!value||value.startsWith("Your ")){alert("There is no result to copy yet.");return}try{await navigator.clipboard.writeText(value);alert("Copied!")}catch{alert("Please select the text and copy it manually.")}}
+$("copyWriting").onclick=()=>copy("writingOutput");$("copyChat").onclick=()=>copy("chatOutput");
+$("clearWriting").onclick=()=>{$("writingInput").value="";$("writingOutput").textContent="Your corrected text will appear here."};
+
+$("check").onclick=async()=>{
+ const text=$("writingInput").value.trim();if(!text){$("writingStatus").textContent="Please enter your text first.";return}
+ busy($("check"),true,"Working…");$("writingStatus").textContent="Malie AI is processing your writing…";
+ try{const d=await api("/api/write",{mode:$("mode").value,text,options:{tone:$("tone").value,length:$("length").value,audience:"general"}});
+ const result=d.result??d.reply??d.output;if(!result)throw Error("No result was returned");$("writingOutput").textContent=typeof result==="string"?result:JSON.stringify(result,null,2);$("writingStatus").textContent="Done. Review your result."}
+ catch(e){$("writingStatus").textContent="Error: "+e.message}
+ finally{busy($("check"),false)}
+};
+$("ask").onclick=async()=>{
+ const message=$("chatInput").value.trim();if(!message){$("chatStatus").textContent="Type a question first.";return}
+ busy($("ask"),true,"Thinking…");$("chatStatus").textContent="Waiting for Malie AI…";
+ try{const d=await api("/api/chat",{message});const result=d.reply??d.result??d.output;if(!result)throw Error("No response returned");$("chatOutput").textContent=typeof result==="string"?result:JSON.stringify(result,null,2);$("chatStatus").textContent="Response received."}
+ catch(e){$("chatStatus").textContent="Error: "+e.message}
+ finally{busy($("ask"),false)}
+};
+
+// Read PDF text using PDF.js
+async function readPdf(file){
+ if(!window.pdfjsLib)throw Error("PDF reader failed to load. Check your internet connection.");
+ const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;let text="";
+ for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i);const c=await page.getTextContent();text+=c.items.map(x=>x.str).join(" ")+"\n";$("quizStatus").textContent=`Reading page ${i} of ${pdf.numPages}…`;if(text.length>40000)break}
+ if(text.trim().length<80)throw Error("No readable text found. This PDF may be scanned or image-only.");
+ return text.slice(0,28000);
+}
+function parseQuestions(raw){
+ let s=String(raw||"").trim().replace(/^```(?:json)?/i,"").replace(/```$/,"").trim();
+ const start=s.indexOf("[");const end=s.lastIndexOf("]");if(start<0||end<start)throw Error("AI did not return a JSON question list. Try again.");
+ return JSON.parse(s.slice(start,end+1));
+}
+let questions=[],given=[],index=0,timer=null,remaining=0,locked=false;
+$("makeQuiz").onclick=async()=>{
+ const file=$("pdf").files[0];if(!file){$("quizStatus").textContent="Please choose a PDF first.";return}
+ busy($("makeQuiz"),true,"Creating quiz…");
+ try{
+  const text=await readPdf(file);$("quizStatus").textContent="Generating questions from your PDF…";
+  const count=Number($("count").value),focus=$("focus").value.trim()||"all main ideas";
+  const message=`Create exactly ${count} multiple-choice questions based ONLY on the study material below. Focus: ${focus}. Return ONLY a valid JSON array with objects containing "question", "options" (exactly four answer strings), "answer" (the exact correct option string), and "explanation". Make distinct, accurate study questions. Do not use markdown.\nSTUDY MATERIAL:\n${text}`;
+  const d=await api("/api/chat",{message});questions=parseQuestions(d.reply??d.result??d.output);
+  questions=questions.slice(0,count).map((q,i)=>{
+   if(!q.question||!Array.isArray(q.options)||q.options.length!==4)throw Error("Question "+(i+1)+" is incomplete. Try again.");
+   let ans=q.answer??q.correctAnswer??q.correct_answer;
+   if(typeof ans==="number")ans=q.options[ans];
+   if(typeof ans==="string"&&/^[A-D]$/i.test(ans.trim()))ans=q.options[ans.trim().toUpperCase().charCodeAt(0)-65];
+   if(!q.options.includes(ans))throw Error("The correct answer for question "+(i+1)+" was not clear. Try again.");
+   return {question:String(q.question),options:q.options.map(String),answer:String(ans),explanation:String(q.explanation||"")};
+  });
+  if(!questions.length)throw Error("No questions were generated.");
+  given=Array(questions.length).fill(null);index=0;
+  $("quizSetup").classList.add("hidden");$("quizResult").classList.add("hidden");$("quizPlay").classList.remove("hidden");showQuestion();
+ }catch(e){$("quizStatus").textContent="Quiz error: "+e.message}
+ finally{busy($("makeQuiz"),false)}
+};
+function stopTimer(){if(timer)clearInterval(timer);timer=null}
+function showQuestion(){
+ locked=false;const q=questions[index];$("qNumber").textContent=`Question ${index+1} of ${questions.length}`;$("bar").style.width=(index/questions.length*100)+"%";$("qText").textContent=q.question;$("options").innerHTML="";
+ q.options.forEach(option=>{const label=document.createElement("label");label.className="option";const input=document.createElement("input");input.type="radio";input.name="answer";input.value=option;const span=document.createElement("span");span.textContent=option;label.append(input,span);$("options").append(label)});
+ $("next").textContent=index===questions.length-1?"Finish quiz ✓":"Submit answer →";$("answerStatus").textContent="Choose an answer before continuing.";startTimer();
+}
+function startTimer(){
+ stopTimer();const limit=Number($("seconds").value);if(!limit){$("timer").textContent="No timer";return}
+ remaining=limit;updateTimer();timer=setInterval(()=>{remaining--;updateTimer();if(remaining<=0){stopTimer();submit(true)}},1000);
+}
+function updateTimer(){$("timer").textContent="00:"+String(Math.max(0,remaining)).padStart(2,"0");$("timer").style.color=remaining<=5?"var(--bad)":"var(--cyan)"}
+function submit(timedOut=false){
+ if(locked)return;const chosen=document.querySelector('input[name="answer"]:checked');
+ if(!chosen&&!timedOut){$("answerStatus").textContent="Choose an answer first.";return}
+ locked=true;stopTimer();given[index]=chosen?chosen.value:null;
+ if(index<questions.length-1){index++;setTimeout(showQuestion,150)}else setTimeout(finish,150);
+}
+$("next").onclick=()=>submit(false);
+$("quitQuiz").onclick=()=>{stopTimer();$("quizPlay").classList.add("hidden");$("quizSetup").classList.remove("hidden");$("quizStatus").textContent="Quiz ended. You can start another one."};
+function finish(){
+ stopTimer();$("quizPlay").classList.add("hidden");$("quizResult").classList.remove("hidden");
+ const correct=questions.filter((q,i)=>given[i]===q.answer).length;
+ $("score").textContent=`${correct}/${questions.length}`;$("summary").textContent=`You scored ${Math.round(correct/questions.length*100)}%. Review each answer below.`;
+ $("review").innerHTML="";
+ questions.forEach((q,i)=>{
+  const item=document.createElement("div");item.className="review";
+  const title=document.createElement("strong");title.textContent=`${i+1}. ${q.question}`;
+  const yours=document.createElement("div");yours.style.color=given[i]===q.answer?"var(--good)":"var(--bad)";yours.textContent="Your answer: "+(given[i]??"No answer");
+  const answer=document.createElement("div");answer.style.color="var(--good)";answer.textContent="Correct answer: "+q.answer;
+  item.append(title,yours,answer);
+  if(q.explanation){const exp=document.createElement("div");exp.className="muted";exp.textContent=q.explanation;item.append(exp)}
+  $("review").append(item);
+ });
+}
+$("again").onclick=()=>{$("quizResult").classList.add("hidden");$("quizSetup").classList.remove("hidden");$("pdf").value="";$("quizStatus").textContent="Choose a PDF to begin."};
+
+// Firebase login
+try{
+ const app=initializeApp(firebaseConfig),auth=getAuth(app),provider=new GoogleAuthProvider();let creating=false;
+ onAuthStateChanged(auth,user=>{
+  $("authForm").classList.toggle("hidden",!!user);$("signedIn").classList.toggle("hidden",!user);
+  $("authHeading").textContent=user?"You're signed in":"Sign in to Malie AI";
+  $("userEmail").textContent=user?.email||"";$("signInNav").textContent=user?"Account":"Sign in";
+ });
+ $("emailButton").onclick=async()=>{
+  const email=$("email").value.trim(),password=$("password").value;
+  if(!email||!password){$("authStatus").textContent="Enter your email and password.";return}
+  $("authStatus").textContent="Please wait…";
+  try{if(creating)await createUserWithEmailAndPassword(auth,email,password);else await signInWithEmailAndPassword(auth,email,password);$("authStatus").textContent="Success."}
+  catch(e){$("authStatus").textContent=authError(e)}
+ };
+ $("createAccount").onclick=()=>{creating=!creating;$("emailButton").textContent=creating?"Create account":"Sign in";$("authHeading").textContent=creating?"Create your Malie AI account":"Sign in to Malie AI";$("createAccount").textContent=creating?"Back to sign in":"Create account"};
+ $("google").onclick=async()=>{try{await signInWithPopup(auth,provider)}catch(e){$("authStatus").textContent=authError(e)}};
+ $("reset").onclick=async()=>{const email=$("email").value.trim();if(!email){$("authStatus").textContent="Enter your email first.";return}try{await sendPasswordResetEmail(auth,email);$("authStatus").textContent="Password reset email sent."}catch(e){$("authStatus").textContent=authError(e)}};
+ $("logout").onclick=()=>signOut(auth);
+ $("signInNav").onclick=()=>$("authBox").scrollIntoView({behavior:"smooth"});
+}catch(e){$("authStatus").textContent="Firebase failed to load: "+e.message}
+function authError(e){
+ const messages={
+ "auth/unauthorized-domain":"This domain is not authorized. In Firebase Console, open Authentication → Settings → Authorized domains and add your website's hostname.",
+ "auth/email-already-in-use":"That email already has an account. Try signing in.",
+ "auth/invalid-email":"Enter a valid email address.",
+ "auth/weak-password":"Use a password of at least six characters.",
+ "auth/invalid-credential":"Email or password is incorrect.",
+ "auth/popup-closed-by-user":"Google sign-in was closed before completion.",
+ "auth/operation-not-allowed":"Enable this sign-in method in Firebase Authentication."
+ };
+ return messages[e.code]||e.message||"Sign-in failed. Try again.";
+}
+</script>
 </body>
 </html>

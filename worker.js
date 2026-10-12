@@ -18,15 +18,6 @@ const taskInstructions = {
     "Rewrite the supplied text in the requested tone for the intended audience. Preserve its meaning and key details. Do not add unsupported claims. Return the rewritten version only unless a brief note is needed."
 };
 
-const json = (data, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store"
-    }
-  });
-
 const corsHeaders = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, POST, OPTIONS",
@@ -44,12 +35,16 @@ function respond(data, status = 200) {
   });
 }
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+const transientStatuses = new Set([500, 502, 503, 504]);
+
 export default {
   async fetch(request, env) {
+    const startedAt = Date.now();
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // Allow browser preflight requests.
     if (request.method === "OPTIONS") {
       return new Response(null, {
         status: 204,
@@ -57,11 +52,11 @@ export default {
       });
     }
 
-    // Health check. Does not expose the secret.
     if (path === "/api/health" && request.method === "GET") {
       return respond({
         ok: true,
         aiConfigured: Boolean(env.GEMINI_API_KEY),
+        model: env.GEMINI_MODEL || "gemini-2.5-flash",
         endpoints: ["/api/chat", "/api/write"]
       });
     }
@@ -70,26 +65,21 @@ export default {
     const isWriting = path === "/api/write";
 
     if (!isChat && !isWriting) {
-      // Serve website assets when configured.
       if (env.ASSETS && typeof env.ASSETS.fetch === "function") {
         return env.ASSETS.fetch(request);
       }
 
-      return respond({
-        error: "Route not found.",
-        path
-      }, 404);
+      return respond({ error: "Route not found." }, 404);
     }
 
     if (request.method !== "POST") {
-      return respond({
-        error: "Use POST for this endpoint."
-      }, 405);
+      return respond({ error: "Use POST for this endpoint." }, 405);
     }
 
     if (!env.GEMINI_API_KEY) {
+      console.error("GEMINI_API_KEY is missing.");
       return respond({
-        error: "GEMINI_API_KEY is missing from Cloudflare Worker secrets."
+        error: "The AI service is not configured."
       }, 503);
     }
 
@@ -98,21 +88,15 @@ export default {
     try {
       body = await request.json();
     } catch {
-      return respond({
-        error: "Invalid JSON. Please send a valid request."
-      }, 400);
+      return respond({ error: "Invalid JSON request." }, 400);
     }
 
-    // Chat sends { message: "..." }.
-    // Writing tools send { mode, text, options }.
     const mode = isChat ? "generate" : body?.mode;
     const text = isChat ? body?.message : body?.text;
     const options = body?.options || {};
 
     if (!Object.prototype.hasOwnProperty.call(taskInstructions, mode)) {
-      return respond({
-        error: "Choose a valid writing mode."
-      }, 400);
+      return respond({ error: "Choose a valid writing mode." }, 400);
     }
 
     if (typeof text !== "string" || !text.trim()) {
@@ -158,7 +142,6 @@ Audience: ${audience}
 User content and instructions:
 ${text}`;
 
-    // Keep the model configurable in Cloudflare.
     const model = env.GEMINI_MODEL || "gemini-2.5-flash";
 
     const apiUrl =
@@ -166,123 +149,174 @@ ${text}`;
       encodeURIComponent(model) +
       ":generateContent";
 
-    try {
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-goog-api-key": env.GEMINI_API_KEY
-        },
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: systemPrompt }]
-          },
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: userInput }]
-            }
-          ],
-          generationConfig: {
-            maxOutputTokens: 3500,
-            temperature: 0.7
-          }
-        })
-      });
+    const payload = {
+      systemInstruction: {
+        parts: [{ text: systemPrompt }]
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: userInput }]
+        }
+      ],
+      generationConfig: {
+        maxOutputTokens: 3500,
+        temperature: 0.7
+      }
+    };
 
-      const raw = await response.text();
-      let data;
+    let response;
+    let lastNetworkError;
+
+    // One initial attempt and at most one retry.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const attemptStarted = Date.now();
 
       try {
-        data = raw ? JSON.parse(raw) : {};
-      } catch {
-        console.error("Gemini returned a non-JSON response.");
-        return respond({
-          error: "Gemini returned an unexpected response. Please try again."
-        }, 502);
-      }
-
-      if (!response.ok) {
-        // Log diagnostic details in Cloudflare, never log the API key.
-        console.error("Gemini API error:", {
-          status: response.status,
-          message: data?.error?.message || "No error message returned",
-          statusName: data?.error?.status || "UNKNOWN"
+        response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-goog-api-key": env.GEMINI_API_KEY
+          },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(25000)
         });
 
-        if (response.status === 429) {
-          return respond({
-            error: "Gemini quota or rate limit reached. Check your Google AI usage and billing, then try again."
-          }, 429);
-        }
+        console.log("Gemini request completed:", {
+          status: response.status,
+          attempt,
+          durationMs: Date.now() - attemptStarted,
+          model
+        });
 
         if (
-          response.status === 400 ||
-          response.status === 401 ||
-          response.status === 403
+          transientStatuses.has(response.status) &&
+          attempt < 2
         ) {
-          return respond({
-            error:
-              "Gemini rejected the request. Check the model name, API key permissions, and Google AI API access. HTTP " +
-              response.status
-          }, 502);
+          // Release the failed response before retrying.
+          await response.body?.cancel();
+          console.warn("Retrying temporary Gemini HTTP error:", {
+            status: response.status,
+            attempt
+          });
+          await sleep(700);
+          continue;
         }
 
-        if (response.status === 404) {
-          return respond({
-            error:
-              "The configured Gemini model was not found. Check GEMINI_MODEL in Cloudflare. Current model: " +
-              model
-          }, 502);
-        }
+        break;
+      } catch (error) {
+        lastNetworkError = error;
 
-        return respond({
-          error:
-            "Gemini returned an error (HTTP " +
-            response.status +
-            "). Check the Worker logs for details."
-        }, 502);
-      }
-
-      const parts = data?.candidates?.[0]?.content?.parts;
-
-      const result = Array.isArray(parts)
-        ? parts
-            .map(part =>
-              typeof part.text === "string" ? part.text : ""
-            )
-            .filter(Boolean)
-            .join("")
-            .trim()
-        : "";
-
-      if (!result) {
-        console.error("Gemini response contained no text.", {
-          finishReason: data?.candidates?.[0]?.finishReason || "UNKNOWN",
-          promptFeedback: data?.promptFeedback || null
+        console.error("Gemini network/timeout error:", {
+          attempt,
+          durationMs: Date.now() - attemptStarted,
+          errorName: error?.name || "Unknown",
+          message: error?.message || "Unknown error"
         });
 
-        return respond({
-          error:
-            "Gemini returned no text. The request may have been blocked or the model may have reached a response limit."
-        }, 502);
+        if (attempt < 2) {
+          await sleep(700);
+          continue;
+        }
       }
+    }
 
-      // Match the response expected by each frontend.
-      if (isChat) {
-        return respond({ reply: result });
-      }
-
-      return respond({ result });
-    } catch (error) {
-      console.error("Oracle AI fetch error:", {
-        message: error?.message || "Unknown network error"
+    if (!response) {
+      console.error("Gemini request failed after retries:", {
+        durationMs: Date.now() - startedAt,
+        errorName: lastNetworkError?.name || "Unknown"
       });
 
       return respond({
-        error:
-          "Oracle could not reach Gemini. Check the Cloudflare Worker logs and try again."
+        error: "Gemini could not be reached after retrying. Please try again."
       }, 502);
     }
+
+    let data;
+    const raw = await response.text();
+
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      console.error("Gemini returned non-JSON data:", {
+        status: response.status,
+        durationMs: Date.now() - startedAt
+      });
+
+      return respond({
+        error: "Gemini returned an unexpected response. Please try again."
+      }, 502);
+    }
+
+    if (!response.ok) {
+      console.error("Gemini API error after retry handling:", {
+        httpStatus: response.status,
+        statusName: data?.error?.status || "UNKNOWN",
+        message: data?.error?.message || "No error message returned",
+        durationMs: Date.now() - startedAt,
+        model
+      });
+
+      if (response.status === 429) {
+        return respond({
+          error: "Gemini rate limit or quota reached. Check your Google AI usage and try again later."
+        }, 429);
+      }
+
+      if (response.status === 400 || response.status === 401 ||
+          response.status === 403 || response.status === 404) {
+        return respond({
+          error: "Gemini rejected the request (HTTP " +
+            response.status +
+            "). Check the Worker logs for the exact reason."
+        }, 502);
+      }
+
+      if (transientStatuses.has(response.status)) {
+        return respond({
+          error: "Gemini is temporarily unavailable (HTTP " +
+            response.status +
+            "). Please try again shortly."
+        }, 503);
+      }
+
+      return respond({
+        error: "Gemini returned an unexpected error (HTTP " +
+          response.status + ")."
+      }, 502);
+    }
+
+    const parts = data?.candidates?.[0]?.content?.parts;
+
+    const result = Array.isArray(parts)
+      ? parts
+          .map(part => typeof part.text === "string" ? part.text : "")
+          .filter(Boolean)
+          .join("")
+          .trim()
+      : "";
+
+    if (!result) {
+      console.error("Gemini response contained no text:", {
+        finishReason: data?.candidates?.[0]?.finishReason || "UNKNOWN",
+        promptBlocked: Boolean(data?.promptFeedback?.blockReason),
+        durationMs: Date.now() - startedAt
+      });
+
+      return respond({
+        error: "Gemini returned no text. Please try a different prompt."
+      }, 502);
+    }
+
+    console.log("Oracle AI response completed:", {
+      endpoint: path,
+      durationMs: Date.now() - startedAt,
+      outputCharacters: result.length
+    });
+
+    return isChat
+      ? respond({ reply: result })
+      : respond({ result });
   }
 };

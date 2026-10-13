@@ -121,6 +121,13 @@
 .overlay{display:none}
 .coming{font-size:9px;border:1px solid var(--border);border-radius:99px;padding:4px 7px;color:var(--muted);margin-left:auto}
 
+/* Mandatory Auth Gate overlay */
+.auth-gate{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+.auth-gate-card{width:min(440px,100%);background:var(--panel);border:1px solid var(--border);border-radius:24px;padding:32px;box-shadow:var(--shadow)}
+.auth-gate-card h1{font-size:32px;letter-spacing:-1.5px;margin:0 0 8px}
+.auth-gate-card h1 span{color:var(--accent)}
+.auth-gate-card p{color:var(--muted);font-size:14px;line-height:1.6;margin:0 0 24px}
+
 /* Account Modal/Drawer Overlay styles */
 .modal-overlay{position:fixed;inset:0;background:#0008;z-index:25;display:none;align-items:center;justify-content:center}
 .modal-overlay.show{display:flex}
@@ -160,6 +167,17 @@
 </style>
 </head>
 <body data-theme="dark">
+
+<!-- Mandatory Sign-in Gate Overlay -->
+<div class="auth-gate" id="authGate">
+  <div class="auth-gate-card">
+    <div style="font-size:12px;font-weight:800;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">Campus Creative</div>
+    <h1>malie<span>.</span></h1>
+    <p>Please sign in with your Google account to access your study space, writing assistant, and quiz center.</p>
+    <button class="primary" id="gateSignInBtn" style="width:100%;padding:14px;font-size:14px">Sign in with Google ↗</button>
+  </div>
+</div>
+
 <div class="app">
 <aside class="sidebar" id="sidebar">
   <div class="brand"><div class="brand-name">malie<span>.</span></div><div class="brand-sub">BY CAMPUS CREATIVE</div></div>
@@ -184,7 +202,7 @@
   <div class="top-actions">
     <div class="model-pill"><span class="dot online"></span> Gemini-powered</div>
     <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="Toggle light/dark theme">☼</button>
-    <button class="btn-auth" id="authBtn">Sign in</button>
+    <button class="btn-auth" id="authBtn">Account</button>
   </div>
 </header>
 <div class="content">
@@ -254,7 +272,7 @@ try {
   auth = getAuth(app);
   db = getFirestore(app);
 } catch(e) {
-  console.warn("Firebase initialization skipped or failed:", e);
+  console.warn("Firebase initialization failed:", e);
 }
 
 "use strict";
@@ -394,7 +412,7 @@ $('menuToggle').addEventListener('click',()=>{$('sidebar').classList.toggle('ope
 
 // Auth & Modal UI Handlers
 const authBtn = $('authBtn'), authModal =$('authModal'), closeModal = $('closeModal'), modalActionBtn =$('modalActionBtn');
-const modalTitle = $('modalTitle'), modalSub = $('modalSub'), modalContent =$('modalContent');
+const modalTitle = $('modalTitle'), modalSub = $('modalSub'), modalContent =$('modalContent'), authGate = $('authGate'), gateSignInBtn =$('gateSignInBtn');
 
 async function renderAuthModalContent() {
   if (currentUser) {
@@ -420,34 +438,23 @@ async function renderAuthModalContent() {
       }
     }
     modalContent.innerHTML = historyHtml;
-  } else {
-    modalTitle.textContent = "Sign in to Malie";
-    modalSub.textContent = "Connect with Google to save quiz scores and history.";
-    modalActionBtn.style.display = "none";
-    modalContent.innerHTML = '<button class="primary" id="googleSignIn" style="width:100%;padding:12px">Sign in with Google</button>';
-    setTimeout(() => {
-      const gBtn = $('googleSignIn');
-      if (gBtn) {
-        gBtn.onclick = async () => {
-          if (!auth) return alert("Firebase auth is not configured.");
-          try {
-            await signInWithPopup(auth, new GoogleAuthProvider());
-            authModal.classList.remove('show');
-          } catch(err) {
-            alert("Sign in failed: " + err.message);
-          }
-        };
-      }
-    }, 50);
   }
 }
+
+async function handleGoogleSignIn() {
+  if (!auth) { alert("Firebase is not initialized."); return; }
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch(err) {
+    alert("Sign in failed: " + err.message);
+  }
+}
+
+gateSignInBtn.onclick = handleGoogleSignIn;
 
 authBtn.onclick = () => {
   if (!auth) { alert("Firebase is not initialized."); return; }
   if (currentUser) {
-    authModal.classList.add('show');
-    renderAuthModalContent();
-  } else {
     authModal.classList.add('show');
     renderAuthModalContent();
   }
@@ -467,12 +474,14 @@ if (auth) {
   onAuthStateChanged(auth, user => {
     currentUser = user;
     if (user) {
+      authGate.classList.add('hidden');
       const initial = (user.email || user.displayName || "U").charAt(0).toUpperCase();
       authBtn.textContent = initial;
       authBtn.classList.add('avatar');
       authBtn.title = user.email || user.displayName;
     } else {
-      authBtn.textContent = "Sign in";
+      authGate.classList.remove('hidden');
+      authBtn.textContent = "Account";
       authBtn.classList.remove('avatar');
       authBtn.title = "";
     }

@@ -71,17 +71,36 @@ h1 { font-size: clamp(34px, 6vw, 58px); line-height: 1.12; letter-spacing: -2px;
 .feature p { font-size: 13px; color: var(--muted); margin: 0; }
 .feature-icon { font-size: 25px; }
 
-.workspace {
-  display: grid; grid-template-columns: 220px minmax(0, 1fr);
-  gap: 17px; padding-bottom: 45px; align-items: start;
-}
-.sidebar, .panel { padding: 17px; min-width: 0; }
-.sidebar h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+/* ───── Workspace launcher + full-screen sections ───── */
+.workspace { padding-bottom: 45px; }
+.sidebar { padding: 17px; }
+.sidebar h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px; }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .tab {
-  display: block; width: 100%; text-align: left; border: 0; background: transparent;
-  color: var(--muted); padding: 12px; border-radius: 10px; margin: 4px 0; font-weight: 650;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; text-align: left;
+  border: 1px solid var(--line); background: var(--card2); color: var(--text);
+  padding: 16px; border-radius: 14px; font-weight: 700; font-size: 16px;
+  transition: transform .2s ease, border-color .2s ease;
 }
-.tab.active { color: var(--text); background: var(--card2); box-shadow: inset 3px 0 var(--accent); }
+.tab small { font-weight: 400; font-size: 12px; color: var(--muted); }
+.tab:hover { border-color: var(--accent); }
+.tab:active { transform: scale(.97); }
+
+.panel { display: none; }
+.panel.open {
+  display: block; position: fixed; inset: 0; z-index: 15; border: 0; border-radius: 0;
+  background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch;
+  animation: slideIn .3s cubic-bezier(.22,1,.36,1) both;
+}
+.panel-top {
+  position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line);
+}
+.panel-top-inner {
+  width: min(900px, calc(100% - 32px)); margin: auto; min-height: 62px;
+  display: flex; align-items: center; gap: 12px;
+}
+.panel-top strong { font-size: 18px; }
+.panel-body { width: min(900px, calc(100% - 32px)); margin: auto; padding: 22px 0 60px; }
 .panel h2 { margin: 0 0 5px; font-size: 24px; }
 .sub { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
 .view { display: none; }
@@ -99,6 +118,12 @@ textarea:focus, input:focus, select:focus { border-color: var(--accent); }
 .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 15px; }
 .status { min-height: 24px; margin: 12px 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
 .status.error { color: var(--bad); }
+
+.pdf-info {
+  margin-top: 10px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 11px;
+  font-size: 13px; color: var(--muted); overflow-wrap: anywhere;
+}
+.pdf-info.ready { color: var(--good); border-style: solid; }
 
 .output {
   overflow-wrap: anywhere; line-height: 1.8; background: var(--card2);
@@ -247,21 +272,18 @@ footer { text-align: center; color: var(--muted); font-size: 12px; border-top: 1
 
 @keyframes pulse { to { opacity: .5; } }
 @keyframes appear { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pop { from { transform: scale(.75); } to { transform: scale(1); } }
 @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: .45; } 40% { transform: translateY(-5px); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 @media (max-width: 720px) {
-  .workspace { grid-template-columns: 1fr; }
-  .sidebar { padding: 10px; }
-  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
-  .tab { text-align: center; padding: 10px 3px; font-size: 12px; }
+  .tabs { grid-template-columns: 1fr; }
   .features { grid-template-columns: 1fr; }
   .hero { padding-top: 35px; }
   .fields { grid-template-columns: 1fr; }
   .brand { font-size: 18px; }
   .nav-actions .btn { padding: 8px; font-size: 12px; }
   .nav-actions .btn.avatar { width: 36px; height: 36px; padding: 0; font-size: 15px; }
-  .panel { padding: 13px; }
   .bubble { max-width: 90%; }
 }
 </style>
@@ -327,137 +349,148 @@ footer { text-align: center; color: var(--muted); font-size: 12px; border-top: 1
     <aside class="sidebar">
       <h3>Your workspace</h3>
       <div class="tabs">
-        <button class="tab active" data-view="writing">✍️ Writing</button>
-        <button class="tab" data-view="chat">💬 AI Chat</button>
-        <button class="tab" data-view="quiz">📚 Quiz Mode</button>
+        <button class="tab" data-view="writing">✍️ Writing<small>Fix and improve your text</small></button>
+        <button class="tab" data-view="chat">💬 AI Chat<small>Ask anything</small></button>
+        <button class="tab" data-view="quiz">📚 Quiz Mode<small>Practise from a PDF</small></button>
       </div>
     </aside>
 
-    <section class="panel">
-      <div class="view active" id="writingView">
-        <h2>Writing assistant</h2>
-        <p class="sub">Enter your text and choose how Malie AI should improve it.</p>
-        <label for="writingInput">Your text</label>
-        <textarea id="writingInput" placeholder="Paste or type your writing here..."></textarea>
-        <div class="fields">
-          <div>
-            <label for="mode">Task</label>
-            <select id="mode">
-              <option value="correct">Correct grammar</option>
-              <option value="improve">Improve writing</option>
-              <option value="rewrite">Rewrite text</option>
-              <option value="summarize">Summarize</option>
-              <option value="expand">Expand ideas</option>
-            </select>
-          </div>
-          <div>
-            <label for="tone">Tone</label>
-            <select id="tone">
-              <option value="natural">Natural</option>
-              <option value="formal">Formal</option>
-              <option value="academic">Academic</option>
-              <option value="friendly">Friendly</option>
-              <option value="professional">Professional</option>
-            </select>
-          </div>
+    <!-- Opens full screen when a tab is tapped -->
+    <section class="panel" id="panel">
+      <div class="panel-top">
+        <div class="panel-top-inner">
+          <button class="btn" id="backBtn" aria-label="Back to workspace">← Back</button>
+          <strong id="panelTitle">Writing</strong>
         </div>
-        <label for="length">Response length</label>
-        <select id="length">
-          <option value="balanced">Balanced</option>
-          <option value="short">Short</option>
-          <option value="detailed">Detailed</option>
-        </select>
-        <div class="actions">
-          <button class="btn primary" id="check">Improve my writing</button>
-          <button class="btn" id="clearWriting">Clear</button>
-        </div>
-        <p class="status" id="writingStatus"></p>
-        <h3>Result</h3>
-        <div class="output" id="writingOutput"><span class="placeholder">Your corrected text will appear here.</span></div>
-        <div class="actions"><button class="btn" id="copyWriting">Copy result</button></div>
       </div>
+      <div class="panel-body">
 
-      <div class="view" id="chatView">
-        <h2>Chat with Malie AI</h2>
-        <p class="sub">Ask a question, learn something new or get help with a problem.</p>
-        <div class="chat-box">
-          <div class="chat-thread" id="chatThread">
-            <div class="chat-empty" id="chatEmpty">👋 Ask Malie AI anything to get started.</div>
+        <div class="view" id="writingView">
+          <h2>Writing assistant</h2>
+          <p class="sub">Enter your text and choose how Malie AI should improve it.</p>
+          <label for="writingInput">Your text</label>
+          <textarea id="writingInput" placeholder="Paste or type your writing here..."></textarea>
+          <div class="fields">
+            <div>
+              <label for="mode">Task</label>
+              <select id="mode">
+                <option value="correct">Correct grammar</option>
+                <option value="improve">Improve writing</option>
+                <option value="rewrite">Rewrite text</option>
+                <option value="summarize">Summarize</option>
+                <option value="expand">Expand ideas</option>
+              </select>
+            </div>
+            <div>
+              <label for="tone">Tone</label>
+              <select id="tone">
+                <option value="natural">Natural</option>
+                <option value="formal">Formal</option>
+                <option value="academic">Academic</option>
+                <option value="friendly">Friendly</option>
+                <option value="professional">Professional</option>
+              </select>
+            </div>
           </div>
-          <div class="chat-input-row">
-            <textarea id="chatInput" rows="1" placeholder="Message Malie AI…"></textarea>
-            <button class="btn primary send-btn" id="ask" aria-label="Send message">➤</button>
-          </div>
-        </div>
-        <div class="actions"><button class="btn" id="clearChat">Clear chat</button></div>
-        <p class="status" id="chatStatus"></p>
-      </div>
-
-      <div class="view" id="quizView">
-        <h2>Quiz mode</h2>
-        <!-- CHANGED: text updated, study material box removed -->
-        <p class="sub">Upload a PDF and Malie AI will generate practice questions from it.</p>
-        <label for="studyFile">Upload a PDF</label>
-        <input id="studyFile" type="file" accept=".pdf,application/pdf">
-        <div class="fields">
-          <div>
-            <label for="questionCount">Number of questions</label>
-            <select id="questionCount">
-              <option value="5">5 questions</option>
-              <option value="10" selected>10 questions</option>
-              <option value="15">15 questions</option>
-              <option value="20">20 questions</option>
-            </select>
-          </div>
-          <div>
-            <label for="quizDifficulty">Difficulty</label>
-            <select id="quizDifficulty">
-              <option value="easy">Easy</option>
-              <option value="medium" selected>Medium</option>
-              <option value="hard">Hard</option>
-            </select>
-          </div>
-        </div>
-        <div class="fields">
-          <div>
-            <label for="quizTotalTime">⏱ Total time (whole quiz)</label>
-            <select id="quizTotalTime">
-              <option value="0">No total timer</option>
-              <option value="5">5 minutes</option>
-              <option value="10" selected>10 minutes</option>
-              <option value="15">15 minutes</option>
-              <option value="20">20 minutes</option>
-              <option value="30">30 minutes</option>
-              <option value="45">45 minutes</option>
-              <option value="60">60 minutes</option>
-            </select>
-          </div>
-          <div>
-            <label for="quizQuestionTime">⏳ Time per question</label>
-            <select id="quizQuestionTime">
-              <option value="0" selected>No question timer</option>
-              <option value="15">15 seconds</option>
-              <option value="30">30 seconds</option>
-              <option value="45">45 seconds</option>
-              <option value="60">1 minute</option>
-              <option value="90">90 seconds</option>
-              <option value="120">2 minutes</option>
-            </select>
-          </div>
-        </div>
-        <div class="actions"><button class="btn primary" id="generateQuiz">Generate quiz</button></div>
-        <p class="status" id="quizStatus"></p>
-        <div id="quizOutput"></div>
-
-        <section style="margin-top:28px">
-          <h3>📚 My past tests</h3>
-          <p class="sub">Your completed quizzes saved to your account.</p>
-          <div id="quizHistory"><p class="placeholder">Sign in to view your saved tests.</p></div>
+          <label for="length">Response length</label>
+          <select id="length">
+            <option value="balanced">Balanced</option>
+            <option value="short">Short</option>
+            <option value="detailed">Detailed</option>
+          </select>
           <div class="actions">
-            <button class="btn" id="refreshQuizHistory">Refresh history</button>
-            <button class="btn" id="clearQuizHistory">Clear past tests</button>
+            <button class="btn primary" id="check">Improve my writing</button>
+            <button class="btn" id="clearWriting">Clear</button>
           </div>
-        </section>
+          <p class="status" id="writingStatus"></p>
+          <h3>Result</h3>
+          <div class="output" id="writingOutput"><span class="placeholder">Your corrected text will appear here.</span></div>
+          <div class="actions"><button class="btn" id="copyWriting">Copy result</button></div>
+        </div>
+
+        <div class="view" id="chatView">
+          <h2>Chat with Malie AI</h2>
+          <p class="sub">Ask a question, learn something new or get help with a problem.</p>
+          <div class="chat-box">
+            <div class="chat-thread" id="chatThread">
+              <div class="chat-empty" id="chatEmpty">👋 Ask Malie AI anything to get started.</div>
+            </div>
+            <div class="chat-input-row">
+              <textarea id="chatInput" rows="1" placeholder="Message Malie AI…"></textarea>
+              <button class="btn primary send-btn" id="ask" aria-label="Send message">➤</button>
+            </div>
+          </div>
+          <div class="actions"><button class="btn" id="clearChat">Clear chat</button></div>
+          <p class="status" id="chatStatus"></p>
+        </div>
+
+        <div class="view" id="quizView">
+          <h2>Quiz mode</h2>
+          <p class="sub">Upload a PDF and Malie AI will generate practice questions from it.</p>
+          <label for="studyFile">Upload a PDF</label>
+          <input id="studyFile" type="file" accept=".pdf,application/pdf">
+          <div class="pdf-info" id="pdfInfo">No PDF selected yet.</div>
+          <div class="fields">
+            <div>
+              <label for="questionCount">Number of questions</label>
+              <select id="questionCount">
+                <option value="5">5 questions</option>
+                <option value="10" selected>10 questions</option>
+                <option value="15">15 questions</option>
+                <option value="20">20 questions</option>
+              </select>
+            </div>
+            <div>
+              <label for="quizDifficulty">Difficulty</label>
+              <select id="quizDifficulty">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </div>
+          </div>
+          <div class="fields">
+            <div>
+              <label for="quizTotalTime">⏱ Total time (whole quiz)</label>
+              <select id="quizTotalTime">
+                <option value="0">No total timer</option>
+                <option value="5">5 minutes</option>
+                <option value="10" selected>10 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="20">20 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60">60 minutes</option>
+              </select>
+            </div>
+            <div>
+              <label for="quizQuestionTime">⏳ Time per question</label>
+              <select id="quizQuestionTime">
+                <option value="0" selected>No question timer</option>
+                <option value="15">15 seconds</option>
+                <option value="30">30 seconds</option>
+                <option value="45">45 seconds</option>
+                <option value="60">1 minute</option>
+                <option value="90">90 seconds</option>
+                <option value="120">2 minutes</option>
+              </select>
+            </div>
+          </div>
+          <div class="actions"><button class="btn primary" id="generateQuiz">Generate quiz</button></div>
+          <p class="status" id="quizStatus"></p>
+          <div id="quizOutput"></div>
+
+          <section style="margin-top:28px">
+            <h3>📚 My past tests</h3>
+            <p class="sub">Your completed quizzes saved to your account.</p>
+            <div id="quizHistory"><p class="placeholder">Sign in to view your saved tests.</p></div>
+            <div class="actions">
+              <button class="btn" id="refreshQuizHistory">Refresh history</button>
+              <button class="btn" id="clearQuizHistory">Clear past tests</button>
+            </div>
+          </section>
+        </div>
+
       </div>
     </section>
   </section>
@@ -477,6 +510,7 @@ const API = "https://oracle-ai.osumemamuromu.workers.dev";
 const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
 const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 const MAX_PDF_CHARS = 60000;
+const MAX_PDF_PAGES = 400;
 
 const firebaseConfig = {
   apiKey: "AIzaSyAbHz_yfiQrPNuODTrKujQ9kNcR4sbpNfQ",
@@ -564,12 +598,26 @@ async function copyText(id) {
   catch { return false; }
 }
 
-/* ───────── Tabs & theme ───────── */
+/* ───────── Workspace sections (full screen) & theme ───────── */
+const panel = $("panel");
+const VIEW_TITLES = { writing: "✍️ Writing", chat: "💬 AI Chat", quiz: "📚 Quiz Mode" };
+
 function openView(name) {
-  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === name));
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === name + "View"));
+  $("panelTitle").textContent = VIEW_TITLES[name] || "";
+  panel.classList.add("open");
+  panel.scrollTop = 0;
+  document.body.style.overflow = "hidden";
+}
+function closeView() {
+  panel.classList.remove("open");
+  document.body.style.overflow = "";
 }
 document.querySelectorAll(".tab").forEach(btn => { btn.onclick = () => openView(btn.dataset.view); });
+$("backBtn").onclick = closeView;
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && panel.classList.contains("open") && !menu.classList.contains("open")) closeView();
+});
 
 function safeStorage(action, key, value) {
   try { return action === "get" ? localStorage.getItem(key) : localStorage.setItem(key, value); }
@@ -658,7 +706,7 @@ function closeMenu() {
   blob.classList.remove("open");
   menu.classList.remove("open");
   menu.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
+  document.body.style.overflow = panel.classList.contains("open") ? "hidden" : "";
 }
 $("menuClose").onclick = closeMenu;
 document.addEventListener("keydown", e => { if (e.key === "Escape" && menu.classList.contains("open")) closeMenu(); });
@@ -768,9 +816,8 @@ $("clearChat").onclick = () => {
   setStatus("chatStatus", "");
 };
 
-/* ───────── PDF import ───────── */
-// CHANGED: the PDF text is now kept in this variable instead of a text box
-let studyContent = "";
+/* ───────── PDF import (no visible text box) ───────── */
+let studyContent = "";   // text extracted from the uploaded PDF
 
 function loadPdfJs() {
   if (window.pdfjsLib) return Promise.resolve();
@@ -778,38 +825,75 @@ function loadPdfJs() {
     const s = document.createElement("script");
     s.src = PDFJS_URL;
     s.onload = resolve;
-    s.onerror = () => reject(new Error("Could not load PDF reader. Check your connection and try again."));
+    s.onerror = () => reject(new Error("Could not load the PDF reader. Check your connection and try again."));
     document.head.appendChild(s);
   });
+}
+
+// Detects table-of-contents / index style pages so they don't waste the question material
+function looksLikeContents(text) {
+  const head = text.slice(0, 400).toLowerCase();
+  const dotLeaders = (text.match(/\.{4,}|(\. ){4,}/g) || []).length;
+  return dotLeaders >= 5 || (/(table of contents|^\s*contents\b)/.test(head) && dotLeaders >= 2);
+}
+
+function setPdfInfo(message, ready = false) {
+  const el = $("pdfInfo");
+  el.textContent = message;
+  el.classList.toggle("ready", ready);
 }
 
 $("studyFile").onchange = async e => {
   const file = e.target.files?.[0];
   studyContent = "";
-  if (!file) return;
+  if (!file) { setPdfInfo("No PDF selected yet."); return; }
   if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+    e.target.value = "";
+    setPdfInfo("No PDF selected yet.");
     return setStatus("quizStatus", "Please select a PDF.", true);
   }
+
+  setPdfInfo("Reading " + file.name + "…");
   setStatus("quizStatus", "Reading PDF…");
   try {
     await loadPdfJs();
     pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
     const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-    let text = "";
-    for (let n = 1; n <= pdf.numPages && text.length < MAX_PDF_CHARS; n++) {
+
+    const pages = [];
+    const lastPage = Math.min(pdf.numPages, MAX_PDF_PAGES);
+    for (let n = 1; n <= lastPage; n++) {
       const page = await pdf.getPage(n);
       const content = await page.getTextContent();
-      text += content.items.map(i => i.str).join(" ") + "\n";
+      const text = content.items.map(i => i.str).join(" ").replace(/\s+/g, " ").trim();
+      if (text) pages.push(text);
     }
-    const truncated = text.length > MAX_PDF_CHARS;
-    studyContent = text.slice(0, MAX_PDF_CHARS).trim();
 
-    if (!studyContent) {
-      return setStatus("quizStatus", "This PDF has no readable text (it may be a scanned image). Try another PDF.", true);
+    if (!pages.length) throw new Error("No readable text found. This PDF may be scanned images.");
+
+    // Drop contents/index pages, but fall back to everything if that removes all pages
+    let useful = pages.filter(p => !looksLikeContents(p));
+    if (!useful.length) useful = pages;
+
+    // Spread the text budget across the whole document instead of only the first pages
+    let combined = useful.join("\n");
+    if (combined.length > MAX_PDF_CHARS) {
+      const budget = Math.floor(MAX_PDF_CHARS / useful.length);
+      combined = useful.map(p => p.slice(0, budget)).join("\n");
     }
-    setStatus("quizStatus", `PDF loaded: ${pdf.numPages} page(s). Ready to generate your quiz.` + (truncated ? " Text was shortened to fit." : ""));
+
+    studyContent = combined.trim();
+    if (studyContent.length < 50) {
+      studyContent = "";
+      throw new Error("Not enough readable text in this PDF.");
+    }
+
+    setPdfInfo(`✓ ${file.name} is ready (${pdf.numPages} page${pdf.numPages === 1 ? "" : "s"}).`, true);
+    setStatus("quizStatus", "PDF loaded. Choose your settings and tap Generate quiz.");
   } catch (err) {
     studyContent = "";
+    e.target.value = "";
+    setPdfInfo("No PDF selected yet.");
     setStatus("quizStatus", err.message, true);
   }
 };
@@ -973,9 +1057,8 @@ function getAnswerKey(q, opts) {
 }
 
 $("generateQuiz").onclick = async () => {
-  // CHANGED: uses the text extracted from the uploaded PDF
   const text = studyContent.trim();
-  if (!text) return setStatus("quizStatus", "Please upload a PDF with readable text first.", true);
+  if (!text) return setStatus("quizStatus", "Please upload a readable PDF first.", true);
 
   setBusy($("generateQuiz"), true, "Generating…");
   setStatus("quizStatus", "Malie AI is preparing your questions…");
@@ -1270,4 +1353,4 @@ function renderQuiz(questions) {
 }
 </script>
 </body>
-          </html>
+  </html>

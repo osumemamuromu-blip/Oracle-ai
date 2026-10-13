@@ -6,9 +6,9 @@
 "observability": {
 "enabled": true
 },
-"assets": {
+"ai": {
 "directory": "./public",
-"binding": "ASSETS",
+"binding": "AI",
 "run_worker_first": ["/api/*"]
 },
 "vars": {

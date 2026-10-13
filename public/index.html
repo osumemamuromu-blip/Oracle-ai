@@ -22,6 +22,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0; background: var(--bg); color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.6;
@@ -47,6 +48,11 @@ header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bot
   padding: 10px 14px; border-radius: 11px; font-weight: 650;
 }
 .btn.primary { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+.btn.avatar {
+  width: 40px; height: 40px; padding: 0; border-radius: 50%;
+  display: grid; place-items: center; font-size: 17px; font-weight: 800; line-height: 1;
+  background: var(--accent2); border-color: var(--accent2); color: #fff; cursor: default;
+}
 
 /* Hero & features */
 .hero { text-align: center; padding: 45px 0 30px; }
@@ -118,13 +124,15 @@ textarea:focus, input:focus, select:focus { border-color: var(--accent); }
 .quiz-question label { display: flex; gap: 9px; align-items: flex-start; font-weight: 400; margin: 10px 0; }
 .quiz-question input { width: auto; margin-top: 6px; }
 .quiz-toolbar {
-  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;
   padding: 14px; margin: 14px 0; background: var(--card2); border: 1px solid var(--line); border-radius: 14px;
 }
-.quiz-timer { font-size: 22px; font-weight: 850; font-variant-numeric: tabular-nums; }
+.timer-block { flex: 1 1 200px; min-width: 0; }
+.quiz-timer { font-size: 22px; font-weight: 850; font-variant-numeric: tabular-nums; margin-bottom: 6px; }
 .quiz-timer.warning { color: var(--bad); animation: pulse .8s infinite alternate; }
 .quiz-progress { height: 7px; width: 100%; background: var(--line); border-radius: 20px; overflow: hidden; }
 .quiz-progress-fill { height: 100%; width: 100%; background: var(--accent); transition: width 1s linear; }
+.timer-note { font-size: 12px; color: var(--muted); margin: 10px 0 0; width: 100%; }
 .score-card {
   margin-top: 20px; padding: 20px; border: 1px solid var(--line);
   border-radius: 18px; background: var(--card2); animation: appear .5s ease both;
@@ -166,6 +174,7 @@ footer { text-align: center; color: var(--muted); font-size: 12px; border-top: 1
   .fields { grid-template-columns: 1fr; }
   .brand { font-size: 18px; }
   .nav-actions .btn { padding: 8px; font-size: 12px; }
+  .nav-actions .btn.avatar { width: 36px; height: 36px; padding: 0; font-size: 15px; }
   .panel { padding: 13px; }
 }
 </style>
@@ -298,14 +307,33 @@ footer { text-align: center; color: var(--muted); font-size: 12px; border-top: 1
             </select>
           </div>
         </div>
-        <label for="quizTime">Time limit</label>
-        <select id="quizTime">
-          <option value="30">30 seconds per question</option>
-          <option value="60" selected>1 minute per question</option>
-          <option value="90">90 seconds per question</option>
-          <option value="120">2 minutes per question</option>
-          <option value="0">No timer</option>
-        </select>
+        <div class="fields">
+          <div>
+            <label for="quizTotalTime">⏱ Total time (whole quiz)</label>
+            <select id="quizTotalTime">
+              <option value="0">No total timer</option>
+              <option value="5">5 minutes</option>
+              <option value="10" selected>10 minutes</option>
+              <option value="15">15 minutes</option>
+              <option value="20">20 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="45">45 minutes</option>
+              <option value="60">60 minutes</option>
+            </select>
+          </div>
+          <div>
+            <label for="quizQuestionTime">⏳ Time per question</label>
+            <select id="quizQuestionTime">
+              <option value="0" selected>No question timer</option>
+              <option value="15">15 seconds</option>
+              <option value="30">30 seconds</option>
+              <option value="45">45 seconds</option>
+              <option value="60">1 minute</option>
+              <option value="90">90 seconds</option>
+              <option value="120">2 minutes</option>
+            </select>
+          </div>
+        </div>
         <div class="actions"><button class="btn primary" id="generateQuiz">Generate quiz</button></div>
         <p class="status" id="quizStatus"></p>
         <div id="quizOutput"></div>
@@ -565,6 +593,24 @@ function historyCollection() {
   return collection(db, "users", auth.currentUser.uid, "quizHistory");
 }
 
+// Shows a circle with the first letter of the user's email in the header.
+function showAvatar(user) {
+  const btn = $("authButton");
+  const label = user.email || user.displayName || "Signed in";
+  btn.textContent = (label.trim().charAt(0) || "U").toUpperCase();
+  btn.classList.add("avatar");
+  btn.title = label;
+  btn.setAttribute("aria-label", "Signed in as " + label);
+}
+
+function showSignInButton() {
+  const btn = $("authButton");
+  btn.textContent = "Sign in";
+  btn.classList.remove("avatar");
+  btn.removeAttribute("title");
+  btn.removeAttribute("aria-label");
+}
+
 async function loadHistory() {
   if (!auth?.currentUser) return;
   const box = $("quizHistory");
@@ -625,13 +671,13 @@ try {
 
   onAuthStateChanged(auth, async user => {
     if (user) {
-      $("authButton").textContent = "Signed in";
+      showAvatar(user);
       $("authStatus").textContent = "Signed in as " + (user.email || user.displayName || "your account") + ". Quiz history is linked to this account.";
       $("authStatus").classList.remove("error");
       $("signOutButton").hidden = false;
       await loadHistory();
     } else {
-      $("authButton").textContent = "Sign in";
+      showSignInButton();
       $("authStatus").textContent = "Sign in with Google to save and access quiz history across devices.";
       $("authStatus").classList.remove("error");
       $("signOutButton").hidden = true;
@@ -679,6 +725,7 @@ let timer = null;
 let finished = false;
 
 const optionText = o => (typeof o === "string" ? o : o?.text ?? o?.label ?? JSON.stringify(o));
+const formatTime = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
 
 // Works out the correct option index (or text answer) from the different key formats the API may return.
 function getAnswerKey(q, opts) {
@@ -728,9 +775,8 @@ $("generateQuiz").onclick = async () => {
       throw new Error("The server did not return quiz questions.");
     }
     renderQuiz(questions);
-    setStatus("quizStatus", $("quizTime").value > 0
-      ? "Quiz ready. Answer before the timer ends."
-      : "Quiz ready. Take your time.");
+    const timed = Number($("quizTotalTime").value) > 0 || Number($("quizQuestionTime").value) > 0;
+    setStatus("quizStatus", timed ? "Quiz ready. Answer before the timer ends." : "Quiz ready. Take your time.");
   } catch (e) {
     setStatus("quizStatus", "Error: " + e.message, true);
   } finally {
@@ -745,22 +791,43 @@ function renderQuiz(questions) {
   const host = $("quizOutput");
   host.innerHTML = "";
 
-  const perQuestion = Number($("quizTime").value);
-  const timed = perQuestion > 0;
-  const total = Math.max(30, questions.length * perQuestion);
-  let remaining = total;
+  const count = questions.length;
+  const totalMinutes = Number($("quizTotalTime").value);
+  const perQuestion = Number($("quizQuestionTime").value);
+  const hasTotal = totalMinutes > 0;
+  const hasPerQ = perQuestion > 0;
 
-  // Toolbar
+  const total = totalMinutes * 60;
+  let remaining = total;
+  let qRemaining = perQuestion;
+  let current = 0;
+
+  // Toolbar with the general timer and/or the per-question timer
   const toolbar = document.createElement("div");
   toolbar.className = "quiz-toolbar";
-  toolbar.innerHTML = timed
-    ? '<div><strong>⏱ Time remaining</strong><div class="quiz-timer" id="quizTimer"></div></div>' +
-      `<div><strong>${questions.length} questions</strong><div class="score-detail">${perQuestion} seconds per question</div></div>` +
-      '<div class="quiz-progress"><div class="quiz-progress-fill" id="quizProgress"></div></div>'
-    : `<div><strong>${questions.length} questions</strong><div class="score-detail">No time limit</div></div>`;
+  const parts = [];
+  if (hasTotal) {
+    parts.push(
+      '<div class="timer-block"><strong>⏱ Total time</strong>' +
+      '<div class="quiz-timer" id="quizTimer"></div>' +
+      '<div class="quiz-progress"><div class="quiz-progress-fill" id="quizProgress"></div></div></div>'
+    );
+  }
+  if (hasPerQ) {
+    parts.push(
+      '<div class="timer-block"><strong>⏳ <span id="qCounter"></span></strong>' +
+      '<div class="quiz-timer" id="qTimer"></div>' +
+      '<div class="quiz-progress"><div class="quiz-progress-fill" id="qProgress"></div></div></div>'
+    );
+  }
+  if (!parts.length) {
+    parts.push(`<div><strong>${count} questions</strong><div class="score-detail">No time limit</div></div>`);
+  }
+  toolbar.innerHTML = parts.join("");
   host.append(toolbar);
 
   // Questions
+  const cards = [];
   questions.forEach((q, i) => {
     const card = document.createElement("div");
     card.className = "quiz-question";
@@ -789,28 +856,84 @@ function renderQuiz(questions) {
       ta.dataset.typed = i;
       card.append(ta);
     }
+    // With a per-question timer, only the current question is shown.
+    card.hidden = hasPerQ && i !== 0;
+    cards.push(card);
     host.append(card);
   });
 
+  // Buttons
+  const actions = document.createElement("div");
+  actions.className = "actions";
+  const nextBtn = document.createElement("button");
+  nextBtn.className = "btn";
+  nextBtn.textContent = "Next question →";
   const submit = document.createElement("button");
   submit.className = "btn primary";
   submit.textContent = "Submit answers";
-  host.append(submit);
+  actions.append(nextBtn, submit);
+  host.append(actions);
 
   const result = document.createElement("div");
   result.hidden = true;
   host.append(result);
 
-  function tick() {
+  function syncButtons() {
+    if (hasPerQ) {
+      nextBtn.hidden = current >= count - 1;
+      submit.hidden = current < count - 1;
+    } else {
+      nextBtn.hidden = true;
+      submit.hidden = false;
+    }
+  }
+  syncButtons();
+
+  function lockCard(i) {
+    cards[i].querySelectorAll("input, textarea").forEach(x => (x.disabled = true));
+  }
+
+  function paintTotal() {
     const t = $("quizTimer");
-    if (!t) return;
-    const m = String(Math.floor(remaining / 60)).padStart(2, "0");
-    const s = String(remaining % 60).padStart(2, "0");
-    t.textContent = `${m}:${s}`;
+    t.textContent = formatTime(remaining);
     t.classList.toggle("warning", remaining <= 15);
     $("quizProgress").style.width = (100 * remaining / total) + "%";
-    if (remaining <= 0) return finish(true);
-    remaining--;
+  }
+
+  function paintQuestion() {
+    const t = $("qTimer");
+    t.textContent = formatTime(qRemaining);
+    t.classList.toggle("warning", qRemaining <= 5);
+    $("qProgress").style.width = (100 * qRemaining / perQuestion) + "%";
+    $("qCounter").textContent = `Question ${current + 1} of ${count}`;
+  }
+
+  // Moves to the next question (button click or when the question timer runs out).
+  function goNext() {
+    if (finished) return;
+    lockCard(current);
+    if (current >= count - 1) return finish(true);
+    cards[current].hidden = true;
+    current++;
+    cards[current].hidden = false;
+    syncButtons();
+    qRemaining = perQuestion;
+    paintQuestion();
+    qRemaining--;
+    cards[current].scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function tick() {
+    if (hasTotal) {
+      paintTotal();
+      if (remaining <= 0) return finish(true);
+      remaining--;
+    }
+    if (hasPerQ) {
+      paintQuestion();
+      if (qRemaining <= 0) return goNext();
+      qRemaining--;
+    }
   }
 
   async function finish(timesUp) {
@@ -851,7 +974,9 @@ function renderQuiz(questions) {
     });
 
     host.querySelectorAll("input, textarea").forEach(x => (x.disabled = true));
-    submit.disabled = true;
+    host.querySelectorAll(".quiz-timer").forEach(t => t.classList.remove("warning"));
+    actions.hidden = true;
+    if (hasPerQ) cards.forEach(c => (c.hidden = true));
     result.hidden = false;
     result.className = "score-card";
 
@@ -908,7 +1033,7 @@ function renderQuiz(questions) {
     if (auth?.currentUser) {
       await saveResult({
         score, total: graded, percent, answers: records,
-        title: `${$("quizDifficulty").value} quiz · ${questions.length} questions`,
+        title: `${$("quizDifficulty").value} quiz · ${count} questions`,
         date: new Date().toISOString()
       });
     } else {
@@ -919,8 +1044,10 @@ function renderQuiz(questions) {
     }
   }
 
+  nextBtn.onclick = goNext;
   submit.onclick = () => finish(false);
-  if (timed) {
+
+  if (hasTotal || hasPerQ) {
     tick();
     timer = setInterval(tick, 1000);
   }

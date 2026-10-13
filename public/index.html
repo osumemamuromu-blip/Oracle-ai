@@ -1291,9 +1291,280 @@ function renderQuiz(questions) {
       setStatus("quizStatus", "Quiz submitted, but no answer key was available.", true);
       return;
     }
+function renderQuiz(questions) {
+  if (timer) clearInterval(timer);
+  finished = false;
+
+  const host = $("quizOutput");
+  host.innerHTML = "";
+
+  const count = questions.length;
+  const totalMinutes = Number($("quizTotalTime").value);
+  const perQuestion = Number($("quizQuestionTime").value);
+  const hasTotal = totalMinutes > 0;
+  const hasPerQ = perQuestion > 0;
+
+  const total = totalMinutes * 60;
+  let remaining = total;
+  let qRemaining = perQuestion;
+  let current = 0;
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "quiz-toolbar";
+  const parts = [];
+
+  if (hasTotal) {
+    parts.push(
+      '<div class="timer-block"><strong>⏱ Total time</strong>' +
+      '<div class="quiz-timer" id="quizTimer"></div>' +
+      '<div class="quiz-progress"><div class="quiz-progress-fill" id="quizProgress"></div></div></div>'
+    );
+  }
+
+  if (hasPerQ) {
+    parts.push(
+      '<div class="timer-block"><strong>⏳ <span id="qCounter"></span></strong>' +
+      '<div class="quiz-timer" id="qTimer"></div>' +
+      '<div class="quiz-progress"><div class="quiz-progress-fill" id="qProgress"></div></div></div>'
+    );
+  }
+
+  if (!parts.length) {
+    parts.push(
+      `<div><strong>${count} questions</strong><div class="score-detail">No time limit</div></div>`
+    );
+  }
+
+  toolbar.innerHTML = parts.join("");
+  host.append(toolbar);
+
+  const cards = [];
+
+  questions.forEach((q, i) => {
+    const card = document.createElement("div");
+    card.className = "quiz-question";
+
+    const prompt = document.createElement("p");
+    prompt.textContent = `${i + 1}. ${q.question || q.prompt || "Question"}`;
+    card.append(prompt);
+
+    const opts = q.options || q.choices || [];
+
+    if (Array.isArray(opts) && opts.length) {
+      opts.forEach((o, j) => {
+        const label = document.createElement("label");
+        const input = document.createElement("input");
+        const span = document.createElement("span");
+
+        input.type = "radio";
+        input.name = "q" + i;
+        input.value = j;
+        span.textContent = optionText(o);
+
+        label.append(input, span);
+        card.append(label);
+      });
+    } else {
+      const ta = document.createElement("textarea");
+      ta.className = "short-textarea";
+      ta.placeholder = "Type your answer…";
+      ta.dataset.typed = i;
+      card.append(ta);
+    }
+
+    card.hidden = hasPerQ && i !== 0;
+    cards.push(card);
+    host.append(card);
+  });
+
+  const actions = document.createElement("div");
+  actions.className = "actions";
+
+  const nextBtn = document.createElement("button");
+  nextBtn.className = "btn";
+  nextBtn.textContent = "Next question →";
+
+  const submit = document.createElement("button");
+  submit.className = "btn primary";
+  submit.textContent = "Submit answers";
+
+  actions.append(nextBtn, submit);
+  host.append(actions);
+
+  const result = document.createElement("div");
+  result.hidden = true;
+  host.append(result);
+
+  function syncButtons() {
+    if (hasPerQ) {
+      nextBtn.hidden = current >= count - 1;
+      submit.hidden = current < count - 1;
+    } else {
+      nextBtn.hidden = true;
+      submit.hidden = false;
+    }
+  }
+
+  syncButtons();
+
+  function lockCard(i) {
+    cards[i].querySelectorAll("input, textarea").forEach(x => {
+      x.disabled = true;
+    });
+  }
+
+  function paintTotal() {
+    const t = $("quizTimer");
+    t.textContent = formatTime(remaining);
+    t.classList.toggle("warning", remaining <= 15);
+    $("quizProgress").style.width = (100 * remaining / total) + "%";
+  }
+
+  function paintQuestion() {
+    const t = $("qTimer");
+    t.textContent = formatTime(qRemaining);
+    t.classList.toggle("warning", qRemaining <= 5);
+    $("qProgress").style.width = (100 * qRemaining / perQuestion) + "%";
+    $("qCounter").textContent = `Question ${current + 1} of ${count}`;
+  }
+
+  function goNext() {
+    if (finished) return;
+
+    lockCard(current);
+
+    if (current >= count - 1) return finish(true);
+
+    cards[current].hidden = true;
+    current++;
+    cards[current].hidden = false;
+
+    syncButtons();
+    qRemaining = perQuestion;
+    paintQuestion();
+    qRemaining--;
+
+    cards[current].scrollIntoView({
+      behavior: "smooth",
+      block: "nearest"
+    });
+  }
+
+  function tick() {
+    if (hasTotal) {
+      paintTotal();
+      if (remaining <= 0) return finish(true);
+      remaining--;
+    }
+
+    if (hasPerQ) {
+      paintQuestion();
+      if (qRemaining <= 0) return goNext();
+      qRemaining--;
+    }
+  }
+
+  async function finish(timesUp) {
+    if (finished) return;
+
+    finished = true;
+    clearInterval(timer);
+    timer = null;
+
+    let score = 0;
+    let graded = 0;
+    const records = [];
+
+    questions.forEach((q, i) => {
+      const opts = q.options || q.choices || [];
+      const key = getAnswerKey(q, Array.isArray(opts) ? opts : []);
+      const selected = host.querySelector(`input[name="q${i}"]:checked`);
+      const typed = host.querySelector(`[data-typed="${i}"]`);
+
+      let chosen = "No answer";
+
+      if (selected) {
+        chosen = optionText(opts[Number(selected.value)]);
+      } else if (typed?.value.trim()) {
+        chosen = typed.value.trim();
+      }
+
+      let isGraded = false;
+      let isCorrect = false;
+
+      if (key) {
+        isGraded = true;
+
+        if (selected && key.index !== null) {
+          isCorrect = Number(selected.value) === key.index;
+        } else if (chosen !== "No answer") {
+          isCorrect =
+            chosen.trim().toLowerCase() === key.text.trim().toLowerCase();
+        }
+      }
+
+      if (isGraded) {
+        graded++;
+        if (isCorrect) score++;
+      }
+
+      records.push({
+        question: q.question || q.prompt || `Question ${i + 1}`,
+        chosen: String(chosen),
+        correct: key ? key.text : "Not provided",
+        answerIndex: key ? key.index : null,
+        isCorrect,
+        explanation: String(q.explanation || ""),
+        graded: isGraded
+      });
+    });
+
+    host.querySelectorAll("input, textarea").forEach(x => {
+      x.disabled = true;
+    });
+
+    host.querySelectorAll(".quiz-timer").forEach(t => {
+      t.classList.remove("warning");
+    });
+
+    actions.hidden = true;
+
+    if (hasPerQ) {
+      cards.forEach(c => {
+        c.hidden = true;
+      });
+    }
+
+    result.hidden = false;
+    result.className = "score-card";
+
+    if (!graded) {
+      result.innerHTML =
+        "<h3>Quiz completed</h3>" +
+        "<p>No recognised answer key was returned, so a reliable score cannot be calculated.</p>";
+
+      records.forEach((r, i) => {
+        const p = document.createElement("p");
+        p.textContent = `${i + 1}. ${r.question} — Yours: ${r.chosen}`;
+        result.append(p);
+      });
+
+      setStatus(
+        "quizStatus",
+        "Quiz submitted, but no answer key was available.",
+        true
+      );
+      return;
+    }
 
     const percent = Math.round(score / graded * 100);
-    const message = percent >= 80 ? "Excellent work! 🎉" : percent >= 60 ? "Good effort! Keep practising." : "Keep going — practice makes progress.";
+
+    const message =
+      percent >= 80
+        ? "Excellent work! 🎉"
+        : percent >= 60
+        ? "Good effort! Keep practising."
+        : "Keep going — practice makes progress.";
 
     result.innerHTML =
       `<div class="score-hero">
@@ -1311,34 +1582,90 @@ function renderQuiz(questions) {
       <h3>Answer review</h3><div id="answerReview"></div>`;
 
     const review = $("answerReview");
+
     records.forEach((r, i) => {
       const div = document.createElement("div");
-      div.className = "quiz-feedback " + (r.graded ? (r.isCorrect ? "correct" : "incorrect") : "");
+
+      div.className =
+        "quiz-feedback " +
+        (r.graded ? (r.isCorrect ? "correct" : "incorrect") : "");
+
       const head = document.createElement("p");
-      head.textContent = `${i + 1}. ${r.graded ? (r.isCorrect ? "✓ Correct" : "✗ Incorrect") : "Not graded"} — ${r.question}`;
-      const detail = document.createElement("p");
-      detail.textContent = `Your answer: ${r.chosen} · Correct answer: ${r.correct}`;
-      div.append(head, detail);
-      if (r.explanation) {
-        const ex = document.createElement("p");
-        ex.textContent = "Explanation: " + r.explanation;
-        div.append(ex);
+      head.textContent =
+        `${i + 1}. ${r.graded
+          ? (r.isCorrect ? "✓ Correct" : "✗ Incorrect")
+          : "Not graded"} — ${r.question}`;
+
+      div.append(head);
+
+      const opts = questions[i].options || questions[i].choices || [];
+      const key = getAnswerKey(questions[i], opts);
+      const selected = host.querySelector(`input[name="q${i}"]:checked`);
+
+      if (Array.isArray(opts) && opts.length) {
+        opts.forEach((option, j) => {
+          const line = document.createElement("p");
+          const isChosen = selected && Number(selected.value) === j;
+          const isAnswer = key && key.index === j;
+
+          line.textContent =
+            (isChosen ? "Your answer: " : "") +
+            (isAnswer ? "✓ Correct answer: " : "") +
+            optionText(option);
+
+          if (isAnswer) {
+            line.style.color = "#16a34a";
+            line.style.backgroundColor = "rgba(34,197,94,0.12)";
+            line.style.border = "1px solid #16a34a";
+            line.style.padding = "10px";
+            line.style.borderRadius = "8px";
+          } else if (isChosen && r.graded && !r.isCorrect) {
+            line.style.color = "#dc2626";
+            line.style.backgroundColor = "rgba(239,68,68,0.12)";
+            line.style.border = "1px solid #dc2626";
+            line.style.padding = "10px";
+            line.style.borderRadius = "8px";
+          }
+
+          div.append(line);
+        });
+      } else {
+        const detail = document.createElement("p");
+        detail.textContent =
+          `Your answer: ${r.chosen} · Correct answer: ${r.correct}`;
+        div.append(detail);
       }
+
+      const ex = document.createElement("p");
+      ex.textContent = r.explanation
+        ? "Explanation: " + r.explanation
+        : "Explanation: No explanation was provided for this question.";
+
+      div.append(ex);
       review.append(div);
     });
 
-    setStatus("quizStatus", timesUp ? "Time is up. Your quiz has been submitted." : `Quiz submitted. Your score is ${score} / ${graded}.`);
+    setStatus(
+      "quizStatus",
+      timesUp
+        ? "Time is up. Your quiz has been submitted."
+        : `Quiz submitted. Your score is ${score} / ${graded}.`
+    );
 
     if (auth?.currentUser) {
       await saveResult({
-        score, total: graded, percent, answers: records,
+        score,
+        total: graded,
+        percent,
+        answers: records,
         title: `${$("quizDifficulty").value} quiz · ${count} questions`,
         date: new Date().toISOString()
       });
     } else {
       const note = document.createElement("p");
       note.className = "score-detail";
-      note.textContent = "Sign in with Google to save this result and access it on other devices.";
+      note.textContent =
+        "Sign in with Google to save this result and access it on other devices.";
       result.append(note);
     }
   }
@@ -1349,6 +1676,7 @@ function renderQuiz(questions) {
   if (hasTotal || hasPerQ) {
     tick();
     timer = setInterval(tick, 1000);
+  }
   }
 }
 </script>

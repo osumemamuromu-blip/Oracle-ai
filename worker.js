@@ -1,20 +1,27 @@
 const taskInstructions = {
   correct:
-    "Correct grammar, spelling, punctuation, and sentence errors. Preserve the writer's meaning, facts, and voice. Return only the corrected text unless a brief note is necessary.",
+    "Correct grammar, spelling, punctuation, and sentence errors. Preserve the writer's meaning, facts, and voice. Return the corrected text first, then briefly explain the important corrections made.",
+
   improve:
-    "Improve clarity, grammar, flow, and readability while preserving the writer's meaning, facts, and voice. Return the improved text only.",
+    "Improve clarity, grammar, flow, and readability while preserving the writer's meaning, facts, and voice. Return the improved text first, then explain the most important improvements.",
+
   generate:
-    "Write original, clear, useful content based on the user's instructions. Follow the requested format and tone.",
+    "Write original, clear, useful content based on the user's instructions. Follow the requested format and tone. Explain difficult ideas simply when appropriate.",
+
   explain:
-    "Explain the provided material clearly and step by step. Use simple language and examples where helpful.",
+    "Teach the material step by step using simple language. Explain what it means, why it works, and how to apply it. Give a relevant example where helpful. Do not merely repeat the material.",
+
   summarize:
-    "Summarize the supplied material accurately. Preserve its main ideas and important details. Do not invent information.",
+    "Summarize the supplied material accurately. Preserve its main ideas and important details. Do not invent information. Explain unfamiliar terms briefly when useful.",
+
   tone:
-    "Rewrite the supplied text in the requested tone while preserving its meaning and important details.",
+    "Rewrite the supplied text in the requested tone while preserving its meaning and important details. Briefly explain significant tone changes.",
+
   rewrite:
-    "Rewrite the supplied text to improve clarity and natural flow while preserving its meaning and facts.",
+    "Rewrite the supplied text to improve clarity and natural flow while preserving its meaning and facts. Briefly explain important changes.",
+
   expand:
-    "Expand the supplied text with relevant explanations and details. Do not invent facts or citations."
+    "Expand the supplied text with relevant explanations, examples, and details. Do not invent facts or citations. Make the added explanations clear and useful."
 };
 
 const corsHeaders = {
@@ -42,9 +49,7 @@ function extractText(data) {
     data?.choices?.[0]?.message?.content ??
     data?.output?.[0]?.content?.[0]?.text;
 
-  if (typeof text === "string") return text.trim();
-
-  return "";
+  return typeof text === "string" ? text.trim() : "";
 }
 
 function parseQuiz(text) {
@@ -61,7 +66,7 @@ function parseQuiz(text) {
     const end = cleaned.lastIndexOf("}");
 
     if (start < 0 || end <= start) {
-      throw new Error("The AI did not return valid quiz JSON.");
+      throw new Error("The AI did not return valid quiz JSON. Please try again.");
     }
 
     parsed = JSON.parse(cleaned.slice(start, end + 1));
@@ -72,7 +77,7 @@ function parseQuiz(text) {
     : parsed.questions;
 
   if (!Array.isArray(questions) || !questions.length) {
-    throw new Error("No quiz questions were returned.");
+    throw new Error("No quiz questions were returned. Please try again.");
   }
 
   const validated = questions.map((item, index) => {
@@ -88,7 +93,7 @@ function parseQuiz(text) {
       options.length < 2
     ) {
       throw new Error(
-        `Quiz question ${index + 1} is incomplete.`
+        `Quiz question ${index + 1} is incomplete. Please generate the quiz again.`
       );
     }
 
@@ -100,13 +105,12 @@ function parseQuiz(text) {
       ).trim()
     );
 
-    let answer = item.answerIndex;
-
-    if (answer === undefined) answer = item.correctIndex;
-    if (answer === undefined) answer = item.correctAnswerIndex;
-    if (answer === undefined) {
-      answer = item.correctAnswer ?? item.answer;
-    }
+    let answer =
+      item.answerIndex ??
+      item.correctIndex ??
+      item.correctAnswerIndex ??
+      item.correctAnswer ??
+      item.answer;
 
     if (typeof answer === "string") {
       const value = answer.trim();
@@ -129,7 +133,7 @@ function parseQuiz(text) {
       answer >= cleanOptions.length
     ) {
       throw new Error(
-        `Quiz question ${index + 1} has an invalid answer.`
+        `Quiz question ${index + 1} has an invalid answer. Please try again.`
       );
     }
 
@@ -137,7 +141,9 @@ function parseQuiz(text) {
       question,
       options: cleanOptions,
       answerIndex: answer,
-      explanation: String(item.explanation || "")
+      explanation: String(
+        item.explanation || item.reason || ""
+      ).trim()
     };
   });
 
@@ -147,7 +153,7 @@ function parseQuiz(text) {
 async function callAI(env, prompt, jsonMode = false) {
   if (!env.AI || typeof env.AI.run !== "function") {
     const error = new Error(
-      "Cloudflare Workers AI is not connected. Check the AI binding."
+      "Cloudflare Workers AI is not connected. Check that your Worker has an AI binding named AI."
     );
     error.status = 500;
     throw error;
@@ -163,8 +169,27 @@ async function callAI(env, prompt, jsonMode = false) {
         {
           role: "system",
           content: jsonMode
-            ? "You are Malie AI, an accurate educational assistant. Follow the user's instructions and return only valid JSON, without Markdown fences or extra text."
-            : "You are Malie AI, a helpful and accurate assistant. Follow the user's instructions, preserve supplied facts, and do not invent citations."
+            ? [
+                "You are Malie AI, an accurate educational quiz generator.",
+                "Use the supplied source material as your authority.",
+                "Return only valid JSON without Markdown fences or extra text.",
+                "Every question must have one unambiguously correct answer.",
+                "Every question must include a useful explanation that teaches why the correct answer is right.",
+                "Keep explanations clear, accurate, and appropriate to the requested difficulty.",
+                "Never invent facts or make up source details."
+              ].join(" ")
+            : [
+                "You are Malie AI, a helpful, patient, accurate AI tutor and writing assistant.",
+                "Teach rather than merely give answers.",
+                "When answering educational questions, explain the reasoning step by step in simple language.",
+                "Define unfamiliar terms and use a relevant example when it helps.",
+                "For calculations, show the method, the working, and the final answer with units where appropriate.",
+                "For science questions, explain why the answer is correct, not just what the answer is.",
+                "For writing tasks, follow the requested task and preserve the user's meaning and facts.",
+                "Use headings or numbered steps when they improve clarity.",
+                "If the request is unclear, ask a brief clarifying question rather than inventing details.",
+                "Be honest about uncertainty and do not invent facts, sources, or citations."
+              ].join(" ")
         },
         {
           role: "user",
@@ -185,21 +210,27 @@ async function callAI(env, prompt, jsonMode = false) {
     const message = String(cause?.message || cause);
 
     const error = new Error(
-      /limit|quota|neuron/i.test(message)
-        ? "Cloudflare AI's free usage limit may have been reached. Please try again after the daily reset."
-        : /capacity|busy|overload/i.test(message)
-        ? "Cloudflare AI is busy right now. Please try again shortly."
+      /limit|quota|neuron|429/i.test(message)
+        ? "The Cloudflare AI usage limit may have been reached. Please try again after the usage limit resets."
+        : /capacity|busy|overload|503/i.test(message)
+        ? "Cloudflare AI is busy right now. Please wait a little and try again."
         : "Cloudflare AI could not complete the request. Please try again."
     );
 
-    error.status = /limit|quota|neuron/i.test(message) ? 429 : 503;
+    error.status =
+      /limit|quota|neuron|429/i.test(message) ? 429 : 503;
+
     throw error;
   }
 
   const text = extractText(result);
 
   if (!text) {
-    console.error("Unexpected Workers AI response:", JSON.stringify(result).slice(0, 1000));
+    console.error(
+      "Unexpected Workers AI response:",
+      JSON.stringify(result).slice(0, 1000)
+    );
+
     throw new Error("The AI returned no text. Please try again.");
   }
 
@@ -210,6 +241,7 @@ function getErrorStatus(error) {
   if ([400, 401, 403, 429, 503].includes(error.status)) {
     return error.status;
   }
+
   return 500;
 }
 
@@ -256,16 +288,29 @@ export default {
           const message = String(body.message || "").trim();
 
           if (!message) {
-            return respond({ error: "Please enter a message." }, 400);
+            return respond({
+              error: "Please enter a message."
+            }, 400);
           }
 
           if (message.length > 30000) {
-            return respond({ error: "Your message is too long." }, 400);
+            return respond({
+              error: "Your message is too long. Please shorten it."
+            }, 400);
           }
 
           const reply = await callAI(
             env,
-            "Answer the user's message clearly and honestly.\n\nUser message:\n" + message
+            [
+              "Respond to the user's message as Malie AI.",
+              "If the user is learning something, teach it in clear steps.",
+              "For calculations, show the working and explain how the result was obtained.",
+              "For school subjects, use simple explanations and examples appropriate to the question.",
+              "If the user asks for a direct answer, give it first and then explain it briefly.",
+              "",
+              "User message:",
+              message
+            ].join("\n")
           );
 
           return respond({ reply });
@@ -277,7 +322,9 @@ export default {
           const options = body.options || {};
 
           if (!inputText) {
-            return respond({ error: "Please enter some text." }, 400);
+            return respond({
+              error: "Please enter some text."
+            }, 400);
           }
 
           if (inputText.length > 30000) {
@@ -291,9 +338,16 @@ export default {
 
           const result = await callAI(
             env,
-            "Task: " + instruction +
-            "\nUser options: " + JSON.stringify(options) +
-            "\n\nText to process:\n" + inputText
+            [
+              "Task: " + instruction,
+              "User options: " + JSON.stringify(options),
+              "Follow the selected task carefully.",
+              "Preserve names, dates, figures, and other supplied facts.",
+              "Do not add unsupported information.",
+              "",
+              "Text to process:",
+              inputText
+            ].join("\n")
           );
 
           return respond({ result });
@@ -307,7 +361,9 @@ export default {
             Math.min(20, Number.parseInt(body.count, 10) || 5)
           );
 
-          const difficulty = String(body.difficulty || "medium").trim();
+          const difficulty = String(
+            body.difficulty || "medium"
+          ).trim();
 
           if (!inputText) {
             return respond({
@@ -321,22 +377,32 @@ export default {
             }, 400);
           }
 
-          const prompt =
-            "Create exactly " + count +
-            " multiple-choice questions based ONLY on the source material below.\n" +
-            "Difficulty: " + difficulty + ".\n" +
-            "Each question must have four answer options, one correct answer, " +
-            "and a short explanation. Avoid duplicates and unsupported facts.\n" +
-            "Return ONLY valid JSON in this structure:\n" +
-            '{"questions":[{"question":"Question text","options":["A","B","C","D"],"answerIndex":0,"explanation":"Short explanation"}]}' +
-            "\n\nSource material:\n" + inputText;
+          const prompt = [
+            "Create exactly " + count + " multiple-choice questions based ONLY on the source material below.",
+            "Difficulty: " + difficulty + ".",
+            "Each question must have exactly four answer options.",
+            "There must be exactly one correct answer per question.",
+            "Vary the correct answer position across questions.",
+            "Avoid duplicate questions and unsupported facts.",
+            "Make the questions test understanding, not only memorisation, when appropriate.",
+            "The explanation must teach the learner why the correct option is right.",
+            "For calculations, include the key reasoning or working in the explanation.",
+            "Keep explanations concise, clear, and suitable for the requested difficulty.",
+            "Use answerIndex as a zero-based number: 0 for the first option, 1 for the second, 2 for the third, or 3 for the fourth.",
+            "Do not put letters such as A or B in answerIndex.",
+            "Return ONLY valid JSON in this exact structure:",
+            '{"questions":[{"question":"Question text","options":["Option 1","Option 2","Option 3","Option 4"],"answerIndex":0,"explanation":"Explain why the correct option is right."}]}',
+            "",
+            "Source material:",
+            inputText
+          ].join("\n");
 
           const resultText = await callAI(env, prompt, true);
           const quiz = parseQuiz(resultText);
 
           if (quiz.questions.length !== count) {
             throw new Error(
-              `The AI returned ${quiz.questions.length} questions instead of ${count}. Please try again.`
+              `The AI returned ${quiz.questions.length} questions instead of ${count}. Please generate the quiz again.`
             );
           }
 
@@ -358,7 +424,9 @@ export default {
     }
 
     if (path.startsWith("/api/")) {
-      return respond({ error: "API endpoint not found." }, 404);
+      return respond({
+        error: "API endpoint not found."
+      }, 404);
     }
 
     if (env.ASSETS) {

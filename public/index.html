@@ -1,12 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#08090a"><meta name="description" content="Malie AI by Campus Creative — think, write, and learn better."><title>malie. — by Campus Creative</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#08090a">
+<meta name="description" content="Malie AI by Campus Creative — think, write, and learn better.">
+<title>malie. — by Campus Creative</title>
 <style>
 :root{color-scheme:dark;--bg:#08090a;--panel:#101112;--panel2:#171819;--border:#292a2c;--text:#f5f5f2;--muted:#9a9b9b;--accent:#d6f36a;--accent-ink:#171a0c;--danger:#ff8b8b;--good:#9ce7b4;--radius:18px;--shadow:0 20px 70px #0005}
 [data-theme="light"]{color-scheme:light;--bg:#f7f7f4;--panel:#fff;--panel2:#f0f0eb;--border:#e3e3dc;--text:#191a17;--muted:#696b65;--accent:#c8e95b;--accent-ink:#202512;--danger:#b72d3a;--good:#197c44;--shadow:0 20px 70px #25271912}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}body{min-height:100dvh}button,input,textarea,select{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}button:disabled{opacity:.55;cursor:not-allowed}.app{min-height:100dvh;display:grid;grid-template-columns:250px minmax(0,1fr)}.sidebar{background:var(--panel);border-right:1px solid var(--border);padding:23px 14px 15px;display:flex;flex-direction:column;gap:24px;z-index:20}.brand{padding:2px 10px 5px}.brand-name{font-size:27px;font-weight:850;letter-spacing:-1.8px;line-height:1}.brand-name span{color:var(--accent)}.brand-sub{font-size:10px;color:var(--muted);margin-top:8px;letter-spacing:.3px}.new-chat{border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:12px 13px;border-radius:12px;text-align:left;font-size:13px}.new-chat:hover,.side-link:hover{background:var(--panel2);border-color:var(--accent)}.side-label{font-size:10px;color:var(--muted);letter-spacing:1.5px;font-weight:750;padding:0 10px;text-transform:uppercase;margin-bottom:8px}.side-links{display:grid;gap:5px}.side-link{border:1px solid transparent;background:transparent;color:var(--muted);padding:11px 10px;border-radius:11px;display:flex;align-items:center;gap:11px;text-align:left;font-size:13px}.side-link .ico{width:20px;text-align:center;font-size:16px;color:var(--text)}.side-link.active{background:color-mix(in srgb,var(--accent) 13%,var(--panel));border-color:color-mix(in srgb,var(--accent) 28%,var(--border));color:var(--text)}.sidebar-bottom{margin-top:auto;border-top:1px solid var(--border);padding:15px 9px 0}.status{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}.dot{width:7px;height:7px;border-radius:50%;background:#777;flex-shrink:0}.dot.online{background:var(--good)}.dot.error{background:var(--danger)}.main{min-width:0;min-height:100dvh;display:flex;flex-direction:column}.topbar{height:68px;flex-shrink:0;padding:12px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--bg) 90%,transparent);position:sticky;top:0;z-index:5;backdrop-filter:blur(15px)}.top-left{display:flex;align-items:center;gap:12px}.page-title{font-size:13px;font-weight:700}.top-actions{display:flex;align-items:center;gap:10px}.model-pill{border:1px solid var(--border);border-radius:99px;padding:8px 11px;font-size:10px;color:var(--muted);display:flex;align-items:center;gap:7px}.theme-toggle,.menu-toggle{border:1px solid var(--border);border-radius:11px;background:var(--panel);color:var(--text);height:36px;min-width:36px;padding:0 10px}.menu-toggle{display:none}.content{width:100%;max-width:1000px;margin:0 auto;padding:36px 28px 26px;flex:1;display:flex;flex-direction:column}.view{display:none;min-height:100%;}.view.active{display:flex;flex-direction:column}.welcome{text-align:center;margin:auto auto 26px;width:100%;padding:20px 0 12px}.eyebrow{font-size:10px;font-weight:800;letter-spacing:2.1px;color:var(--muted);text-transform:uppercase;margin-bottom:17px}.hello{font-size:clamp(32px,5vw,49px);letter-spacing:-2.2px;line-height:1.08;font-weight:800;margin:0}.hello .highlight{color:var(--accent)}.subtitle{max-width:490px;margin:16px auto 0;color:var(--muted);font-size:14px;line-height:1.75}.suggestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;width:100%;max-width:680px;margin:30px auto 0;text-align:left}.suggestion{border:1px solid var(--border);border-radius:15px;background:var(--panel);color:var(--text);padding:17px;min-width:0;text-align:left;display:flex;align-items:flex-start;gap:13px;transition:transform .2s,border-color .2s}.suggestion:hover{transform:translateY(-2px);border-color:var(--accent)}.s-icon{height:37px;width:37px;flex-shrink:0;border-radius:12px;background:var(--panel2);display:grid;place-items:center;font-size:17px}.suggestion strong{font-size:12px;display:block;margin:2px 0 6px}.suggestion small{font-size:11px;color:var(--muted);line-height:1.5;display:block}.chat{display:flex;flex-direction:column;gap:23px;padding:10px 0 28px}.message{display:flex;gap:11px;align-items:flex-start}.message.user{flex-direction:row-reverse}.avatar{width:31px;height:31px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;background:var(--panel2);border:1px solid var(--border);font-weight:800;font-size:12px}.message.user .avatar{background:var(--accent);color:var(--accent-ink);border-color:transparent}.bubble{max-width:min(100%,720px);min-width:0;padding:13px 15px;border:1px solid var(--border);border-radius:4px 15px 15px 15px;background:var(--panel);font-size:13px;line-height:1.8;overflow-wrap:anywhere;white-space:pre-wrap}.message.user .bubble{border-radius:15px 4px 15px 15px;background:var(--panel2)}.message-actions{margin-top:6px}.mini-btn{border:0;background:transparent;color:var(--muted);font-size:10px;padding:5px}.mini-btn:hover{color:var(--text)}.typing{display:flex;gap:5px;padding:5px 0}.typing span{height:6px;width:6px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite}.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}@keyframes pulse{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}.composer-wrap{position:sticky;bottom:0;margin-top:auto;padding:12px 28px 12px;background:linear-gradient(transparent,var(--bg) 18%);z-index:4}.composer{max-width:790px;margin:0 auto;padding:12px 12px 10px 16px;border:1px solid var(--border);border-radius:18px;background:var(--panel);box-shadow:var(--shadow)}.composer:focus-within{border-color:color-mix(in srgb,var(--accent) 60%,var(--border))}#prompt{display:block;width:100%;resize:none;min-height:29px;max-height:170px;border:0;outline:0;background:transparent;color:var(--text);padding:4px 0;font-size:13px;line-height:1.65}#prompt::placeholder{color:var(--muted)}.composer-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}.input-hint,.footer-note{font-size:10px;color:var(--muted)}.send,.primary{border:0;border-radius:11px;background:var(--accent);color:var(--accent-ink);font-weight:800}.send{height:37px;width:39px;font-size:19px}.primary{padding:11px 16px;font-size:12px}.secondary{padding:10px 14px;border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:11px;font-size:12px}.footer-note{text-align:center;max-width:790px;margin:9px auto 0;line-height:1.5}.section-head{margin:10px 0 23px}.section-head h1{font-size:clamp(27px,4vw,36px);letter-spacing:-1.3px;margin:0 0 9px}.section-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.7}.work-card{border:1px solid var(--border);background:var(--panel);border-radius:18px;padding:22px;margin-bottom:15px}.field-label{display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:9px}.field,.work-textarea,.work-select{width:100%;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text);padding:13px;font-size:13px}.work-textarea{resize:vertical;min-height:145px;line-height:1.7}.work-select{max-width:100%;}.field-row{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:16px}.field-group{margin-bottom:16px}.button-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.result-box{border:1px solid var(--border);background:var(--panel2);border-radius:13px;padding:16px;font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:17px;min-height:48px}.result-box:empty{display:none}.small-note{font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px}.upload-zone{border:1px dashed #7778;border-radius:14px;padding:25px 15px;text-align:center;background:var(--bg)}.upload-zone strong{font-size:13px;display:block;margin-bottom:7px}.upload-zone p{font-size:11px;color:var(--muted);margin:0 0 13px}.upload-zone input{max-width:100%;font-size:11px;color:var(--muted)}.quiz-meta{display:flex;gap:10px;flex-wrap:wrap;margin:13px 0}.tag{border:1px solid var(--border);border-radius:99px;padding:7px 10px;font-size:10px;color:var(--muted)}.quiz-question{font-size:15px;font-weight:750;line-height:1.6;margin-bottom:16px}.quiz-option{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--border);border-radius:12px;padding:12px;margin:8px 0;font-size:12px;line-height:1.6;cursor:pointer}.quiz-option:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--panel))}.quiz-option input{accent-color:var(--accent);margin-top:3px}.quiz-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px}.hidden{display:none!important}.overlay{display:none}.error-note{font-size:12px;color:var(--danger);line-height:1.6;margin-top:10px}.mobile-wordmark{display:none}.coming{font-size:9px;border:1px solid var(--border);border-radius:99px;padding:4px 7px;color:var(--muted);margin-left:auto}.app-footer{font-size:10px;color:var(--muted);padding:12px 0 0;text-align:center}
-@media(max-width:760px){.app{grid-template-columns:1fr}.sidebar{position:fixed;inset:0 auto 0 0;width:min(285px,86vw);transform:translateX(-105%);transition:transform .22s;box-shadow:var(--shadow)}.sidebar.open{transform:translateX(0)}.overlay.show{display:block;position:fixed;inset:0;background:#0008;z-index:15}.topbar{height:60px;padding:10px 14px}.menu-toggle{display:block}.mobile-wordmark{display:block;font-size:18px;font-weight:850;letter-spacing:-1px}.content{padding:25px 15px 20px}.welcome{padding-top:25px}.hello{letter-spacing:-1.5px}.subtitle{font-size:13px}.suggestions{gap:8px;margin-top:24px}.suggestion{padding:12px;gap:9px}.s-icon{width:32px;height:32px}.composer-wrap{padding:10px 10px 9px}.model-pill{display:none}.field-row{grid-template-columns:1fr}.work-card{padding:16px}.section-head{margin-top:4px}.chat{gap:17px}.bubble{font-size:12px;padding:11px}.top-actions{gap:7px}}@media(max-width:380px){.suggestions{grid-template-columns:1fr}.suggestion{align-items:center}.suggestion .s-icon{margin:0}.input-hint{font-size:9px}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}body{min-height:100dvh}button,input,textarea,select{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}button:disabled{opacity:.55;cursor:not-allowed}
+
+.app{min-height:100dvh;display:grid;grid-template-columns:250px minmax(0,1fr)}
+.sidebar{background:var(--panel);border-right:1px solid var(--border);padding:23px 14px 15px;display:flex;flex-direction:column;gap:24px;z-index:20}
+.brand{padding:2px 10px 5px}
+.brand-name{font-size:27px;font-weight:850;letter-spacing:-1.8px;line-height:1}
+.brand-name span{color:var(--accent)}
+.brand-sub{font-size:10px;color:var(--muted);margin-top:8px;letter-spacing:.3px}
+.new-chat{border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:12px 13px;border-radius:12px;text-align:left;font-size:13px}
+.new-chat:hover,.side-link:hover{background:var(--panel2);border-color:var(--accent)}
+.side-label{font-size:10px;color:var(--muted);letter-spacing:1.5px;font-weight:750;padding:0 10px;text-transform:uppercase;margin-bottom:8px}
+.side-links{display:grid;gap:5px}
+.side-link{border:1px solid transparent;background:transparent;color:var(--muted);padding:11px 10px;border-radius:11px;display:flex;align-items:center;gap:11px;text-align:left;font-size:13px}
+.side-link .ico{width:20px;text-align:center;font-size:16px;color:var(--text)}
+.side-link.active{background:color-mix(in srgb,var(--accent) 13%,var(--panel));border-color:color-mix(in srgb,var(--accent) 28%,var(--border));color:var(--text)}
+.sidebar-bottom{margin-top:auto;border-top:1px solid var(--border);padding:15px 9px 0}
+.status{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:#777;flex-shrink:0}
+.dot.online{background:var(--good)}
+.dot.error{background:var(--danger)}
+
+.main{min-width:0;min-height:100dvh;display:flex;flex-direction:column}
+.topbar{height:68px;flex-shrink:0;padding:12px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--bg) 90%,transparent);position:sticky;top:0;z-index:5;backdrop-filter:blur(15px)}
+.top-left{display:flex;align-items:center;gap:12px}
+.page-title{font-size:13px;font-weight:700}
+.top-actions{display:flex;align-items:center;gap:10px}
+.model-pill{border:1px solid var(--border);border-radius:99px;padding:8px 11px;font-size:10px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.theme-toggle,.menu-toggle,.btn-auth{border:1px solid var(--border);border-radius:11px;background:var(--panel);color:var(--text);height:36px;min-width:36px;padding:0 12px;font-size:12px;font-weight:700}
+.btn-auth.avatar{width:36px;padding:0;border-radius:50%;display:grid;place-items:center;font-size:14px;background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.menu-toggle{display:none}
+
+.content{width:100%;max-width:1000px;margin:0 auto;padding:36px 28px 26px;flex:1;display:flex;flex-direction:column}
+.view{display:none;min-height:100%}
+.view.active{display:flex;flex-direction:column}
+
+.welcome{text-align:center;margin:auto auto 26px;width:100%;padding:20px 0 12px}
+.eyebrow{font-size:10px;font-weight:800;letter-spacing:2.1px;color:var(--muted);text-transform:uppercase;margin-bottom:17px}
+.hello{font-size:clamp(32px,5vw,49px);letter-spacing:-2.2px;line-height:1.08;font-weight:800;margin:0}
+.hello .highlight{color:var(--accent)}
+.subtitle{max-width:490px;margin:16px auto 0;color:var(--muted);font-size:14px;line-height:1.75}
+
+.suggestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;width:100%;max-width:680px;margin:30px auto 0;text-align:left}
+.suggestion{border:1px solid var(--border);border-radius:15px;background:var(--panel);color:var(--text);padding:17px;min-width:0;text-align:left;display:flex;align-items:flex-start;gap:13px;transition:transform .2s,border-color .2s}
+.suggestion:hover{transform:translateY(-2px);border-color:var(--accent)}
+.s-icon{height:37px;width:37px;flex-shrink:0;border-radius:12px;background:var(--panel2);display:grid;place-items:center;font-size:17px}
+.suggestion strong{font-size:12px;display:block;margin:2px 0 6px}
+.suggestion small{font-size:11px;color:var(--muted);line-height:1.5;display:block}
+
+.chat{display:flex;flex-direction:column;gap:23px;padding:10px 0 28px}
+.message{display:flex;gap:11px;align-items:flex-start}
+.message.user{flex-direction:row-reverse}
+.avatar{width:31px;height:31px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;background:var(--panel2);border:1px solid var(--border);font-weight:800;font-size:12px}
+.message.user .avatar{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.bubble{max-width:min(100%,720px);min-width:0;padding:13px 15px;border:1px solid var(--border);border-radius:4px 15px 15px 15px;background:var(--panel);font-size:13px;line-height:1.8;overflow-wrap:anywhere;white-space:pre-wrap}
+.message.user .bubble{border-radius:15px 4px 15px 15px;background:var(--panel2)}
+.bubble p{margin:.3em 0}
+.bubble h1,.bubble h2,.bubble h3{letter-spacing:normal;margin:.5em 0 .2em;font-size:15px}
+.bubble pre{overflow:auto;background:var(--bg);padding:10px;border-radius:8px;font-size:12px}
+.message-actions{margin-top:6px}
+.mini-btn{border:0;background:transparent;color:var(--muted);font-size:10px;padding:5px}
+.mini-btn:hover{color:var(--text)}
+
+.typing{display:flex;gap:5px;padding:5px 0}
+.typing span{height:6px;width:6px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite}
+.typing span:nth-child(2){animation-delay:.15s}
+.typing span:nth-child(3){animation-delay:.3s}
+@keyframes pulse{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+
+.composer-wrap{position:sticky;bottom:0;margin-top:auto;padding:12px 28px 12px;background:linear-gradient(transparent,var(--bg) 18%);z-index:4}
+.composer{max-width:790px;margin:0 auto;padding:12px 12px 10px 16px;border:1px solid var(--border);border-radius:18px;background:var(--panel);box-shadow:var(--shadow)}
+.composer:focus-within{border-color:color-mix(in srgb,var(--accent) 60%,var(--border))}
+#prompt{display:block;width:100%;resize:none;min-height:29px;max-height:170px;border:0;outline:0;background:transparent;color:var(--text);padding:4px 0;font-size:13px;line-height:1.65}
+#prompt::placeholder{color:var(--muted)}
+.composer-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}
+.input-hint,.footer-note{font-size:10px;color:var(--muted)}
+.send,.primary{border:0;border-radius:11px;background:var(--accent);color:var(--accent-ink);font-weight:800}
+.send{height:37px;width:39px;font-size:19px}
+.primary{padding:11px 16px;font-size:12px}
+.secondary{padding:10px 14px;border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:11px;font-size:12px}
+.footer-note{text-align:center;max-width:790px;margin:9px auto 0;line-height:1.5}
+
+.section-head{margin:10px 0 23px}
+.section-head h1{font-size:clamp(27px,4vw,36px);letter-spacing:-1.3px;margin:0 0 9px}
+.section-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.7}
+.work-card{border:1px solid var(--border);background:var(--panel);border-radius:18px;padding:22px;margin-bottom:15px}
+.field-label{display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:9px}
+.field,.work-textarea,.work-select{width:100%;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text);padding:13px;font-size:13px}
+.work-textarea{resize:vertical;min-height:145px;line-height:1.7}
+.work-select{max-width:100%}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:16px}
+.field-group{margin-bottom:16px}
+.button-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.result-box{border:1px solid var(--border);background:var(--panel2);border-radius:13px;padding:16px;font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:17px;min-height:48px}
+.result-box:empty{display:none}
+.small-note{font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px}
+
+.upload-zone{border:1px dashed #7778;border-radius:14px;padding:25px 15px;text-align:center;background:var(--bg)}
+.upload-zone strong{font-size:13px;display:block;margin-bottom:7px}
+.upload-zone p{font-size:11px;color:var(--muted);margin:0 0 13px}
+.upload-zone input{max-width:100%;font-size:11px;color:var(--muted)}
+
+.quiz-meta{display:flex;gap:10px;flex-wrap:wrap;margin:13px 0}
+.tag{border:1px solid var(--border);border-radius:99px;padding:7px 10px;font-size:10px;color:var(--muted)}
+.quiz-question{font-size:15px;font-weight:750;line-height:1.6;margin-bottom:16px}
+.quiz-option{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--border);border-radius:12px;padding:12px;margin:8px 0;font-size:12px;line-height:1.6;cursor:pointer}
+.quiz-option:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--panel))}
+.quiz-option input{accent-color:var(--accent);margin-top:3px}
+.quiz-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px}
+.hidden{display:none!important}
+.overlay{display:none}
+.coming{font-size:9px;border:1px solid var(--border);border-radius:99px;padding:4px 7px;color:var(--muted);margin-left:auto}
+
+/* Account Modal/Drawer Overlay styles */
+.modal-overlay{position:fixed;inset:0;background:#0008;z-index:25;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal-card{width:min(420px,92vw);background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:var(--shadow)}
+.modal-card h2{margin:0 0 8px;font-size:20px}
+.modal-card p{color:var(--muted);font-size:13px;margin:0 0 16px}
+.history-item{border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--panel2);font-size:12px;margin-bottom:8px}
+.history-item strong{display:block;margin-bottom:2px}
+.history-item small{color:var(--muted)}
+
+@media(max-width:760px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:fixed;inset:0 auto 0 0;width:min(285px,86vw);transform:translateX(-105%);transition:transform .22s;box-shadow:var(--shadow)}
+  .sidebar.open{transform:translateX(0)}
+  .overlay.show{display:block;position:fixed;inset:0;background:#0008;z-index:15}
+  .topbar{height:60px;padding:10px 14px}
+  .menu-toggle{display:block}
+  .mobile-wordmark{display:block;font-size:18px;font-weight:850;letter-spacing:-1px}
+  .content{padding:25px 15px 20px}
+  .welcome{padding-top:25px}
+  .hello{letter-spacing:-1.5px}
+  .subtitle{font-size:13px}
+  .suggestions{gap:8px;margin-top:24px}
+  .suggestion{padding:12px;gap:9px}
+  .s-icon{width:32px;height:32px}
+  .composer-wrap{padding:10px 10px 9px}
+  .model-pill{display:none}
+  .field-row{grid-template-columns:1fr}
+  .work-card{padding:16px}
+  .section-head{margin-top:4px}
+  .chat{gap:17px}
+  .bubble{font-size:12px;padding:11px}
+  .top-actions{gap:7px}
+}
+@media(max-width:380px){.suggestions{grid-template-columns:1fr}.suggestion{align-items:center}.suggestion .s-icon{margin:0}.input-hint{font-size:9px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body data-theme="dark">
@@ -25,7 +175,18 @@
 </aside>
 <div class="overlay" id="overlay"></div>
 <main class="main">
-<header class="topbar"><div class="top-left"><button class="menu-toggle" id="menuToggle" aria-label="Open menu">☰</button><div class="mobile-wordmark">malie<span style="color:var(--accent)">.</span></div><div class="page-title" id="pageTitle">Explore</div></div><div class="top-actions"><div class="model-pill"><span class="dot online"></span> Gemini-powered</div><button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="Toggle light/dark theme">☼</button></div></header>
+<header class="topbar">
+  <div class="top-left">
+    <button class="menu-toggle" id="menuToggle" aria-label="Open menu">☰</button>
+    <div class="mobile-wordmark">malie<span style="color:var(--accent)">.</span></div>
+    <div class="page-title" id="pageTitle">Explore</div>
+  </div>
+  <div class="top-actions">
+    <div class="model-pill"><span class="dot online"></span> Gemini-powered</div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="Toggle light/dark theme">☼</button>
+    <button class="btn-auth" id="authBtn">Sign in</button>
+  </div>
+</header>
 <div class="content">
 <section class="view active" id="view-explore">
   <div class="welcome" id="welcome"><div class="eyebrow">Your space to think clearly</div><h1 class="hello">Hey, Prosper<span class="highlight">.</span><br>What’s on your mind?</h1><p class="subtitle">Learn something new, untangle a difficult idea, or turn your rough thoughts into something brilliant.</p>
@@ -41,24 +202,61 @@
 <section class="view" id="view-writing">
  <div class="section-head"><h1>Writing Lab<span style="color:var(--accent)">.</span></h1><p>Make your words clearer, stronger, and more natural. Choose a workflow and Malie will help.</p></div>
  <div class="work-card"><div class="field-row"><div><label class="field-label" for="writeMode">What do you want to do?</label><select class="work-select" id="writeMode"><option value="correct">Correct grammar and spelling</option><option value="rewrite">Rewrite and improve</option><option value="professional">Make it professional</option><option value="simplify">Make it simpler</option><option value="expand">Expand my ideas</option><option value="summarize">Summarize text</option><option value="explain">Explain my writing</option></select></div><div><label class="field-label" for="writeTone">Tone</label><select class="work-select" id="writeTone"><option value="natural">Natural and clear</option><option value="professional">Professional</option><option value="friendly">Friendly</option><option value="academic">Academic</option><option value="persuasive">Persuasive</option></select></div></div>
- <div class="field-group"><label class="field-label" for="writeInput">Your text</label><textarea class="work-textarea" id="writeInput" placeholder="Paste your paragraph, email, essay, or rough idea here..."></textarea></div><div class="button-row"><button class="primary" id="writeBtn">Improve my writing ↗</button><button class="secondary" id="clearWrite">Clear</button></div><div class="result-box" id="writeResult" aria-live="polite"></div><div class="button-row hidden" id="writeResultActions"><button class="secondary" id="copyWrite">Copy result</button><button class="secondary" id="useInChat">Continue in Explore</button></div><p class="small-note">Writing Lab uses your existing Cloudflare Worker endpoint at <code>/api/write</code>[span_1](start_span)[span_1](end_span).</p></div>
+ <div class="field-group"><label class="field-label" for="writeInput">Your text</label><textarea class="work-textarea" id="writeInput" placeholder="Paste your paragraph, email, essay, or rough idea here..."></textarea></div><div class="button-row"><button class="primary" id="writeBtn">Improve my writing ↗</button><button class="secondary" id="clearWrite">Clear</button></div><div class="result-box" id="writeResult" aria-live="polite"></div><div class="button-row hidden" id="writeResultActions"><button class="secondary" id="copyWrite">Copy result</button><button class="secondary" id="useInChat">Continue in Explore</button></div><p class="small-note">Writing Lab uses your existing Cloudflare Worker endpoint at <code>/api/write</code>[span_0](start_span)[span_0](end_span).</p></div>
 </section>
 <section class="view" id="view-quiz">
  <div class="section-head"><h1>Quiz Mode<span style="color:var(--accent)">.</span></h1><p>Turn your study material into a multiple-choice quiz, test yourself, and see your score.</p></div>
- <div class="work-card" id="quizSetup"><div class="upload-zone"><strong>Choose a study PDF</strong><p>Malie will extract the text and create questions from your document.</p><input type="file" id="quizFile" accept="application/pdf,.pdf"></div><div class="field-row" style="margin-top:17px"><div><label class="field-label" for="quizCount">Number of questions</label><select class="work-select" id="quizCount"><option value="5">5 questions</option><option value="10" selected>10 questions</option><option value="15">15 questions</option><option value="20">20 questions</option></select></div><div><label class="field-label" for="quizMinutes">Time limit</label><select class="work-select" id="quizMinutes"><option value="0">No timer</option><option value="5">5 minutes</option><option value="10" selected>10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option></select></div></div><div class="button-row"><button class="primary" id="generateQuiz">Generate quiz ↗</button></div><div class="result-box" id="quizSetupStatus" aria-live="polite"></div><p class="small-note">Questions are generated using your existing <code>/api/chat</code> endpoint. PDF processing happens in your browser[span_2](start_span)[span_2](end_span).</p></div>
+ <div class="work-card" id="quizSetup"><div class="upload-zone"><strong>Choose a study PDF</strong><p>Malie will extract the text and create questions from your document.</p><input type="file" id="quizFile" accept="application/pdf,.pdf"></div><div class="field-row" style="margin-top:17px"><div><label class="field-label" for="quizCount">Number of questions</label><select class="work-select" id="quizCount"><option value="5">5 questions</option><option value="10" selected>10 questions</option><option value="15">15 questions</option><option value="20">20 questions</option></select></div><div><label class="field-label" for="quizMinutes">Time limit</label><select class="work-select" id="quizMinutes"><option value="0">No timer</option><option value="5">5 minutes</option><option value="10" selected>10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option></select></div></div><div class="button-row"><button class="primary" id="generateQuiz">Generate quiz ↗</button></div><div class="result-box" id="quizSetupStatus" aria-live="polite"></div><p class="small-note">Questions are generated using your existing <code>/api/chat</code> endpoint. PDF processing happens in your browser[span_1](start_span)[span_1](end_span).</p></div>
  <div class="work-card hidden" id="quizPanel"><div class="quiz-meta"><span class="tag" id="quizProgress">Question 1 of 10</span><span class="tag" id="quizTimer">10:00 remaining</span><span class="tag" id="quizScore">Score: 0</span></div><div id="quizQuestionArea"></div><div class="quiz-actions"><button class="secondary" id="quitQuiz">Exit quiz</button><button class="primary" id="nextQuestion">Next question →</button></div></div>
  <div class="work-card hidden" id="quizResults"><div class="section-head"><h1 id="quizResultTitle">Quiz complete.</h1><p id="quizResultSummary"></p></div><div class="button-row"><button class="primary" id="retryQuiz">Try another quiz</button><button class="secondary" id="reviewQuiz">Review answers</button></div><div id="quizReview" class="result-box hidden"></div></div>
 </section>
 <section class="view" id="view-study">
  <div class="section-head"><h1>Study from PDF<span style="color:var(--accent)">.</span></h1><p>Bring your notes or textbook. Get a concise summary, key ideas, and questions to help you remember what you read.</p></div>
- <div class="work-card"><div class="upload-zone"><strong>Upload your PDF document</strong><p>Choose lecture notes, a textbook chapter, or study material.</p><input type="file" id="studyFile" accept="application/pdf,.pdf"></div><div class="field-group" style="margin-top:18px"><label class="field-label" for="studyTask">What should Malie do with it?</label><select class="work-select" id="studyTask"><option value="summary">Summarize the document</option><option value="keypoints">Extract key points and definitions</option><option value="flashcards">Create study flashcards</option><option value="explain">Explain the material simply</option></select></div><div class="button-row"><button class="primary" id="studyBtn">Study this document ↗</button></div><div class="result-box" id="studyResult" aria-live="polite"></div><div class="button-row hidden" id="studyActions"><button class="secondary" id="copyStudy">Copy study notes</button><button class="secondary" id="quizFromStudy">Make a quiz from this PDF</button></div><p class="small-note">PDF text is extracted in your browser, then sent to your configured AI Worker to process. Very large or scanned image-only PDFs may need OCR and may not extract correctly[span_3](start_span)[span_3](end_span).</p></div>
+ <div class="work-card"><div class="upload-zone"><strong>Upload your PDF document</strong><p>Choose lecture notes, a textbook chapter, or study material.</p><input type="file" id="studyFile" accept="application/pdf,.pdf"></div><div class="field-group" style="margin-top:18px"><label class="field-label" for="studyTask">What should Malie do with it?</label><select class="work-select" id="studyTask"><option value="summary">Summarize the document</option><option value="keypoints">Extract key points and definitions</option><option value="flashcards">Create study flashcards</option><option value="explain">Explain the material simply</option></select></div><div class="button-row"><button class="primary" id="studyBtn">Study this document ↗</button></div><div class="result-box" id="studyResult" aria-live="polite"></div><div class="button-row hidden" id="studyActions"><button class="secondary" id="copyStudy">Copy study notes</button><button class="secondary" id="quizFromStudy">Make a quiz from this PDF</button></div><p class="small-note">PDF text is extracted in your browser, then sent to your configured AI Worker to process. Very large or scanned image-only PDFs may need OCR and may not extract correctly[span_2](start_span)[span_2](end_span).</p></div>
 </section>
 <section class="view" id="view-premium"><div class="section-head"><h1>Malie 2 Premium<span style="color:var(--accent)">.</span></h1><p>A more powerful Malie experience is on the way.</p></div><div class="work-card"><div class="eyebrow">Coming soon</div><h2 style="font-size:24px;letter-spacing:-.8px;margin:0 0 12px">More room for bigger ideas.</h2><p style="color:var(--muted);font-size:13px;line-height:1.8;max-width:560px">Malie 2 Premium is planned for a future release. This section is a preview only; premium features and subscriptions are not active yet.</p></div></section>
 </div>
 <div class="composer-wrap" id="composerWrap"><form class="composer" id="chatForm"><textarea id="prompt" rows="1" maxlength="12000" placeholder="Ask Malie anything..." aria-label="Message Malie" required></textarea><div class="composer-bottom"><span class="input-hint">Enter to send · Shift + Enter for a new line</span><button class="send" id="sendBtn" type="submit" aria-label="Send message">↑</button></div></form><div class="footer-note">Malie can make mistakes. Verify important information.</div></div>
 </main></div>
+
+<!-- Account / Sign-in Modal -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal-card">
+    <h2 id="modalTitle">Account</h2>
+    <p id="modalSub">Manage your account and view quiz history.</p>
+    <div id="modalContent"></div>
+    <div class="button-row" style="margin-top:16px">
+      <button class="secondary" id="closeModal">Close</button>
+      <button class="primary" id="modalActionBtn" style="display:none">Sign out</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAbHz_yfiQrPNuODTrKujQ9kNcR4sbpNfQ",
+  authDomain: "malie-ai-auth.firebaseapp.com",
+  projectId: "malie-ai-auth",
+  storageBucket: "malie-ai-auth.firebasestorage.app",
+  messagingSenderId: "334163694573",
+  appId: "1:334163694573:web:1d82c54f057ad74e2ecde4",
+  measurementId: "G-7FHDD141B5"
+};
+
+let auth = null, db = null, currentUser = null;
+try {
+  const app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+} catch(e) {
+  console.warn("Firebase initialization skipped or failed:", e);
+}
+
 "use strict";
 const API_CHAT="/api/chat",API_WRITE="/api/write";
 const $=id=>document.getElementById(id);let busy=false,firstMessage=true,currentView="explore",lastWriteResult="",lastStudyResult="";
@@ -66,32 +264,349 @@ const form=$('chatForm'),promptBox=$('prompt'),sendBtn=$('sendBtn'),chat=$('chat
 if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}
 function setStatus(message,state=''){ $('sideStatus').textContent=message;$('sideDot').className='dot'+(state?' '+state:''); }
 function escapeText(s){return String(s??'');}
+
+function parseMarkdown(text) {
+  const lines = String(text ?? "").split("\n");
+  const out = [];
+  let inCode = false, codeLines = [];
+  for(const line of lines) {
+    if(line.trim().startsWith("```")) {
+      if(inCode) {
+        out.push("<pre><code>" + escapeText(codeLines.join("\n")) + "</code></pre>");
+        codeLines = [];
+      }
+      inCode = !inCode;
+      continue;
+    }
+    if(inCode) { codeLines.push(line); continue; }
+    const h = line.match(/^(#{1,3})\s+(.+)/);
+    if(h) {
+      out.push(`<h${h[1].length}>${escapeText(h[2])}</h${h[1].length}>`);
+    } else if(/^\s*[-*]\s+/.test(line)) {
+      out.push("<li>" + escapeText(line.replace(/^\s*[-*]\s+/, "")) + "</li>");
+    } else if(line.trim() !== "") {
+      out.push("<p>" + escapeText(line) + "</p>");
+    }
+  }
+  if(inCode) out.push("<pre><code>" + escapeText(codeLines.join("\n")) + "</code></pre>");
+  return out.join("");
+}
+
 function resizeInput(){promptBox.style.height='auto';promptBox.style.height=Math.min(promptBox.scrollHeight,170)+'px';}promptBox.addEventListener('input',resizeInput);
 promptBox.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();if(!busy)form.requestSubmit();}});
-function addMessage(role,text){const row=document.createElement('div');row.className='message '+role;const avatar=document.createElement('div');avatar.className='avatar';avatar.textContent=role==='user'?'P':'m.';const body=document.createElement('div');body.style.minWidth='0';const bubble=document.createElement('div');bubble.className='bubble';bubble.textContent=text;body.appendChild(bubble);if(role==='assistant'){const actions=document.createElement('div');actions.className='message-actions';const copy=document.createElement('button');copy.className='mini-btn';copy.type='button';copy.textContent='Copy response';copy.onclick=async()=>{try{await navigator.clipboard.writeText(text);copy.textContent='Copied!';}catch(_){copy.textContent='Copy unavailable';}};actions.appendChild(copy);body.appendChild(actions);}row.append(avatar,body);chat.appendChild(row);return row;}
-function addTyping(){const row=document.createElement('div');row.className='message';row.id='typingIndicator';const av=document.createElement('div');av.className='avatar';av.textContent='m.';const bubble=document.createElement('div');bubble.className='bubble';bubble.setAttribute('aria-label','Malie is thinking');const dots=document.createElement('div');dots.className='typing';for(let i=0;i<3;i++)dots.appendChild(document.createElement('span'));bubble.appendChild(dots);row.append(av,bubble);chat.appendChild(row);row.scrollIntoView({behavior:'smooth',block:'end'});return row;}
-function extractReply(data){if(typeof data==='string')return data;if(!data||typeof data!=='object')return '';for(const key of ['reply','response','text','message','result'])if(typeof data[key]==='string')return data[key];const parts=data.candidates?.[0]?.content?.parts;if(Array.isArray(parts))return parts.map(p=>typeof p.text==='string'?p.text:'').filter(Boolean).join('\n');return '';}
-function readableError(data,status){if(data&&typeof data.error==='string')return data.error;if(status===404)return 'The API endpoint was not found (404). Check that this Worker includes '+API_CHAT+'.';if(status===429)return 'The AI service has reached a usage limit. Please wait and try again.';if(status>=500)return 'The Cloudflare Worker or AI service returned HTTP '+status+'. Check the Worker logs.';return 'The request failed (HTTP '+status+').';}
-async function postJSON(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body)});const raw=await r.text();let data={};try{data=raw?JSON.parse(raw):{};}catch(_){data={rawText:raw};}if(!r.ok)throw new Error(readableError(data,r.status));return data;}
-async function sendMessage(message){if(busy||!message.trim())return;busy=true;sendBtn.disabled=true;promptBox.disabled=true;if(firstMessage){welcome.style.display='none';chat.style.display='flex';firstMessage=false;}addMessage('user',message);promptBox.value='';resizeInput();const typing=addTyping();setStatus('Connecting to AI…');try{const data=await postJSON(API_CHAT,{message});const reply=extractReply(data);if(!reply)throw new Error('The Worker responded, but no AI reply was found. It should return JSON containing a reply field.');typing.remove();addMessage('assistant',reply);setStatus('AI response received','online');}catch(e){typing.remove();addMessage('assistant',"I couldn't complete that request.\n\n"+(e.message||'Unexpected error')+'\n\nCheck your Cloudflare Worker and try again.');setStatus('Connection needs attention','error');console.error('Malie chat request failed:',e);}finally{busy=false;sendBtn.disabled=false;promptBox.disabled=false;promptBox.focus();}}
+
+function addMessage(role,text){
+  const row=document.createElement('div');row.className='message '+role;
+  const avatar=document.createElement('div');avatar.className='avatar';avatar.textContent=role==='user'?'P':'m.';
+  const body=document.createElement('div');body.style.minWidth='0';
+  const bubble=document.createElement('div');bubble.className='bubble';
+  if(role==='assistant'){ bubble.innerHTML=parseMarkdown(text); } else { bubble.textContent=text; }
+  body.appendChild(bubble);
+  if(role==='assistant'){
+    const actions=document.createElement('div');actions.className='message-actions';
+    const copy=document.createElement('button');copy.className='mini-btn';copy.type='button';copy.textContent='Copy response';
+    copy.onclick=async()=>{try{await navigator.clipboard.writeText(text);copy.textContent='Copied!';}catch(_){copy.textContent='Copy unavailable';}};
+    actions.appendChild(copy);body.appendChild(actions);
+  }
+  row.append(avatar,body);chat.appendChild(row);return row;
+}
+
+function addTyping(){
+  const row=document.createElement('div');row.className='message';row.id='typingIndicator';
+  const av=document.createElement('div');av.className='avatar';av.textContent='m.';
+  const bubble=document.createElement('div');bubble.className='bubble';bubble.setAttribute('aria-label','Malie is thinking');
+  const dots=document.createElement('div');dots.className='typing';for(let i=0;i<3;i++)dots.appendChild(document.createElement('span'));
+  bubble.appendChild(dots);row.append(av,bubble);chat.appendChild(row);row.scrollIntoView({behavior:'smooth',block:'end'});return row;
+}
+
+function extractReply(data){
+  if(typeof data==='string')return data;
+  if(!data||typeof data!=='object')return '';
+  for(const key of ['reply','response','text','message','result'])if(typeof data[key]==='string')return data[key];
+  const parts=data.candidates?.[0]?.content?.parts;
+  if(Array.isArray(parts))return parts.map(p=>typeof p.text==='string'?p.text:'').filter(Boolean).join('\n');
+  return '';
+}
+
+function readableError(data,status){
+  if(data&&typeof data.error==='string')return data.error;
+  if(status===404)return 'The API endpoint was not found (404). Check that this Worker includes '+API_CHAT+'.';
+  if(status===429)return 'The AI service has reached a usage limit. Please wait and try again.';
+  if(status>=500)return 'The Cloudflare Worker or AI service returned HTTP '+status+'. Check the Worker logs.';
+  return 'The request failed (HTTP '+status+').';
+}
+
+async function postJSON(url,body){
+  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body)});
+  const raw=await r.text();let data={};
+  try{data=raw?JSON.parse(raw):{};}catch(_){data={rawText:raw};}
+  if(!r.ok)throw new Error(readableError(data,r.status));return data;
+}
+
+async function sendMessage(message){
+  if(busy||!message.trim())return;busy=true;sendBtn.disabled=true;promptBox.disabled=true;
+  if(firstMessage){welcome.style.display='none';chat.style.display='flex';firstMessage=false;}
+  addMessage('user',message);promptBox.value='';resizeInput();
+  const typing=addTyping();setStatus('Connecting to AI…');
+  try{
+    const data=await postJSON(API_CHAT,{message});
+    const reply=extractReply(data);
+    if(!reply)throw new Error('The Worker responded, but no AI reply was found. It should return JSON containing a reply field.');
+    typing.remove();addMessage('assistant',reply);setStatus('AI response received','online');
+  }catch(e){
+    typing.remove();
+    addMessage('assistant',"I couldn't complete that request.\n\n"+(e.message||'Unexpected error')+'\n\nCheck your Cloudflare Worker and try again.');
+    setStatus('Connection needs attention','error');
+  }finally{busy=false;sendBtn.disabled=false;promptBox.disabled=false;promptBox.focus();}
+}
+
 form.addEventListener('submit',e=>{e.preventDefault();sendMessage(promptBox.value);});
-function switchView(name){if(!['explore','writing','quiz','study','premium'].includes(name))return;currentView=name;document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+name));document.querySelectorAll('.side-link[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===name));const titles={explore:'Explore',writing:'Writing Lab',quiz:'Quiz Mode',study:'Study from PDF',premium:'Malie 2 Premium'};pageTitle.textContent=titles[name];composerWrap.classList.toggle('hidden',name!=='explore');closeMenu();window.scrollTo({top:0,behavior:'smooth'});}
-document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));document.querySelectorAll('[data-open-view]').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.openView)));document.querySelectorAll('[data-prompt]').forEach(b=>b.addEventListener('click',()=>{if(currentView!=='explore')switchView('explore');const p=b.dataset.prompt||'';promptBox.value=p;resizeInput();sendMessage(p);}));
-$('newChat').addEventListener('click',()=>{if(busy)return;chat.replaceChildren();chat.style.display='none';welcome.style.display='block';firstMessage=true;promptBox.value='';resizeInput();switchView('explore');setStatus('Ready for a new chat');promptBox.focus();});
-$('themeToggle').addEventListener('click',()=>{const light=document.body.dataset.theme!=='light';document.body.dataset.theme=light?'light':'dark';$('themeToggle').textContent=light?'☾':'☼';$('themeToggle').title=light?'Switch to dark theme':'Switch to light theme';$('themeToggle').setAttribute('aria-label',$('themeToggle').title);});
-function closeMenu(){$('sidebar').classList.remove('open');$('overlay').classList.remove('show');}$('menuToggle').addEventListener('click',()=>{$('sidebar').classList.toggle('open');$('overlay').classList.toggle('show');});$('overlay').addEventListener('click',closeMenu);
-async function extractPdf(file){if(!file)throw new Error('Choose a PDF file first.');if(file.type&&file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf'))throw new Error('Please choose a PDF file.');if(!window.pdfjsLib)throw new Error('The PDF reader could not load. Check your internet connection and refresh the page.');const bytes=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:bytes}).promise;let pages=[];for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i);const content=await page.getTextContent();pages.push(content.items.map(x=>x.str).join(' '));}const text=pages.join('\n\n');if(!text.trim())throw new Error('No selectable text was found. This may be a scanned/image-only PDF and needs OCR.');return {text:text.slice(0,45000),pages:pdf.numPages};}
+
+function switchView(name){
+  if(!['explore','writing','quiz','study','premium'].includes(name))return;
+  currentView=name;
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+name));
+  document.querySelectorAll('.side-link[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
+  const titles={explore:'Explore',writing:'Writing Lab',quiz:'Quiz Mode',study:'Study from PDF',premium:'Malie 2 Premium'};
+  pageTitle.textContent=titles[name];composerWrap.classList.toggle('hidden',name!=='explore');closeMenu();window.scrollTo({top:0,behavior:'smooth'});
+}
+
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
+document.querySelectorAll('[data-open-view]').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.openView)));
+document.querySelectorAll('[data-prompt]').forEach(b=>b.addEventListener('click',()=>{
+  if(currentView!=='explore')switchView('explore');
+  const p=b.dataset.prompt||'';promptBox.value=p;resizeInput();sendMessage(p);
+}));
+
+$('newChat').addEventListener('click',()=>{
+  if(busy)return;chat.replaceChildren();chat.style.display='none';welcome.style.display='block';
+  firstMessage=true;promptBox.value='';resizeInput();switchView('explore');setStatus('Ready for a new chat');promptBox.focus();
+});
+
+$('themeToggle').addEventListener('click',()=>{
+  const light=document.body.dataset.theme!=='light';
+  document.body.dataset.theme=light?'light':'dark';
+  $('themeToggle').textContent=light?'☾':'☼';$('themeToggle').title=light?'Switch to dark theme':'Switch to light theme';
+});
+
+function closeMenu(){$('sidebar').classList.remove('open');$('overlay').classList.remove('show');}
+$('menuToggle').addEventListener('click',()=>{$('sidebar').classList.toggle('open');$('overlay').classList.toggle('show');});$('overlay').addEventListener('click',closeMenu);
+
+// Auth & Modal UI Handlers
+const authBtn = $('authBtn'), authModal =$('authModal'), closeModal = $('closeModal'), modalActionBtn =$('modalActionBtn');
+const modalTitle = $('modalTitle'), modalSub = $('modalSub'), modalContent =$('modalContent');
+
+async function renderAuthModalContent() {
+  if (currentUser) {
+    modalTitle.textContent = "Your Account";
+    modalSub.textContent = currentUser.email || currentUser.displayName || "Signed in";
+    modalActionBtn.textContent = "Sign out";
+    modalActionBtn.style.display = "inline-block";
+    
+    let historyHtml = '<p style="font-size:13px;color:var(--muted);margin-bottom:10px">Recent quiz history:</p>';
+    if (db && auth) {
+      try {
+        const snap = await getDocs(query(collection(db, "users", currentUser.uid, "quizHistory"), orderBy("date", "desc"), limit(5)));
+        if (!snap.empty) {
+          snap.forEach(docSnap => {
+            const data = docSnap.data();
+            historyHtml += `<div class="history-item"><strong>${data.title || 'Quiz'}</strong><small>Score: ${data.score}/${data.total} (${data.percent}%)</small></div>`;
+          });
+        } else {
+          historyHtml += '<p style="font-size:12px;color:var(--muted)">No past quiz records found.</p>';
+        }
+      } catch (err) {
+        historyHtml += '<p style="font-size:12px;color:var(--danger)">Could not load history.</p>';
+      }
+    }
+    modalContent.innerHTML = historyHtml;
+  } else {
+    modalTitle.textContent = "Sign in to Malie";
+    modalSub.textContent = "Connect with Google to save quiz scores and history.";
+    modalActionBtn.style.display = "none";
+    modalContent.innerHTML = '<button class="primary" id="googleSignIn" style="width:100%;padding:12px">Sign in with Google</button>';
+    setTimeout(() => {
+      const gBtn = $('googleSignIn');
+      if (gBtn) {
+        gBtn.onclick = async () => {
+          if (!auth) return alert("Firebase auth is not configured.");
+          try {
+            await signInWithPopup(auth, new GoogleAuthProvider());
+            authModal.classList.remove('show');
+          } catch(err) {
+            alert("Sign in failed: " + err.message);
+          }
+        };
+      }
+    }, 50);
+  }
+}
+
+authBtn.onclick = () => {
+  if (!auth) { alert("Firebase is not initialized."); return; }
+  if (currentUser) {
+    authModal.classList.add('show');
+    renderAuthModalContent();
+  } else {
+    authModal.classList.add('show');
+    renderAuthModalContent();
+  }
+};
+
+closeModal.onclick = () => authModal.classList.remove('show');
+authModal.onclick = (e) => { if(e.target === authModal) authModal.classList.remove('show'); };
+
+modalActionBtn.onclick = async () => {
+  if (currentUser && auth) {
+    await signOut(auth);
+    authModal.classList.remove('show');
+  }
+};
+
+if (auth) {
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    if (user) {
+      const initial = (user.email || user.displayName || "U").charAt(0).toUpperCase();
+      authBtn.textContent = initial;
+      authBtn.classList.add('avatar');
+      authBtn.title = user.email || user.displayName;
+    } else {
+      authBtn.textContent = "Sign in";
+      authBtn.classList.remove('avatar');
+      authBtn.title = "";
+    }
+  });
+}
+
+async function extractPdf(file){
+  if(!file)throw new Error('Choose a PDF file first.');
+  if(file.type&&file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf'))throw new Error('Please choose a PDF file.');
+  if(!window.pdfjsLib)throw new Error('The PDF reader could not load.');
+  const bytes=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:bytes}).promise;
+  let pages=[];for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i);const content=await page.getTextContent();pages.push(content.items.map(x=>x.str).join(' '));}
+  const text=pages.join('\n\n');if(!text.trim())throw new Error('No selectable text was found.');return {text:text.slice(0,45000),pages:pdf.numPages};
+}
 function showError(target,error){target.textContent='Error: '+(error?.message||String(error));target.classList.remove('hidden');}
-$('writeBtn').addEventListener('click',async()=>{const text=$('writeInput').value.trim();if(!text){$('writeResult').textContent='Please paste your text first.';return;}const btn=$('writeBtn');btn.disabled=true;btn.textContent='Working…';$('writeResult').textContent='Malie is working on your text…';$('writeResultActions').classList.add('hidden');try{const mode=$('writeMode').value;const options={tone:$('writeTone').value};const data=await postJSON(API_WRITE,{mode,text,options});lastWriteResult=extractReply(data);if(!lastWriteResult)throw new Error('The Worker did not return a result field. Check the /api/write response format.');$('writeResult').textContent=lastWriteResult;$('writeResultActions').classList.remove('hidden');setStatus('Writing result ready','online');}catch(e){showError($('writeResult'),e);setStatus('Writing request failed','error');}finally{btn.disabled=false;btn.textContent='Improve my writing ↗';}});
-$('clearWrite').addEventListener('click',()=>{$('writeInput').value='';$('writeResult').textContent='';$('writeResultActions').classList.add('hidden');lastWriteResult='';});$('copyWrite').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(lastWriteResult);$('copyWrite').textContent='Copied!';}catch(_){$('copyWrite').textContent='Copy unavailable';}});$('useInChat').addEventListener('click',()=>{switchView('explore');promptBox.value='Help me continue improving this text:\n\n'+lastWriteResult;resizeInput();promptBox.focus();});
-let quizQuestions=[],quizIndex=0,quizAnswers=[],quizSeconds=0,quizInterval=null,quizEnded=false,quizSourceText='';function stopQuizTimer(){if(quizInterval){clearInterval(quizInterval);quizInterval=null;}}function formatTime(n){return Math.floor(n/60)+':'+String(n%60).padStart(2,'0');}function startQuizTimer(){stopQuizTimer();if(quizSeconds<=0){$('quizTimer').textContent='No timer';return;}const tick=()=>{$('quizTimer').textContent=formatTime(quizSeconds)+' remaining';if(quizSeconds<=0){stopQuizTimer();finishQuiz(true);return;}quizSeconds--;};tick();quizInterval=setInterval(tick,1000);}
-function parseQuizReply(reply){let s=reply.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');const start=s.indexOf('{'),end=s.lastIndexOf('}');if(start>=0&&end>start)s=s.slice(start,end+1);let obj;try{obj=JSON.parse(s);}catch(_){throw new Error('Malie returned quiz text that was not valid JSON. Try generating the quiz again.');}const qs=Array.isArray(obj)?obj:obj.questions;if(!Array.isArray(qs)||!qs.length)throw new Error('No quiz questions were found in the AI response.');return qs.map(q=>({question:String(q.question||q.q||''),options:Array.isArray(q.options)?q.options.map(String):Array.isArray(q.choices)?q.choices.map(String):[],answer:Number.isInteger(q.answer)?q.answer:Number.isInteger(q.correctAnswer)?q.correctAnswer:parseInt(q.answer,10),explanation:String(q.explanation||q.reason||q.rationale||'').trim()})).filter(q=>q.question&&q.options.length>=2&&q.answer>=0&&q.answer<q.options.length);}
-$('generateQuiz').addEventListener('click',async()=>{const file=$('quizFile').files[0];const btn=$('generateQuiz');btn.disabled=true;btn.textContent='Preparing quiz…';$('quizSetupStatus').textContent='Reading your PDF…';try{const pdf=await extractPdf(file);quizSourceText=pdf.text;$('quizSetupStatus').textContent='Generating questions from '+pdf.pages+' page(s)…';const count=Number($('quizCount').value);const prompt='Create exactly '+count+' useful multiple-choice study questions based only on the study text below. Each question must have 4 options. Return ONLY valid JSON, no markdown, in this format: {"questions":[{"question":"...","options":["A...","B...","C...","D..."],"answer":0,"explanation":"..."}]}. The answer must be the zero-based index of the correct option. Make distractors plausible. For every question, explanation must be a clear 1-3 sentence teaching explanation: state why the correct option is correct and, when useful, why the most tempting wrong option is wrong. Never leave explanation empty.\n\nSTUDY TEXT:\n'+quizSourceText;const data=await postJSON(API_CHAT,{message:prompt});quizQuestions=parseQuizReply(extractReply(data));if(!quizQuestions.length)throw new Error('The AI response did not contain usable questions. Try again.');quizAnswers=new Array(quizQuestions.length).fill(null);quizIndex=0;quizEnded=false;quizSeconds=Number($('quizMinutes').value)*60;$('quizSetup').classList.add('hidden');$('quizResults').classList.add('hidden');$('quizReview').classList.add('hidden');$('quizPanel').classList.remove('hidden');renderQuestion();startQuizTimer();setStatus('Quiz ready','online');}catch(e){showError($('quizSetupStatus'),e);setStatus('Quiz generation failed','error');}finally{btn.disabled=false;btn.textContent='Generate quiz ↗';}});
-function renderQuestion(){const q=quizQuestions[quizIndex];$('quizProgress').textContent='Question '+(quizIndex+1)+' of '+quizQuestions.length;$('quizScore').textContent='Answered: '+quizAnswers.filter(x=>x!==null).length;$('quizQuestionArea').replaceChildren();const question=document.createElement('div');question.className='quiz-question';question.textContent=q.question;$('quizQuestionArea').appendChild(question);q.options.forEach((opt,i)=>{const label=document.createElement('label');label.className='quiz-option';const radio=document.createElement('input');radio.type='radio';radio.name='quizAnswer';radio.value=String(i);radio.checked=quizAnswers[quizIndex]===i;radio.addEventListener('change',()=>{quizAnswers[quizIndex]=i;$('quizScore').textContent='Answered: '+quizAnswers.filter(x=>x!==null).length;});const text=document.createElement('span');text.textContent=opt;label.append(radio,text);$('quizQuestionArea').appendChild(label);});$('nextQuestion').textContent=quizIndex===quizQuestions.length-1?'Finish quiz ✓':'Next question →';}
-$('nextQuestion').addEventListener('click',()=>{if(quizAnswers[quizIndex]===null&&quizIndex<quizQuestions.length-1){/* allow skipping */}if(quizIndex<quizQuestions.length-1){quizIndex++;renderQuestion();}else finishQuiz(false);});function finishQuiz(timeout){if(quizEnded)return;quizEnded=true;stopQuizTimer();$('quizPanel').classList.add('hidden');$('quizResults').classList.remove('hidden');const score=quizQuestions.reduce((n,q,i)=>n+(quizAnswers[i]===q.answer?1:0),0);$('quizResultTitle').textContent=timeout?'Time is up.':'Quiz complete.';$('quizResultSummary').textContent='You scored '+score+' out of '+quizQuestions.length+' ('+Math.round(score/quizQuestions.length*100)+'%). '+(score/quizQuestions.length>=.8?'Great work — you know this material well.':score/quizQuestions.length>=.5?'Good effort. Review the explanations to strengthen what you know.':'Keep practicing. Review the correct answers, then try again.');$('quizReview').classList.add('hidden');$('reviewQuiz').textContent='Review answers';}
-$('quitQuiz').addEventListener('click',()=>{stopQuizTimer();$('quizPanel').classList.add('hidden');$('quizSetup').classList.remove('hidden');});$('retryQuiz').addEventListener('click',()=>{stopQuizTimer();$('quizResults').classList.add('hidden');$('quizSetup').classList.remove('hidden');$('quizSetupStatus').textContent='';});$('reviewQuiz').addEventListener('click',()=>{const box=$('quizReview');if(!box.classList.contains('hidden')){box.classList.add('hidden');return;}box.textContent=quizQuestions.map((q,i)=>'Q'+(i+1)+'. '+q.question+'\nYour answer: '+(quizAnswers[i]===null?'Not answered':q.options[quizAnswers[i]])+'\nCorrect answer: '+q.options[q.answer]+'\nExplanation: '+(q.explanation||'No explanation was provided for this question. Generate a new quiz to try again.')).join('\n\n');box.classList.remove('hidden');});
-$('studyBtn').addEventListener('click',async()=>{const file=$('studyFile').files[0],btn=$('studyBtn');btn.disabled=true;btn.textContent='Reading document…';$('studyResult').textContent='Extracting text from your PDF…';$('studyActions').classList.add('hidden');try{const pdf=await extractPdf(file);const tasks={summary:'Write a clear, well-structured summary with headings.',keypoints:'Extract the most important key points, terms, and definitions in a study-friendly list.',flashcards:'Create useful flashcards in Question: / Answer: format.',explain:'Teach the material in simple language with examples and explain difficult terms.'};$('studyResult').textContent='Asking Malie to prepare your notes…';const data=await postJSON(API_CHAT,{message:tasks[$('studyTask').value]+' Use only the document text below.\n\nDOCUMENT TEXT:\n'+pdf.text});lastStudyResult=extractReply(data);if(!lastStudyResult)throw new Error('No study notes were returned by the Worker.');$('studyResult').textContent=lastStudyResult;$('studyActions').classList.remove('hidden');setStatus('Study notes ready','online');}catch(e){showError($('studyResult'),e);setStatus('PDF study failed','error');}finally{btn.disabled=false;btn.textContent='Study this document ↗';}});
-$('copyStudy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(lastStudyResult);$('copyStudy').textContent='Copied!';}catch(_){$('copyStudy').textContent='Copy unavailable';}});$('quizFromStudy').addEventListener('click',()=>{switchView('quiz');if($('studyFile').files[0]){$('quizFile').files;/* user chooses the PDF again because file inputs cannot be assigned programmatically */$('quizSetupStatus').textContent='Please choose the same PDF above to generate your quiz.';}});
+
+$('writeBtn').addEventListener('click',async()=>{
+  const text=$('writeInput').value.trim();if(!text){$('writeResult').textContent='Please paste your text first.';return;}
+  const btn=$('writeBtn');btn.disabled=true;btn.textContent='Working…';$('writeResult').textContent='Malie is working on your text…';$('writeResultActions').classList.add('hidden');
+  try{
+    const mode=$('writeMode').value;const options={tone:$('writeTone').value};
+    const data=await postJSON(API_WRITE,{mode,text,options});
+    lastWriteResult=extractReply(data);
+    if(!lastWriteResult)throw new Error('The Worker did not return a result field.');
+    $('writeResult').textContent=lastWriteResult;$('writeResultActions').classList.remove('hidden');setStatus('Writing result ready','online');
+  }catch(e){showError($('writeResult'),e);setStatus('Writing request failed','error');}finally{btn.disabled=false;btn.textContent='Improve my writing ↗';}
+});
+
+$('clearWrite').addEventListener('click',()=>{$('writeInput').value='';$('writeResult').textContent='';$('writeResultActions').classList.add('hidden');lastWriteResult='';});
+$('copyWrite').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(lastWriteResult);$('copyWrite').textContent='Copied!';}catch(_){$('copyWrite').textContent='Copy unavailable';}});$('useInChat').addEventListener('click',()=>{switchView('explore');promptBox.value='Help me continue improving this text:\n\n'+lastWriteResult;resizeInput();promptBox.focus();});
+
+let quizQuestions=[],quizIndex=0,quizAnswers=[],quizSeconds=0,quizInterval=null,quizEnded=false,quizSourceText='';
+function stopQuizTimer(){if(quizInterval){clearInterval(quizInterval);quizInterval=null;}}
+function formatTime(n){return Math.floor(n/60)+':'+String(n%60).padStart(2,'0');}
+function startQuizTimer(){
+  stopQuizTimer();if(quizSeconds<=0){$('quizTimer').textContent='No timer';return;}
+  const tick=()=>{$('quizTimer').textContent=formatTime(quizSeconds)+' remaining';if(quizSeconds<=0){stopQuizTimer();finishQuiz(true);return;}quizSeconds--;};
+  tick();quizInterval=setInterval(tick,1000);
+}
+function parseQuizReply(reply){
+  let s=reply.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
+  const start=s.indexOf('{'),end=s.lastIndexOf('}');if(start>=0&&end>start)s=s.slice(start,end+1);
+  let obj;try{obj=JSON.parse(s);}catch(_){throw new Error('Malie returned quiz text that was not valid JSON.');}
+  const qs=Array.isArray(obj)?obj:obj.questions;if(!Array.isArray(qs)||!qs.length)throw new Error('No quiz questions were found.');
+  return qs.map(q=>({
+    question:String(q.question||q.q||''),
+    options:Array.isArray(q.options)?q.options.map(String):Array.isArray(q.choices)?q.choices.map(String):[],
+    answer:Number.isInteger(q.answer)?q.answer:Number.isInteger(q.correctAnswer)?q.correctAnswer:parseInt(q.answer,10),
+    explanation:String(q.explanation||q.reason||q.rationale||'').trim()
+  })).filter(q=>q.question&&q.options.length>=2&&q.answer>=0&&q.answer<q.options.length);
+}
+
+$('generateQuiz').addEventListener('click',async()=>{
+  const file=$('quizFile').files[0];const btn=$('generateQuiz');btn.disabled=true;btn.textContent='Preparing quiz…';$('quizSetupStatus').textContent='Reading your PDF…';
+  try{
+    const pdf=await extractPdf(file);quizSourceText=pdf.text;$('quizSetupStatus').textContent='Generating questions from '+pdf.pages+' page(s)…';
+    const count=Number($('quizCount').value);
+    const prompt='Create exactly '+count+' useful multiple-choice study questions based only on the study text below. Each question must have 4 options. Return ONLY valid JSON, no markdown, in this format: {"questions":[{"question":"...","options":["A...","B...","C...","D..."],"answer":0,"explanation":"..."}]}. The answer must be the zero-based index of the correct option.\n\nSTUDY TEXT:\n'+quizSourceText;
+    const data=await postJSON(API_CHAT,{message:prompt});
+    quizQuestions=parseQuizReply(extractReply(data));
+    if(!quizQuestions.length)throw new Error('The AI response did not contain usable questions.');
+    quizAnswers=new Array(quizQuestions.length).fill(null);quizIndex=0;quizEnded=false;quizSeconds=Number($('quizMinutes').value)*60;
+    $('quizSetup').classList.add('hidden');$('quizResults').classList.add('hidden');$('quizReview').classList.add('hidden');$('quizPanel').classList.remove('hidden');
+    renderQuestion();startQuizTimer();setStatus('Quiz ready','online');
+  }catch(e){showError($('quizSetupStatus'),e);setStatus('Quiz generation failed','error');}finally{btn.disabled=false;btn.textContent='Generate quiz ↗';}
+});
+
+function renderQuestion(){
+  const q=quizQuestions[quizIndex];
+  $('quizProgress').textContent='Question '+(quizIndex+1)+' of '+quizQuestions.length;
+  $('quizScore').textContent='Answered: '+quizAnswers.filter(x=>x!==null).length;
+  $('quizQuestionArea').replaceChildren();
+  const question=document.createElement('div');question.className='quiz-question';question.textContent=q.question;
+  $('quizQuestionArea').appendChild(question);
+  q.options.forEach((opt,i)=>{
+    const label=document.createElement('label');label.className='quiz-option';
+    const radio=document.createElement('input');radio.type='radio';radio.name='quizAnswer';radio.value=String(i);radio.checked=quizAnswers[quizIndex]===i;
+    radio.addEventListener('change',()=>{quizAnswers[quizIndex]=i;$('quizScore').textContent='Answered: '+quizAnswers.filter(x=>x!==null).length;});
+    const text=document.createElement('span');text.textContent=opt;label.append(radio,text);$('quizQuestionArea').appendChild(label);
+  });
+  $('nextQuestion').textContent=quizIndex===quizQuestions.length-1?'Finish quiz ✓':'Next question →';
+}
+
+$('nextQuestion').addEventListener('click',()=>{
+  if(quizIndex<quizQuestions.length-1){quizIndex++;renderQuestion();}else finishQuiz(false);
+});
+
+async function finishQuiz(timeout){
+  if(quizEnded)return;quizEnded=true;stopQuizTimer();
+  $('quizPanel').classList.add('hidden');$('quizResults').classList.remove('hidden');
+  const score=quizQuestions.reduce((n,q,i)=>n+(quizAnswers[i]===q.answer?1:0),0);
+  const percent = Math.round(score/quizQuestions.length*100);
+  $('quizResultTitle').textContent=timeout?'Time is up.':'Quiz complete.';
+  $('quizResultSummary').textContent='You scored '+score+' out of '+quizQuestions.length+' ('+percent+'%).';
+  $('quizReview').classList.add('hidden');$('reviewQuiz').textContent='Review answers';
+
+  if (currentUser && db) {
+    try {
+      await addDoc(collection(db, "users", currentUser.uid, "quizHistory"), {
+        score, total: quizQuestions.length, percent, title: 'Quiz Mode Practice', date: new Date().toISOString()
+      });
+    } catch(err) {
+      console.warn("Failed to save quiz result:", err);
+    }
+  }
+}
+
+$('quitQuiz').addEventListener('click',()=>{stopQuizTimer();$('quizPanel').classList.add('hidden');$('quizSetup').classList.remove('hidden');});
+$('retryQuiz').addEventListener('click',()=>{stopQuizTimer();$('quizResults').classList.add('hidden');$('quizSetup').classList.remove('hidden');$('quizSetupStatus').textContent='';});
+$('reviewQuiz').addEventListener('click',()=>{
+  const box=$('quizReview');if(!box.classList.contains('hidden')){box.classList.add('hidden');return;}
+  box.textContent=quizQuestions.map((q,i)=>'Q'+(i+1)+'. '+q.question+'\nYour answer: '+(quizAnswers[i]===null?'Not answered':q.options[quizAnswers[i]])+'\nCorrect answer: '+q.options[q.answer]+'\nExplanation: '+(q.explanation||'None')).join('\n\n');
+  box.classList.remove('hidden');
+});
+
+$('studyBtn').addEventListener('click',async()=>{
+  const file=$('studyFile').files[0],btn=$('studyBtn');btn.disabled=true;btn.textContent='Reading document…';$('studyResult').textContent='Extracting text from your PDF…';$('studyActions').classList.add('hidden');
+  try{
+    const pdf=await extractPdf(file);
+    const tasks={summary:'Write a clear, well-structured summary with headings.',keypoints:'Extract the most important key points, terms, and definitions.',flashcards:'Create useful flashcards in Question: / Answer: format.',explain:'Teach the material in simple language with examples.'};
+    $('studyResult').textContent='Asking Malie to prepare your notes…';
+    const data=await postJSON(API_CHAT,{message:tasks[$('studyTask').value]+' Use only the document text below.\n\nDOCUMENT TEXT:\n'+pdf.text});
+    lastStudyResult=extractReply(data);
+    if(!lastStudyResult)throw new Error('No study notes were returned.');
+    $('studyResult').innerHTML=parseMarkdown(lastStudyResult);
+    $('studyActions').classList.remove('hidden');setStatus('Study notes ready','online');
+  }catch(e){showError($('studyResult'),e);setStatus('PDF study failed','error');}finally{btn.disabled=false;btn.textContent='Study this document ↗';}
+});
+
+$('copyStudy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(lastStudyResult);$('copyStudy').textContent='Copied!';}catch(_){$('copyStudy').textContent='Copy unavailable';}});
+$('quizFromStudy').addEventListener('click',()=>{switchView('quiz');if($('studyFile').files[0]){$('quizSetupStatus').textContent='Please choose the same PDF above to generate your quiz.';}});
+
 setStatus('Interface ready');
 </script>
-</body></html>
+</body>
+</html>
+

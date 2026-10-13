@@ -3,280 +3,397 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#10111a">
-<title>Malie AI — Study & Writing Assistant</title>
+<meta name="theme-color" content="#08090a">
+<meta name="description" content="Malie AI by Campus Creative — think, write, and learn better.">
+<title>malie. — by Campus Creative</title>
 <style>
-:root {
-  color-scheme: dark;
-  --bg: #10111a; --card: #191b28; --card2: #202333;
-  --text: #f5f5fb; --muted: #a4a8bd; --line: #303449;
-  --accent: #9b87ff; --accent2: #7863ef;
-  --good: #64dba5; --bad: #ff8585;
-}
-[data-theme=light] {
-  color-scheme: light;
-  --bg: #f5f6fc; --card: #fff; --card2: #f0f1fa;
-  --text: #202237; --muted: #686d83; --line: #dedfee;
-  --accent: #7258e8; --accent2: #6045d6;
-  --good: #138657; --bad: #c93636;
-}
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }
-body {
-  margin: 0; background: var(--bg); color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.6;
-}
-button, input, textarea, select { font: inherit; }
-button { cursor: pointer; }
-button:disabled { opacity: .6; cursor: wait; }
-.container { width: min(1100px, calc(100% - 32px)); margin: auto; }
+:root{color-scheme:dark;--bg:#08090a;--panel:#101112;--panel2:#171819;--border:#292a2c;--text:#f5f5f2;--muted:#9a9b9b;--accent:#d6f36a;--accent-ink:#171a0c;--danger:#ff8b8b;--good:#9ce7b4;--shadow:0 20px 70px #0005}
+[data-theme="light"]{color-scheme:light;--bg:#f7f7f4;--panel:#fff;--panel2:#f0f0eb;--border:#e3e3dc;--text:#191a17;--muted:#696b65;--accent:#c8e95b;--accent-ink:#202512;--danger:#b72d3a;--good:#197c44;--shadow:0 20px 70px #25271912}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+body{min-height:100dvh}
+[hidden],.hidden{display:none!important}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+button:disabled{opacity:.55;cursor:not-allowed}
 
-header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
-.nav { min-height: 68px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; }
-.logo {
-  display: grid; place-items: center; width: 39px; height: 39px; border-radius: 13px;
-  background: linear-gradient(135deg, #a797ff, #6650e9); color: #fff;
-}
-.nav-actions { display: flex; gap: 7px; align-items: center; }
+/* Layout */
+.app{min-height:100dvh;display:grid;grid-template-columns:250px minmax(0,1fr)}
+.sidebar{background:var(--panel);border-right:1px solid var(--border);padding:23px 14px 15px;display:flex;flex-direction:column;gap:24px;z-index:20}
+.brand{padding:2px 10px 5px}
+.brand-name{font-size:27px;font-weight:850;letter-spacing:-1.8px;line-height:1}
+.brand-name span{color:var(--accent)}
+.brand-sub{font-size:10px;color:var(--muted);margin-top:8px;letter-spacing:.3px}
+.new-chat{border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:12px 13px;border-radius:12px;text-align:left;font-size:13px}
+.new-chat:hover,.side-link:hover{background:var(--panel2);border-color:var(--accent)}
+.side-label{font-size:10px;color:var(--muted);letter-spacing:1.5px;font-weight:750;padding:0 10px;text-transform:uppercase;margin-bottom:8px}
+.side-links{display:grid;gap:5px}
+.side-link{border:1px solid transparent;background:transparent;color:var(--muted);padding:11px 10px;border-radius:11px;display:flex;align-items:center;gap:11px;text-align:left;font-size:13px;width:100%}
+.side-link .ico{width:20px;text-align:center;font-size:16px;color:var(--text)}
+.side-link.active{background:color-mix(in srgb,var(--accent) 13%,var(--panel));border-color:color-mix(in srgb,var(--accent) 28%,var(--border));color:var(--text)}
+.sidebar-bottom{margin-top:auto;border-top:1px solid var(--border);padding:15px 9px 0}
+.side-status{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:#777;flex-shrink:0}
+.dot.online{background:var(--good)}
+.dot.error{background:var(--danger)}
+.coming{font-size:9px;border:1px solid var(--border);border-radius:99px;padding:4px 7px;color:var(--muted);margin-left:auto}
 
-.btn {
-  border: 1px solid var(--line); background: var(--card2); color: var(--text);
-  padding: 10px 14px; border-radius: 11px; font-weight: 650;
-}
-.btn.primary { background: var(--accent2); border-color: var(--accent2); color: #fff; }
-.btn.avatar {
-  width: 40px; height: 40px; padding: 0; border-radius: 50%;
-  display: grid; place-items: center; font-size: 17px; font-weight: 800; line-height: 1;
-  background: var(--accent2); border-color: var(--accent2); color: #fff;
-  transition: transform .25s cubic-bezier(.22,1,.36,1);
-}
-.btn.avatar:active { transform: scale(.88); }
+.main{min-width:0;min-height:100dvh;display:flex;flex-direction:column}
+.topbar{height:68px;flex-shrink:0;padding:12px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--bg) 90%,transparent);position:sticky;top:0;z-index:5;backdrop-filter:blur(15px)}
+.top-left{display:flex;align-items:center;gap:12px}
+.page-title{font-size:13px;font-weight:700}
+.top-actions{display:flex;align-items:center;gap:10px}
+.model-pill{border:1px solid var(--border);border-radius:99px;padding:8px 11px;font-size:10px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.top-btn{border:1px solid var(--border);border-radius:11px;background:var(--panel);color:var(--text);height:36px;min-width:36px;padding:0 12px;font-size:13px;font-weight:650}
+.top-btn.acct{width:38px;height:38px;padding:0;border-radius:50%;background:var(--accent);color:var(--accent-ink);border-color:transparent;font-size:16px;font-weight:850;display:grid;place-items:center;transition:transform .25s cubic-bezier(.22,1,.36,1)}
+.top-btn.acct:active{transform:scale(.88)}
+.menu-toggle{display:none}
+.mobile-wordmark{display:none;font-size:18px;font-weight:850;letter-spacing:-1px}
+.content{width:100%;max-width:1000px;margin:0 auto;padding:36px 28px 26px;flex:1;display:flex;flex-direction:column}
+.view{display:none;min-height:100%}
+.view.active{display:flex;flex-direction:column}
 
-.hero { text-align: center; padding: 45px 0 30px; }
-.eyebrow {
-  display: inline-block; color: var(--accent); background: var(--card2);
-  padding: 6px 12px; border-radius: 50px; font-size: 13px; font-weight: 700;
-}
-h1 { font-size: clamp(34px, 6vw, 58px); line-height: 1.12; letter-spacing: -2px; margin: 18px 0; }
-.gradient {
-  background: linear-gradient(90deg, #a99aff, #7aafff);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.hero p { color: var(--muted); max-width: 620px; margin: auto; }
-.features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 25px 0 35px; }
-.feature, .sidebar, .panel { background: var(--card); border: 1px solid var(--line); border-radius: 17px; }
-.feature { padding: 18px; }
-.feature h3 { margin: 6px 0; }
-.feature p { font-size: 13px; color: var(--muted); margin: 0; }
-.feature-icon { font-size: 25px; }
+/* Explore */
+.welcome{text-align:center;margin:auto auto 26px;width:100%;padding:20px 0 12px}
+.eyebrow{font-size:10px;font-weight:800;letter-spacing:2.1px;color:var(--muted);text-transform:uppercase;margin-bottom:17px}
+.hello{font-size:clamp(32px,5vw,49px);letter-spacing:-2.2px;line-height:1.08;font-weight:800;margin:0}
+.hello .highlight{color:var(--accent)}
+.subtitle{max-width:490px;margin:16px auto 0;color:var(--muted);font-size:14px;line-height:1.75}
+.suggestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;width:100%;max-width:680px;margin:30px auto 0;text-align:left}
+.suggestion{border:1px solid var(--border);border-radius:15px;background:var(--panel);color:var(--text);padding:17px;min-width:0;text-align:left;display:flex;align-items:flex-start;gap:13px;transition:transform .2s,border-color .2s}
+.suggestion:hover{transform:translateY(-2px);border-color:var(--accent)}
+.s-icon{height:37px;width:37px;flex-shrink:0;border-radius:12px;background:var(--panel2);display:grid;place-items:center;font-size:17px}
+.suggestion strong{font-size:12px;display:block;margin:2px 0 6px}
+.suggestion small{font-size:11px;color:var(--muted);line-height:1.5;display:block}
 
-.workspace {
-  display: grid; grid-template-columns: 220px minmax(0, 1fr);
-  gap: 17px; padding-bottom: 45px; align-items: start;
-}
-.sidebar, .panel { padding: 17px; min-width: 0; }
-.sidebar h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
-.tab {
-  display: block; width: 100%; text-align: left; border: 0; background: transparent;
-  color: var(--muted); padding: 12px; border-radius: 10px; margin: 4px 0; font-weight: 650;
-}
-.tab.active { color: var(--text); background: var(--card2); box-shadow: inset 3px 0 var(--accent); }
-.panel h2 { margin: 0 0 5px; font-size: 24px; }
-.sub { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
-.view { display: none; }
-.view.active { display: block; }
+.chat{display:flex;flex-direction:column;gap:23px;padding:10px 0 28px}
+.message{display:flex;gap:11px;align-items:flex-start;animation:appear .3s ease both}
+.message.user{flex-direction:row-reverse}
+.avatar{width:31px;height:31px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;background:var(--panel2);border:1px solid var(--border);font-weight:800;font-size:12px}
+.message.user .avatar{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.bubble{max-width:min(100%,720px);min-width:0;padding:13px 15px;border:1px solid var(--border);border-radius:4px 15px 15px 15px;background:var(--panel);font-size:13px;line-height:1.8;overflow-wrap:anywhere}
+.message.user .bubble{border-radius:15px 4px 15px 15px;background:var(--panel2);white-space:pre-wrap}
+.bubble.error{color:var(--danger)}
+.bubble p{margin:.3em 0}
+.bubble h1,.bubble h2,.bubble h3{letter-spacing:normal;margin:.5em 0 .2em;font-size:15px}
+.bubble pre,.result-box pre{overflow:auto;background:var(--bg);padding:10px;border-radius:8px;font-size:12px}
+.message-actions{margin-top:6px}
+.mini-btn{border:0;background:transparent;color:var(--muted);font-size:10px;padding:5px}
+.mini-btn:hover{color:var(--text)}
+.typing{display:flex;gap:5px;padding:5px 0}
+.typing span{height:6px;width:6px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite}
+.typing span:nth-child(2){animation-delay:.15s}
+.typing span:nth-child(3){animation-delay:.3s}
 
-label { display: block; font-size: 13px; font-weight: 700; margin: 14px 0 7px; }
-textarea, input, select {
-  width: 100%; background: var(--card2); color: var(--text);
-  border: 1px solid var(--line); border-radius: 11px; padding: 12px; outline: none;
-}
-textarea { min-height: 145px; resize: vertical; }
-textarea:focus, input:focus, select:focus { border-color: var(--accent); }
-.short-textarea { min-height: 90px; }
-.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 15px; }
-.status { min-height: 24px; margin: 12px 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
-.status.error { color: var(--bad); }
+.composer-wrap{position:sticky;bottom:0;margin-top:auto;padding:12px 28px;background:linear-gradient(transparent,var(--bg) 18%);z-index:4}
+.composer{max-width:790px;margin:0 auto;padding:12px 12px 10px 16px;border:1px solid var(--border);border-radius:18px;background:var(--panel);box-shadow:var(--shadow)}
+.composer:focus-within{border-color:color-mix(in srgb,var(--accent) 60%,var(--border))}
+#prompt{display:block;width:100%;resize:none;min-height:29px;max-height:170px;border:0;outline:0;background:transparent;color:var(--text);padding:4px 0;font-size:13px;line-height:1.65}
+#prompt::placeholder{color:var(--muted)}
+.composer-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}
+.input-hint,.footer-note{font-size:10px;color:var(--muted)}
+.send,.primary{border:0;border-radius:11px;background:var(--accent);color:var(--accent-ink);font-weight:800}
+.send{height:37px;width:39px;font-size:19px}
+.primary{padding:11px 16px;font-size:12px}
+.secondary{padding:10px 14px;border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:11px;font-size:12px}
+.footer-note{text-align:center;max-width:790px;margin:9px auto 0;line-height:1.5}
 
-.output {
-  overflow-wrap: anywhere; line-height: 1.8; background: var(--card2);
-  border: 1px solid var(--line); padding: 16px; border-radius: 12px; margin-top: 12px;
-}
-.output p { margin: .4em 0; }
-.output pre { overflow: auto; background: var(--bg); padding: 12px; border-radius: 8px; }
-.output h1, .output h2, .output h3 { letter-spacing: normal; }
-.placeholder { color: var(--muted); }
+/* Work views */
+.section-head{margin:10px 0 23px}
+.section-head h1{font-size:clamp(27px,4vw,36px);letter-spacing:-1.3px;margin:0 0 9px}
+.section-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.7}
+.work-card{border:1px solid var(--border);background:var(--panel);border-radius:18px;padding:22px;margin-bottom:15px}
+.field-label{display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:9px}
+.work-textarea,.work-select,.work-input{width:100%;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text);padding:13px;font-size:13px}
+.work-textarea{resize:vertical;min-height:145px;line-height:1.7}
+.work-textarea.short{min-height:90px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:16px}
+.field-group{margin-bottom:16px}
+.button-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.result-box{border:1px solid var(--border);background:var(--panel2);border-radius:13px;padding:16px;font-size:13px;line-height:1.8;overflow-wrap:anywhere;margin-top:17px;min-height:48px}
+.result-box p{margin:.4em 0}
+.result-box h1,.result-box h2,.result-box h3{letter-spacing:normal}
+.status{font-size:12px;color:var(--muted);line-height:1.6;margin:12px 0;min-height:18px;overflow-wrap:anywhere}
+.status.error{color:var(--danger)}
+.placeholder{color:var(--muted)}
+.upload-zone{border:1px dashed #7778;border-radius:14px;padding:22px 15px;text-align:center;background:var(--bg)}
+.upload-zone strong{font-size:13px;display:block;margin-bottom:7px}
+.upload-zone p{font-size:11px;color:var(--muted);margin:0 0 13px}
+.upload-zone input{max-width:100%;font-size:11px;color:var(--muted)}
 
-.chat-box {
-  display: flex; flex-direction: column; background: var(--bg);
-  border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
-}
-.chat-thread {
-  display: flex; flex-direction: column; gap: 10px;
-  height: min(480px, 58vh); min-height: 280px; overflow-y: auto;
-  padding: 16px; scroll-behavior: smooth;
-}
-.chat-empty { margin: auto; text-align: center; color: var(--muted); font-size: 14px; }
-.msg { display: flex; max-width: 100%; animation: appear .3s ease both; }
-.msg.user { justify-content: flex-end; }
-.bubble {
-  max-width: 82%; padding: 10px 14px; border-radius: 18px; overflow-wrap: anywhere;
-  line-height: 1.6; font-size: 15px;
-}
-.msg.user .bubble { background: var(--accent2); color: #fff; border-bottom-right-radius: 5px; white-space: pre-wrap; }
-.msg.bot .bubble { background: var(--card2); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
-.msg.bot .bubble.error { color: var(--bad); }
-.bubble p { margin: .3em 0; }
-.bubble h1, .bubble h2, .bubble h3 { letter-spacing: normal; margin: .5em 0 .2em; font-size: 17px; }
-.bubble pre { overflow: auto; background: var(--bg); padding: 10px; border-radius: 8px; font-size: 13px; }
-.typing { display: inline-flex; gap: 5px; align-items: center; height: 22px; }
-.typing span {
-  width: 7px; height: 7px; border-radius: 50%; background: var(--muted);
-  animation: bounce 1s infinite ease-in-out;
-}
-.typing span:nth-child(2) { animation-delay: .15s; }
-.typing span:nth-child(3) { animation-delay: .3s; }
-.chat-input-row {
-  display: flex; gap: 8px; align-items: flex-end; padding: 10px;
-  border-top: 1px solid var(--line); background: var(--card);
-}
-.chat-input-row textarea {
-  min-height: 44px; max-height: 140px; resize: none; padding: 11px 14px;
-  border-radius: 22px; line-height: 1.4;
-}
-.send-btn {
-  flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border-radius: 50%;
-  display: grid; place-items: center; font-size: 17px;
-}
+/* Quiz */
+#quizOutput:empty{display:none}
+#quizOutput{border:1px solid var(--border);background:var(--panel);border-radius:18px;padding:22px;margin-bottom:15px}
+.quiz-toolbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;padding:14px;margin:0 0 14px;background:var(--panel2);border:1px solid var(--border);border-radius:14px}
+.timer-block{flex:1 1 200px;min-width:0;font-size:12px}
+.quiz-timer{font-size:22px;font-weight:850;font-variant-numeric:tabular-nums;margin:4px 0 6px}
+.quiz-timer.warning{color:var(--danger);animation:flash .8s infinite alternate}
+.quiz-progress{height:7px;width:100%;background:var(--border);border-radius:20px;overflow:hidden}
+.quiz-progress-fill{height:100%;width:100%;background:var(--accent);transition:width 1s linear}
+.q-card{border:1px solid var(--border);border-radius:14px;padding:16px;margin:13px 0}
+.q-text{font-size:15px;font-weight:750;line-height:1.6;margin:0 0 14px}
+.quiz-option{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--border);border-radius:12px;padding:12px;margin:8px 0;font-size:12px;line-height:1.6;cursor:pointer}
+.quiz-option:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--panel))}
+.quiz-option input{accent-color:var(--accent);margin-top:3px}
+.score-card{margin-top:20px;padding:20px;border:1px solid var(--border);border-radius:18px;background:var(--panel2);animation:appear .5s ease both}
+.score-hero{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.score-ring{width:120px;height:120px;flex:0 0 120px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--accent) var(--angle),var(--border) 0deg);position:relative;animation:pop .6s ease both}
+.score-ring::before{content:"";position:absolute;inset:9px;background:var(--panel2);border-radius:50%}
+.score-ring-content{z-index:1;text-align:center}
+.score-number{font-size:25px;font-weight:850}
+.score-percent,.score-detail{font-size:12px;color:var(--muted)}
+.score-message{font-size:18px;font-weight:800;margin:0}
+.quiz-feedback{padding:12px 0;border-bottom:1px solid var(--border);font-size:13px}
+.quiz-feedback p{margin:4px 0}
+.quiz-feedback.correct{color:var(--good)}
+.quiz-feedback.incorrect{color:var(--danger)}
+.history-card{border:1px solid var(--border);background:var(--panel2);border-radius:12px;padding:13px;margin:10px 0}
+.history-card h4{margin:0 0 5px;font-size:14px}
+.history-card p{font-size:12px;color:var(--muted);margin:4px 0}
+.history-card summary{cursor:pointer;color:var(--accent);font-size:12px}
+.work-card h3{margin:0 0 4px;font-size:16px}
+.sub{color:var(--muted);font-size:12px;margin:0 0 14px}
 
-/* ───── Account menu (liquid full-screen) ───── */
-.blob, .menu {
-  position: fixed; inset: 0; --ox: calc(100% - 36px); --oy: 34px;
-  clip-path: circle(0px at var(--ox) var(--oy)); visibility: hidden;
-}
-.blob { z-index: 19; background: var(--accent2); transition: clip-path .7s cubic-bezier(.77,0,.18,1), visibility 0s .7s; }
-.menu {
-  z-index: 20; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch;
-  transition: clip-path .8s cubic-bezier(.77,0,.18,1) 0s, visibility 0s .8s;
-}
-.blob.open { clip-path: circle(150vmax at var(--ox) var(--oy)); visibility: visible; transition: clip-path 1s cubic-bezier(.22,1,.36,1), visibility 0s; }
-.menu.open { clip-path: circle(150vmax at var(--ox) var(--oy)); visibility: visible; transition: clip-path 1s cubic-bezier(.22,1,.36,1) .09s, visibility 0s; }
-.menu-inner { width: min(560px, calc(100% - 32px)); margin: auto; padding: 18px 0 50px; }
-.menu-top { display: flex; justify-content: space-between; align-items: center; min-height: 52px; }
-.menu-close {
-  width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line);
-  background: var(--card2); color: var(--text); font-size: 18px; display: grid; place-items: center; padding: 0;
-  transition: transform .4s cubic-bezier(.22,1,.36,1);
-}
-.menu.open .menu-close:hover { transform: rotate(90deg); }
-.menu-item { opacity: 0; transform: translateY(22px) scale(.97); transition: opacity .4s ease, transform .6s cubic-bezier(.22,1,.36,1); }
-.menu.open .menu-item { opacity: 1; transform: none; transition-delay: calc(.28s + var(--i) * 70ms); }
-.menu:not(.open) .menu-item { transition-delay: 0s; transition-duration: .2s; }
-.profile { display: flex; align-items: center; gap: 14px; margin: 14px 0 22px; }
-.profile .big {
-  width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; font-size: 25px;
-  font-weight: 800; background: var(--accent2); color: #fff; flex: 0 0 58px;
-}
-.profile strong { display: block; font-size: 18px; overflow-wrap: anywhere; }
-.profile span { font-size: 13px; color: var(--muted); }
-.premium {
-  padding: 18px; border-radius: 18px; color: #fff; margin-bottom: 22px;
-  background: linear-gradient(135deg, #8a74ff, #5a8bff);
-}
-.premium h3 { margin: 0 0 4px; }
-.premium p { margin: 0 0 12px; font-size: 13px; opacity: .9; }
-.premium .btn { background: rgba(255,255,255,.2); border-color: rgba(255,255,255,.35); color: #fff; }
-.menu h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 22px 0 8px; }
-.recent {
-  display: block; width: 100%; text-align: left; background: var(--card); border: 1px solid var(--line);
-  color: var(--text); border-radius: 13px; padding: 12px 14px; margin: 7px 0; overflow: hidden;
-  text-overflow: ellipsis; white-space: nowrap;
-}
-.recent small { display: block; color: var(--muted); font-size: 12px; }
-.menu-empty { color: var(--muted); font-size: 14px; margin: 6px 0; }
-.signout { width: 100%; margin-top: 26px; color: var(--bad); }
+/* Premium */
+.premium-card h2{font-size:24px;letter-spacing:-.8px;margin:0 0 12px}
+.premium-card p{color:var(--muted);font-size:13px;line-height:1.8;max-width:560px}
 
-.toast {
-  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 30px); opacity: 0; z-index: 30;
-  background: var(--card2); border: 1px solid var(--line); padding: 10px 16px; border-radius: 12px;
-  font-size: 14px; transition: .35s cubic-bezier(.22,1,.36,1); pointer-events: none; max-width: 90%;
-}
-.toast.show { opacity: 1; transform: translate(-50%, 0); }
-.toast.error { color: var(--bad); }
+/* Account menu (liquid full-screen) */
+.blob,.menu{position:fixed;inset:0;--ox:calc(100% - 36px);--oy:34px;clip-path:circle(0px at var(--ox) var(--oy));visibility:hidden}
+.blob{z-index:39;background:var(--accent);transition:clip-path .7s cubic-bezier(.77,0,.18,1),visibility 0s .7s}
+.menu{z-index:40;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;transition:clip-path .8s cubic-bezier(.77,0,.18,1) 0s,visibility 0s .8s}
+.blob.open{clip-path:circle(150vmax at var(--ox) var(--oy));visibility:visible;transition:clip-path 1s cubic-bezier(.22,1,.36,1),visibility 0s}
+.menu.open{clip-path:circle(150vmax at var(--ox) var(--oy));visibility:visible;transition:clip-path 1s cubic-bezier(.22,1,.36,1) .09s,visibility 0s}
+.menu-inner{width:min(560px,calc(100% - 32px));margin:auto;padding:18px 0 50px}
+.menu-top{display:flex;justify-content:space-between;align-items:center;min-height:52px}
+.menu-close{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:18px;display:grid;place-items:center;padding:0;transition:transform .4s cubic-bezier(.22,1,.36,1)}
+.menu.open .menu-close:hover{transform:rotate(90deg)}
+.menu-item{opacity:0;transform:translateY(22px) scale(.97);transition:opacity .4s ease,transform .6s cubic-bezier(.22,1,.36,1)}
+.menu.open .menu-item{opacity:1;transform:none;transition-delay:calc(.28s + var(--i) * 70ms)}
+.menu:not(.open) .menu-item{transition-delay:0s;transition-duration:.2s}
+.profile{display:flex;align-items:center;gap:14px;margin:14px 0 22px}
+.profile .big{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-size:25px;font-weight:850;background:var(--accent);color:var(--accent-ink);flex:0 0 58px}
+.profile strong{display:block;font-size:18px;overflow-wrap:anywhere}
+.profile span{font-size:12px;color:var(--muted)}
+.premium-promo{padding:18px;border-radius:18px;background:var(--accent);color:var(--accent-ink);margin-bottom:22px}
+.premium-promo h3{margin:0 0 4px}
+.premium-promo p{margin:0 0 12px;font-size:13px;opacity:.85}
+.premium-promo .btn{border:0;border-radius:11px;background:var(--accent-ink);color:var(--accent);padding:10px 14px;font-weight:800;font-size:12px}
+.menu h4{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);margin:22px 0 8px}
+.recent{display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:13px;padding:12px 14px;margin:7px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.recent:hover{border-color:var(--accent)}
+.recent small{display:block;color:var(--muted);font-size:11px}
+.menu-empty{color:var(--muted);font-size:13px;margin:6px 0}
+.signout{width:100%;margin-top:26px;color:var(--danger);padding:12px}
 
-.quiz-question { border: 1px solid var(--line); border-radius: 12px; padding: 15px; margin: 13px 0; }
-.quiz-question p { font-weight: 700; margin-top: 0; }
-.quiz-question label { display: flex; gap: 9px; align-items: flex-start; font-weight: 400; margin: 10px 0; }
-.quiz-question input { width: auto; margin-top: 6px; }
-.quiz-toolbar {
-  display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;
-  padding: 14px; margin: 14px 0; background: var(--card2); border: 1px solid var(--line); border-radius: 14px;
-}
-.timer-block { flex: 1 1 200px; min-width: 0; }
-.quiz-timer { font-size: 22px; font-weight: 850; font-variant-numeric: tabular-nums; margin-bottom: 6px; }
-.quiz-timer.warning { color: var(--bad); animation: pulse .8s infinite alternate; }
-.quiz-progress { height: 7px; width: 100%; background: var(--line); border-radius: 20px; overflow: hidden; }
-.quiz-progress-fill { height: 100%; width: 100%; background: var(--accent); transition: width 1s linear; }
-.score-card {
-  margin-top: 20px; padding: 20px; border: 1px solid var(--line);
-  border-radius: 18px; background: var(--card2); animation: appear .5s ease both;
-}
-.score-hero { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-.score-ring {
-  width: 120px; height: 120px; flex: 0 0 120px; border-radius: 50%; display: grid; place-items: center;
-  background: conic-gradient(var(--accent) var(--angle), var(--line) 0deg); position: relative; animation: pop .6s ease both;
-}
-.score-ring::before { content: ""; position: absolute; inset: 9px; background: var(--card2); border-radius: 50%; }
-.score-ring-content { z-index: 1; text-align: center; }
-.score-number { font-size: 25px; font-weight: 850; }
-.score-percent, .score-detail { font-size: 13px; color: var(--muted); }
-.score-message { font-size: 18px; font-weight: 800; margin: 0; }
-.quiz-feedback { padding: 12px 0; border-bottom: 1px solid var(--line); }
-.quiz-feedback p { margin: 4px 0; }
-.quiz-feedback.correct { color: var(--good); }
-.quiz-feedback.incorrect { color: var(--bad); }
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,30px);opacity:0;z-index:50;background:var(--panel2);border:1px solid var(--border);padding:10px 16px;border-radius:12px;font-size:13px;transition:.35s cubic-bezier(.22,1,.36,1);pointer-events:none;max-width:90%}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.error{color:var(--danger)}
 
-.history-card { border: 1px solid var(--line); background: var(--card2); border-radius: 12px; padding: 13px; margin: 10px 0; }
-.history-card h4 { margin: 0 0 5px; }
-.history-card p { font-size: 13px; color: var(--muted); margin: 4px 0; }
-.history-card summary { cursor: pointer; color: var(--accent); }
+.overlay{display:none}
+@keyframes pulse{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+@keyframes flash{to{opacity:.5}}
+@keyframes appear{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{from{transform:scale(.75)}to{transform:scale(1)}}
 
-footer { text-align: center; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding: 22px 0; }
-
-@keyframes pulse { to { opacity: .5; } }
-@keyframes appear { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes pop { from { transform: scale(.75); } to { transform: scale(1); } }
-@keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: .45; } 40% { transform: translateY(-5px); opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
-@media (max-width: 720px) {
-  .workspace { grid-template-columns: 1fr; }
-  .sidebar { padding: 10px; }
-  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
-  .tab { text-align: center; padding: 10px 3px; font-size: 12px; }
-  .features { grid-template-columns: 1fr; }
-  .hero { padding-top: 35px; }
-  .fields { grid-template-columns: 1fr; }
-  .brand { font-size: 18px; }
-  .nav-actions .btn { padding: 8px; font-size: 12px; }
-  .nav-actions .btn.avatar { width: 36px; height: 36px; padding: 0; font-size: 15px; }
-  .panel { padding: 13px; }
-  .bubble { max-width: 90%; }
+@media(max-width:760px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:fixed;inset:0 auto 0 0;width:min(285px,86vw);transform:translateX(-105%);transition:transform .22s;box-shadow:var(--shadow)}
+  .sidebar.open{transform:translateX(0)}
+  .overlay.show{display:block;position:fixed;inset:0;background:#0008;z-index:15}
+  .topbar{height:60px;padding:10px 14px}
+  .menu-toggle{display:block}
+  .mobile-wordmark{display:block}
+  .content{padding:25px 15px 20px}
+  .welcome{padding-top:25px}
+  .hello{letter-spacing:-1.5px}
+  .subtitle{font-size:13px}
+  .suggestions{gap:8px;margin-top:24px}
+  .suggestion{padding:12px;gap:9px}
+  .s-icon{width:32px;height:32px}
+  .composer-wrap{padding:10px 10px 9px}
+  .model-pill{display:none}
+  .field-row{grid-template-columns:1fr}
+  .work-card,#quizOutput{padding:16px}
+  .section-head{margin-top:4px}
+  .chat{gap:17px}
+  .bubble{font-size:12px;padding:11px}
+  .top-actions{gap:7px}
 }
+@media(max-width:380px){
+  .suggestions{grid-template-columns:1fr}
+  .suggestion{align-items:center}
+  .input-hint{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="container nav">
-    <div class="brand"><div class="logo">M</div><span>Malie AI</span></div>
-    <div class="nav-actions">
-      <button class="btn" id="themeToggle">☀️ Light mode</button>
-      <button class="btn" id="authButton">Sign in</button>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="brand-name">malie<span>.</span></div><div class="brand-sub">BY CAMPUS CREATIVE</div></div>
+    <button class="new-chat" id="newChat">＋ &nbsp; New chat</button>
+    <div>
+      <div class="side-label">Workspace</div>
+      <nav class="side-links">
+        <button class="side-link active" data-view="explore"><span class="ico">⌂</span>Explore</button>
+        <button class="side-link" data-view="writing"><span class="ico">✎</span>Writing Lab</button>
+        <button class="side-link" data-view="quiz"><span class="ico">☷</span>Quiz Mode</button>
+        <button class="side-link" data-view="premium"><span class="ico">✦</span>Malie 2 Premium <span class="coming">SOON</span></button>
+      </nav>
     </div>
-  </div>
-</header>
+    <div class="sidebar-bottom"><div class="side-status"><span class="dot" id="sideDot"></span><span id="sideStatus">Interface ready</span></div></div>
+  </aside>
+  <div class="overlay" id="overlay"></div>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="top-left">
+        <button class="top-btn menu-toggle" id="menuToggle" aria-label="Open menu">☰</button>
+        <div class="mobile-wordmark">malie<span style="color:var(--accent)">.</span></div>
+        <div class="page-title" id="pageTitle">Explore</div>
+      </div>
+      <div class="top-actions">
+        <div class="model-pill"><span class="dot online"></span> Gemini-powered</div>
+        <button class="top-btn" id="themeToggle" aria-label="Toggle theme" title="Switch to light theme">☼</button>
+        <button class="top-btn" id="authButton">Sign in</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- Explore (chat) -->
+      <section class="view active" id="view-explore">
+        <div class="welcome" id="welcome">
+          <div class="eyebrow">Your space to think clearly</div>
+          <h1 class="hello">Hey, <span id="helloName">Prosper</span><span class="highlight">.</span><br>What’s on your mind?</h1>
+          <p class="subtitle">Learn something new, untangle a difficult idea, or turn your rough thoughts into something brilliant.</p>
+          <div class="suggestions">
+            <button class="suggestion" data-prompt="Explain something I find difficult in simple terms, with examples."><span class="s-icon">✳</span><span><strong>Understand anything</strong><small>Clear explanations, step by step</small></span></button>
+            <button class="suggestion" data-open-view="writing"><span class="s-icon">✎</span><span><strong>Make your writing better</strong><small>Rewrite, correct, and refine your words</small></span></button>
+            <button class="suggestion" data-open-view="quiz"><span class="s-icon">☷</span><span><strong>Test yourself</strong><small>Upload a PDF and practise with a quiz</small></span></button>
+            <button class="suggestion" data-open-view="premium"><span class="s-icon">✦</span><span><strong>Malie 2 Premium</strong><small>More powerful tools <span class="coming">COMING SOON</span></small></span></button>
+          </div>
+        </div>
+        <div class="chat" id="chat" aria-live="polite"></div>
+      </section>
+
+      <!-- Writing Lab -->
+      <section class="view" id="view-writing">
+        <div class="section-head"><h1>Writing Lab<span style="color:var(--accent)">.</span></h1><p>Make your words clearer, stronger, and more natural. Choose a task and Malie will help.</p></div>
+        <div class="work-card">
+          <div class="field-group"><label class="field-label" for="writingInput">Your text</label><textarea class="work-textarea" id="writingInput" placeholder="Paste your paragraph, email, essay, or rough idea here..."></textarea></div>
+          <div class="field-row">
+            <div><label class="field-label" for="mode">Task</label>
+              <select class="work-select" id="mode">
+                <option value="correct">Correct grammar</option>
+                <option value="improve">Improve writing</option>
+                <option value="rewrite">Rewrite text</option>
+                <option value="summarize">Summarize</option>
+                <option value="expand">Expand ideas</option>
+              </select></div>
+            <div><label class="field-label" for="tone">Tone</label>
+              <select class="work-select" id="tone">
+                <option value="natural">Natural</option>
+                <option value="formal">Formal</option>
+                <option value="academic">Academic</option>
+                <option value="friendly">Friendly</option>
+                <option value="professional">Professional</option>
+              </select></div>
+          </div>
+          <div class="field-group"><label class="field-label" for="length">Response length</label>
+            <select class="work-select" id="length">
+              <option value="balanced">Balanced</option>
+              <option value="short">Short</option>
+              <option value="detailed">Detailed</option>
+            </select></div>
+          <div class="button-row">
+            <button class="primary" id="check">Improve my writing ↗</button>
+            <button class="secondary" id="clearWriting">Clear</button>
+          </div>
+          <p class="status" id="writingStatus"></p>
+          <div class="result-box" id="writingOutput"><span class="placeholder">Your corrected text will appear here.</span></div>
+          <div class="button-row" style="margin-top:12px"><button class="secondary" id="copyWriting">Copy result</button></div>
+        </div>
+      </section>
+
+      <!-- Quiz Mode -->
+      <section class="view" id="view-quiz">
+        <div class="section-head"><h1>Quiz Mode<span style="color:var(--accent)">.</span></h1><p>Turn your study material into a quiz, test yourself, and see your score.</p></div>
+        <div class="work-card">
+          <div class="upload-zone"><strong>Choose a study PDF</strong><p>Malie will extract the text in your browser. Or paste your notes below.</p><input id="studyFile" type="file" accept=".pdf,application/pdf"></div>
+          <div class="field-group" style="margin-top:17px"><label class="field-label" for="studyText">Study material</label><textarea class="work-textarea" id="studyText" placeholder="Paste your notes or textbook content here..."></textarea></div>
+          <div class="field-row">
+            <div><label class="field-label" for="questionCount">Number of questions</label>
+              <select class="work-select" id="questionCount">
+                <option value="5">5 questions</option>
+                <option value="10" selected>10 questions</option>
+                <option value="15">15 questions</option>
+                <option value="20">20 questions</option>
+              </select></div>
+            <div><label class="field-label" for="quizDifficulty">Difficulty</label>
+              <select class="work-select" id="quizDifficulty">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+              </select></div>
+          </div>
+          <div class="field-row">
+            <div><label class="field-label" for="quizTotalTime">⏱ Total time (whole quiz)</label>
+              <select class="work-select" id="quizTotalTime">
+                <option value="0">No total timer</option>
+                <option value="5">5 minutes</option>
+                <option value="10" selected>10 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="20">20 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60">60 minutes</option>
+              </select></div>
+            <div><label class="field-label" for="quizQuestionTime">⏳ Time per question</label>
+              <select class="work-select" id="quizQuestionTime">
+                <option value="0" selected>No question timer</option>
+                <option value="15">15 seconds</option>
+                <option value="30">30 seconds</option>
+                <option value="45">45 seconds</option>
+                <option value="60">1 minute</option>
+                <option value="90">90 seconds</option>
+                <option value="120">2 minutes</option>
+              </select></div>
+          </div>
+          <div class="button-row"><button class="primary" id="generateQuiz">Generate quiz ↗</button></div>
+          <p class="status" id="quizStatus"></p>
+        </div>
+        <div id="quizOutput"></div>
+
+        <div class="work-card">
+          <h3>My past tests</h3>
+          <p class="sub">Your completed quizzes saved to your account.</p>
+          <div id="quizHistory"><p class="placeholder">Sign in to view your saved tests.</p></div>
+          <div class="button-row" style="margin-top:12px">
+            <button class="secondary" id="refreshQuizHistory">Refresh history</button>
+            <button class="secondary" id="clearQuizHistory">Clear past tests</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Premium -->
+      <section class="view" id="view-premium">
+        <div class="section-head"><h1>Malie 2 Premium<span style="color:var(--accent)">.</span></h1><p>A more powerful Malie experience is on the way.</p></div>
+        <div class="work-card premium-card"><div class="eyebrow">Coming soon</div><h2>More room for bigger ideas.</h2><p>Malie 2 Premium is planned for a future release. This section is a preview only; premium features and subscriptions are not active yet.</p></div>
+      </section>
+    </div>
+
+    <div class="composer-wrap" id="composerWrap">
+      <form class="composer" id="chatForm">
+        <textarea id="prompt" rows="1" maxlength="12000" placeholder="Ask Malie anything..." aria-label="Message Malie" required></textarea>
+        <div class="composer-bottom"><span class="input-hint">Enter to send · Shift + Enter for a new line</span><button class="send" id="sendBtn" type="submit" aria-label="Send message">↑</button></div>
+      </form>
+      <div class="footer-note">Malie can make mistakes. Verify important information.</div>
+    </div>
+  </main>
+</div>
 
 <!-- Account menu -->
 <div class="blob" id="menuBlob"></div>
@@ -290,181 +407,17 @@ footer { text-align: center; color: var(--muted); font-size: 12px; border-top: 1
       <div class="big" id="menuAvatar">U</div>
       <div><strong id="menuName">Signed in</strong><span>Quiz history is linked to this account.</span></div>
     </div>
-    <div class="premium menu-item" style="--i:2">
-      <h3>✦ Malie Premium</h3>
+    <div class="premium-promo menu-item" style="--i:2">
+      <h3>✦ Malie 2 Premium</h3>
       <p>Longer study material, more quizzes and priority speed.</p>
-      <button class="btn" id="premiumBtn">Get Premium</button>
+      <button class="btn" id="premiumBtn">See what’s coming</button>
     </div>
-    <div class="menu-item" style="--i:3">
-      <h4>Recent chats</h4>
-      <div id="recentChats"></div>
-    </div>
-    <div class="menu-item" style="--i:4">
-      <h4>Recent quizzes</h4>
-      <div id="recentQuizzes"></div>
-    </div>
-    <div class="menu-item" style="--i:5">
-      <button class="btn signout" id="signOutButton">Sign out</button>
-    </div>
+    <div class="menu-item" style="--i:3"><h4>Recent chats</h4><div id="recentChats"></div></div>
+    <div class="menu-item" style="--i:4"><h4>Recent quizzes</h4><div id="recentQuizzes"></div></div>
+    <div class="menu-item" style="--i:5"><button class="secondary signout" id="signOutButton">Sign out</button></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
-
-<main class="container">
-  <section class="hero">
-    <span class="eyebrow">✦ Your personal AI assistant</span>
-    <h1>Think better.<br><span class="gradient">Write smarter.</span></h1>
-    <p>Improve your writing, ask questions and practise with quizzes using Malie AI.</p>
-  </section>
-
-  <section class="features">
-    <article class="feature"><div class="feature-icon">✍️</div><h3>Writing assistant</h3><p>Correct grammar, improve clarity and adjust your writing style.</p></article>
-    <article class="feature"><div class="feature-icon">💬</div><h3>AI chat</h3><p>Ask questions and get helpful explanations.</p></article>
-    <article class="feature"><div class="feature-icon">📚</div><h3>Quiz mode</h3><p>Practise questions based on your study material.</p></article>
-  </section>
-
-  <section class="workspace">
-    <aside class="sidebar">
-      <h3>Your workspace</h3>
-      <div class="tabs">
-        <button class="tab active" data-view="writing">✍️ Writing</button>
-        <button class="tab" data-view="chat">💬 AI Chat</button>
-        <button class="tab" data-view="quiz">📚 Quiz Mode</button>
-      </div>
-    </aside>
-
-    <section class="panel">
-      <div class="view active" id="writingView">
-        <h2>Writing assistant</h2>
-        <p class="sub">Enter your text and choose how Malie AI should improve it.</p>
-        <label for="writingInput">Your text</label>
-        <textarea id="writingInput" placeholder="Paste or type your writing here..."></textarea>
-        <div class="fields">
-          <div>
-            <label for="mode">Task</label>
-            <select id="mode">
-              <option value="correct">Correct grammar</option>
-              <option value="improve">Improve writing</option>
-              <option value="rewrite">Rewrite text</option>
-              <option value="summarize">Summarize</option>
-              <option value="expand">Expand ideas</option>
-            </select>
-          </div>
-          <div>
-            <label for="tone">Tone</label>
-            <select id="tone">
-              <option value="natural">Natural</option>
-              <option value="formal">Formal</option>
-              <option value="academic">Academic</option>
-              <option value="friendly">Friendly</option>
-              <option value="professional">Professional</option>
-            </select>
-          </div>
-        </div>
-        <label for="length">Response length</label>
-        <select id="length">
-          <option value="balanced">Balanced</option>
-          <option value="short">Short</option>
-          <option value="detailed">Detailed</option>
-        </select>
-        <div class="actions">
-          <button class="btn primary" id="check">Improve my writing</button>
-          <button class="btn" id="clearWriting">Clear</button>
-        </div>
-        <p class="status" id="writingStatus"></p>
-        <h3>Result</h3>
-        <div class="output" id="writingOutput"><span class="placeholder">Your corrected text will appear here.</span></div>
-        <div class="actions"><button class="btn" id="copyWriting">Copy result</button></div>
-      </div>
-
-      <div class="view" id="chatView">
-        <h2>Chat with Malie AI</h2>
-        <p class="sub">Ask a question, learn something new or get help with a problem.</p>
-        <div class="chat-box">
-          <div class="chat-thread" id="chatThread">
-            <div class="chat-empty" id="chatEmpty">👋 Ask Malie AI anything to get started.</div>
-          </div>
-          <div class="chat-input-row">
-            <textarea id="chatInput" rows="1" placeholder="Message Malie AI…"></textarea>
-            <button class="btn primary send-btn" id="ask" aria-label="Send message">➤</button>
-          </div>
-        </div>
-        <div class="actions"><button class="btn" id="clearChat">Clear chat</button></div>
-        <p class="status" id="chatStatus"></p>
-      </div>
-
-      <div class="view" id="quizView">
-        <h2>Quiz mode</h2>
-        <p class="sub">Upload a PDF or enter your study material to generate practice questions.</p>
-        <label for="studyFile">Upload a PDF (optional)</label>
-        <input id="studyFile" type="file" accept=".pdf,application/pdf">
-        <label for="studyText">Study material</label>
-        <textarea id="studyText" placeholder="Paste your notes or textbook content here..."></textarea>
-        <div class="fields">
-          <div>
-            <label for="questionCount">Number of questions</label>
-            <select id="questionCount">
-              <option value="5">5 questions</option>
-              <option value="10" selected>10 questions</option>
-              <option value="15">15 questions</option>
-              <option value="20">20 questions</option>
-            </select>
-          </div>
-          <div>
-            <label for="quizDifficulty">Difficulty</label>
-            <select id="quizDifficulty">
-              <option value="easy">Easy</option>
-              <option value="medium" selected>Medium</option>
-              <option value="hard">Hard</option>
-            </select>
-          </div>
-        </div>
-        <div class="fields">
-          <div>
-            <label for="quizTotalTime">⏱ Total time (whole quiz)</label>
-            <select id="quizTotalTime">
-              <option value="0">No total timer</option>
-              <option value="5">5 minutes</option>
-              <option value="10" selected>10 minutes</option>
-              <option value="15">15 minutes</option>
-              <option value="20">20 minutes</option>
-              <option value="30">30 minutes</option>
-              <option value="45">45 minutes</option>
-              <option value="60">60 minutes</option>
-            </select>
-          </div>
-          <div>
-            <label for="quizQuestionTime">⏳ Time per question</label>
-            <select id="quizQuestionTime">
-              <option value="0" selected>No question timer</option>
-              <option value="15">15 seconds</option>
-              <option value="30">30 seconds</option>
-              <option value="45">45 seconds</option>
-              <option value="60">1 minute</option>
-              <option value="90">90 seconds</option>
-              <option value="120">2 minutes</option>
-            </select>
-          </div>
-        </div>
-        <div class="actions"><button class="btn primary" id="generateQuiz">Generate quiz</button></div>
-        <p class="status" id="quizStatus"></p>
-        <div id="quizOutput"></div>
-
-        <section style="margin-top:28px">
-          <h3>📚 My past tests</h3>
-          <p class="sub">Your completed quizzes saved to your account.</p>
-          <div id="quizHistory"><p class="placeholder">Sign in to view your saved tests.</p></div>
-          <div class="actions">
-            <button class="btn" id="refreshQuizHistory">Refresh history</button>
-            <button class="btn" id="clearQuizHistory">Clear past tests</button>
-          </div>
-        </section>
-      </div>
-    </section>
-  </section>
-</main>
-
-<footer>Malie AI · Your writing and learning companion</footer>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
@@ -523,10 +476,14 @@ function markdown(text) {
 function show(id, value) {
   $(id).innerHTML = markdown(typeof value === "string" ? value : JSON.stringify(value, null, 2));
 }
+function side(message, state = "") {
+  $("sideStatus").textContent = message.length > 42 ? message.slice(0, 42) + "…" : message;
+  $("sideDot").className = "dot" + (state ? " " + state : "");
+}
 function setStatus(id, message, isError = false) {
   const el = $(id);
-  el.textContent = message;
-  el.classList.toggle("error", isError);
+  if (el) { el.textContent = message; el.classList.toggle("error", isError); }
+  if (message) side(message, isError ? "error" : "online");
 }
 let toastTimer;
 function toast(message, isError = false) {
@@ -560,35 +517,53 @@ async function api(path, body) {
   if (!res.ok || data.error) throw new Error(data.error || data.message || `Request failed (${res.status}).`);
   return data;
 }
-async function copyText(id) {
-  try { await navigator.clipboard.writeText($(id).innerText); return true; }
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; }
   catch { return false; }
 }
-
-/* ───────── Tabs & theme ───────── */
-function openView(name) {
-  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === name));
-  document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === name + "View"));
-}
-document.querySelectorAll(".tab").forEach(btn => { btn.onclick = () => openView(btn.dataset.view); });
-
 function safeStorage(action, key, value) {
   try { return action === "get" ? localStorage.getItem(key) : localStorage.setItem(key, value); }
   catch { return null; }
 }
+
+/* ───────── Theme ───────── */
 const savedTheme = safeStorage("get", "malie-theme");
 if (savedTheme === "light" || savedTheme === "dark") document.documentElement.dataset.theme = savedTheme;
 
-function updateThemeLabel() {
-  $("themeToggle").textContent = document.documentElement.dataset.theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode";
+function updateThemeButton() {
+  const light = document.documentElement.dataset.theme === "light";
+  $("themeToggle").textContent = light ? "☾" : "☼";
+  $("themeToggle").title = light ? "Switch to dark theme" : "Switch to light theme";
 }
-updateThemeLabel();
+updateThemeButton();
 $("themeToggle").onclick = () => {
-  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
   document.documentElement.dataset.theme = next;
   safeStorage("set", "malie-theme", next);
-  updateThemeLabel();
+  updateThemeButton();
 };
+
+/* ───────── Navigation ───────── */
+const titles = { explore: "Explore", writing: "Writing Lab", quiz: "Quiz Mode", premium: "Malie 2 Premium" };
+const composerWrap = $("composerWrap");
+
+function closeSidebar() {
+  $("sidebar").classList.remove("open");
+  $("overlay").classList.remove("show");
+}
+function switchView(name) {
+  if (!titles[name]) return;
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === "view-" + name));
+  document.querySelectorAll(".side-link[data-view]").forEach(b => b.classList.toggle("active", b.dataset.view === name));
+  $("pageTitle").textContent = titles[name];
+  composerWrap.classList.toggle("hidden", name !== "explore");
+  closeSidebar();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
+document.querySelectorAll("[data-open-view]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.openView)));
+$("menuToggle").onclick = () => { $("sidebar").classList.toggle("open"); $("overlay").classList.toggle("show"); };
+$("overlay").onclick = closeSidebar;
 
 /* ───────── Recent chats (stored on this device) ───────── */
 function getRecent() {
@@ -608,7 +583,7 @@ function renderMenuLists() {
   const chats = $("recentChats");
   chats.innerHTML = "";
   const recent = getRecent();
-  if (!recent.length) chats.innerHTML = '<p class="menu-empty">No chats yet. Ask Malie AI something!</p>';
+  if (!recent.length) chats.innerHTML = '<p class="menu-empty">No chats yet. Ask Malie something!</p>';
   recent.forEach(r => {
     const b = document.createElement("button");
     b.className = "recent";
@@ -618,10 +593,10 @@ function renderMenuLists() {
     b.append(small);
     b.onclick = () => {
       closeMenu();
-      openView("chat");
-      chatInput.value = r.t;
-      resizeChatInput();
-      chatInput.focus();
+      switchView("explore");
+      promptBox.value = r.t;
+      resizeInput();
+      promptBox.focus();
     };
     chats.append(b);
   });
@@ -636,11 +611,10 @@ function renderMenuLists() {
     const small = document.createElement("small");
     small.textContent = `${q.score ?? 0}/${q.total ?? 0} correct`;
     b.append(small);
-    b.onclick = () => { closeMenu(); openView("quiz"); $("quizHistory").scrollIntoView({ behavior: "smooth" }); };
+    b.onclick = () => { closeMenu(); switchView("quiz"); setTimeout(() => $("quizHistory").scrollIntoView({ behavior: "smooth" }), 150); };
     quizzes.append(b);
   });
 }
-
 function openMenu() {
   const r = $("authButton").getBoundingClientRect();
   const x = r.left + r.width / 2, y = r.top + r.height / 2;
@@ -662,12 +636,116 @@ function closeMenu() {
   document.body.style.overflow = "";
 }
 $("menuClose").onclick = closeMenu;
-document.addEventListener("keydown", e => { if (e.key === "Escape" && menu.classList.contains("open")) closeMenu(); });
-$("premiumBtn").onclick = () => toast("Premium is coming soon ✦");
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { if (menu.classList.contains("open")) closeMenu(); closeSidebar(); }
+});
+$("premiumBtn").onclick = () => { closeMenu(); switchView("premium"); };
 
-/* ───────── Writing assistant ───────── */
+/* ───────── Chat (Explore) ───────── */
+const form = $("chatForm"), promptBox = $("prompt"), sendBtn = $("sendBtn");
+const chat = $("chat"), welcome = $("welcome");
+let chatBusy = false, firstMessage = true;
+let userLetter = "P";
+
+function resizeInput() {
+  promptBox.style.height = "auto";
+  promptBox.style.height = Math.min(promptBox.scrollHeight, 170) + "px";
+}
+promptBox.addEventListener("input", resizeInput);
+promptBox.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!chatBusy) form.requestSubmit(); }
+});
+
+function addMessage(role) {
+  const row = document.createElement("div");
+  row.className = "message " + role;
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.textContent = role === "user" ? userLetter : "m.";
+  const body = document.createElement("div");
+  body.style.minWidth = "0";
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  body.append(bubble);
+  row.append(avatar, body);
+  chat.append(row);
+  row.scrollIntoView({ behavior: "smooth", block: "end" });
+  return { row, body, bubble };
+}
+function typingDots() {
+  return '<div class="typing" aria-label="Malie is thinking"><span></span><span></span><span></span></div>';
+}
+function addCopyButton(body, text) {
+  const actions = document.createElement("div");
+  actions.className = "message-actions";
+  const copy = document.createElement("button");
+  copy.className = "mini-btn";
+  copy.type = "button";
+  copy.textContent = "Copy response";
+  copy.onclick = async () => { copy.textContent = (await copyText(text)) ? "Copied!" : "Copy unavailable"; };
+  actions.append(copy);
+  body.append(actions);
+}
+
+async function sendChat(message) {
+  message = (message || "").trim();
+  if (!message || chatBusy) return;
+
+  chatBusy = true;
+  sendBtn.disabled = true;
+  promptBox.disabled = true;
+  if (firstMessage) { welcome.style.display = "none"; firstMessage = false; }
+
+  addMessage("user").bubble.textContent = message;
+  addRecent(message);
+  promptBox.value = "";
+  resizeInput();
+
+  const { body, bubble } = addMessage("assistant");
+  bubble.innerHTML = typingDots();
+  side("Connecting to AI…");
+
+  try {
+    const data = await api("/api/chat", { message });
+    const reply = data.reply ?? data.result ?? data.output;
+    if (!reply) throw new Error("No response returned.");
+    const text = typeof reply === "string" ? reply : JSON.stringify(reply, null, 2);
+    bubble.innerHTML = markdown(text);
+    addCopyButton(body, text);
+    side("AI response received", "online");
+  } catch (e) {
+    bubble.classList.add("error");
+    bubble.textContent = "Error: " + e.message;
+    side("Connection needs attention", "error");
+  } finally {
+    chatBusy = false;
+    sendBtn.disabled = false;
+    promptBox.disabled = false;
+    promptBox.focus();
+  }
+}
+form.addEventListener("submit", e => { e.preventDefault(); sendChat(promptBox.value); });
+
+document.querySelectorAll("[data-prompt]").forEach(b => b.addEventListener("click", () => {
+  switchView("explore");
+  sendChat(b.dataset.prompt || "");
+}));
+
+$("newChat").onclick = () => {
+  if (chatBusy) return;
+  chat.replaceChildren();
+  welcome.style.display = "block";
+  firstMessage = true;
+  promptBox.value = "";
+  resizeInput();
+  switchView("explore");
+  side("Ready for a new chat");
+  promptBox.focus();
+};
+
+/* ───────── Writing Lab ───────── */
 $("copyWriting").onclick = async () =>
-  setStatus("writingStatus", (await copyText("writingOutput")) ? "Copied." : "Copy failed; select the text manually.");
+  setStatus("writingStatus", (await copyText($("writingOutput").innerText)) ? "Copied." : "Copy failed; select the text manually.");
 
 $("clearWriting").onclick = () => {
   $("writingInput").value = "";
@@ -680,7 +758,7 @@ $("check").onclick = async () => {
   if (!text) return setStatus("writingStatus", "Please enter your text first.", true);
 
   setBusy($("check"), true, "Working…");
-  setStatus("writingStatus", "Malie AI is processing your writing…");
+  setStatus("writingStatus", "Malie is processing your writing…");
   try {
     const data = await api("/api/write", {
       mode: $("mode").value,
@@ -696,77 +774,6 @@ $("check").onclick = async () => {
   } finally {
     setBusy($("check"), false);
   }
-};
-
-/* ───────── Chat ───────── */
-const thread = $("chatThread");
-const chatInput = $("chatInput");
-let chatBusy = false;
-
-function scrollThread() { thread.scrollTop = thread.scrollHeight; }
-
-function addMessage(role) {
-  const empty = $("chatEmpty");
-  if (empty) empty.remove();
-  const row = document.createElement("div");
-  row.className = "msg " + role;
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  row.append(bubble);
-  thread.append(row);
-  scrollThread();
-  return bubble;
-}
-function typingDots() {
-  return '<span class="typing" aria-label="Malie AI is typing"><span></span><span></span><span></span></span>';
-}
-function resizeChatInput() {
-  chatInput.style.height = "auto";
-  chatInput.style.height = Math.min(chatInput.scrollHeight, 140) + "px";
-}
-
-async function sendChat() {
-  const message = chatInput.value.trim();
-  if (!message || chatBusy) return;
-
-  chatBusy = true;
-  $("ask").disabled = true;
-  setStatus("chatStatus", "");
-
-  addMessage("user").textContent = message;
-  addRecent(message);
-  chatInput.value = "";
-  resizeChatInput();
-
-  const bubble = addMessage("bot");
-  bubble.innerHTML = typingDots();
-
-  try {
-    const data = await api("/api/chat", { message });
-    const reply = data.reply ?? data.result ?? data.output;
-    if (!reply) throw new Error("No response returned.");
-    bubble.innerHTML = markdown(typeof reply === "string" ? reply : JSON.stringify(reply, null, 2));
-  } catch (e) {
-    bubble.classList.add("error");
-    bubble.textContent = "Error: " + e.message;
-  } finally {
-    chatBusy = false;
-    $("ask").disabled = false;
-    scrollThread();
-    chatInput.focus();
-  }
-}
-
-$("ask").onclick = sendChat;
-chatInput.addEventListener("input", resizeChatInput);
-chatInput.addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); }
-});
-$("clearChat").onclick = () => {
-  thread.innerHTML = '<div class="chat-empty" id="chatEmpty">👋 Ask Malie AI anything to get started.</div>';
-  chatInput.value = "";
-  resizeChatInput();
-  setStatus("chatStatus", "");
 };
 
 /* ───────── PDF import ───────── */
@@ -813,24 +820,27 @@ function historyCollection() {
   if (!auth?.currentUser) throw new Error("Sign in first.");
   return collection(db, "users", auth.currentUser.uid, "quizHistory");
 }
-
 function showAvatar(user) {
   const btn = $("authButton");
   const label = user.email || user.displayName || "Signed in";
   const letter = (label.trim().charAt(0) || "U").toUpperCase();
+  userLetter = letter;
   btn.textContent = letter;
-  btn.classList.add("avatar");
+  btn.classList.add("acct");
   btn.title = label;
   btn.setAttribute("aria-label", "Open account menu for " + label);
   $("menuAvatar").textContent = letter;
   $("menuName").textContent = label;
+  $("helloName").textContent = (user.displayName || "").trim().split(" ")[0] || "Prosper";
 }
 function showSignInButton() {
   const btn = $("authButton");
   btn.textContent = "Sign in";
-  btn.classList.remove("avatar");
+  btn.classList.remove("acct");
   btn.removeAttribute("title");
   btn.removeAttribute("aria-label");
+  userLetter = "P";
+  $("helloName").textContent = "Prosper";
 }
 
 async function loadHistory() {
@@ -917,14 +927,11 @@ $("authButton").onclick = async () => {
     toast("Sign-in failed: " + e.message + " Check Firebase authorised domains.", true);
   }
 };
-
 $("signOutButton").onclick = async () => {
   try { await signOut(auth); }
   catch (e) { toast("Sign-out failed: " + e.message, true); }
 };
-
 $("refreshQuizHistory").onclick = loadHistory;
-
 $("clearQuizHistory").onclick = async () => {
   if (!auth?.currentUser) return setStatus("quizStatus", "Sign in to clear saved history.", true);
   if (!confirm("Delete all your saved quiz history? This cannot be undone.")) return;
@@ -969,7 +976,7 @@ $("generateQuiz").onclick = async () => {
   if (!text) return setStatus("quizStatus", "Upload a readable PDF or paste study material first.", true);
 
   setBusy($("generateQuiz"), true, "Generating…");
-  setStatus("quizStatus", "Malie AI is preparing your questions…");
+  setStatus("quizStatus", "Malie is preparing your questions…");
   $("quizOutput").innerHTML = "";
   if (timer) { clearInterval(timer); timer = null; }
 
@@ -993,6 +1000,7 @@ $("generateQuiz").onclick = async () => {
     renderQuiz(questions);
     const timed = Number($("quizTotalTime").value) > 0 || Number($("quizQuestionTime").value) > 0;
     setStatus("quizStatus", timed ? "Quiz ready. Answer before the timer ends." : "Quiz ready. Take your time.");
+    $("quizOutput").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {
     setStatus("quizStatus", "Error: " + e.message, true);
   } finally {
@@ -1036,7 +1044,7 @@ function renderQuiz(questions) {
     );
   }
   if (!parts.length) {
-    parts.push(`<div><strong>${count} questions</strong><div class="score-detail">No time limit</div></div>`);
+    parts.push(`<div class="timer-block"><strong>${count} questions</strong><div class="score-detail">No time limit</div></div>`);
   }
   toolbar.innerHTML = parts.join("");
   host.append(toolbar);
@@ -1044,9 +1052,10 @@ function renderQuiz(questions) {
   const cards = [];
   questions.forEach((q, i) => {
     const card = document.createElement("div");
-    card.className = "quiz-question";
+    card.className = "q-card";
 
     const prompt = document.createElement("p");
+    prompt.className = "q-text";
     prompt.textContent = `${i + 1}. ${q.question || q.prompt || "Question"}`;
     card.append(prompt);
 
@@ -1054,6 +1063,7 @@ function renderQuiz(questions) {
     if (Array.isArray(opts) && opts.length) {
       opts.forEach((o, j) => {
         const label = document.createElement("label");
+        label.className = "quiz-option";
         const input = document.createElement("input");
         const span = document.createElement("span");
         input.type = "radio";
@@ -1065,7 +1075,7 @@ function renderQuiz(questions) {
       });
     } else {
       const ta = document.createElement("textarea");
-      ta.className = "short-textarea";
+      ta.className = "work-textarea short";
       ta.placeholder = "Type your answer…";
       ta.dataset.typed = i;
       card.append(ta);
@@ -1076,12 +1086,12 @@ function renderQuiz(questions) {
   });
 
   const actions = document.createElement("div");
-  actions.className = "actions";
+  actions.className = "button-row";
   const nextBtn = document.createElement("button");
-  nextBtn.className = "btn";
+  nextBtn.className = "secondary";
   nextBtn.textContent = "Next question →";
   const submit = document.createElement("button");
-  submit.className = "btn primary";
+  submit.className = "primary";
   submit.textContent = "Submit answers";
   actions.append(nextBtn, submit);
   host.append(actions);
@@ -1216,7 +1226,7 @@ function renderQuiz(questions) {
           <div class="score-detail">${timesUp ? "Time ran out. " : ""}You scored ${score} out of ${graded} gradable questions.</div>
         </div>
       </div>
-      <h3>Answer review</h3><div id="answerReview"></div>`;
+      <h3 style="margin-top:18px">Answer review</h3><div id="answerReview"></div>`;
 
     const review = $("answerReview");
     records.forEach((r, i) => {

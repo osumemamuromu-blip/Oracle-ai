@@ -272,7 +272,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import {
+getAuth,
+GoogleAuthProvider,
+signInWithRedirect,
+getRedirectResult,
+setPersistence,
+browserLocalPersistence,
+signOut,
+onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -286,15 +295,37 @@ const firebaseConfig = {
 };
 
 let auth = null, db = null, currentUser = null;
+
 try {
-  const app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  getRedirectResult(auth)
-  .then(result => {
-    if (result && result.user) {
-      console.log("Google sign-in successful:", result.user.email);
-    }
-  })
+const app = initializeApp(firebaseConfig);
+auth = getAuth(app);
+db = getFirestore(app);
+
+setPersistence(auth, browserLocalPersistence)
+.catch(error => {
+console.error("Firebase persistence error:", error.code, error.message);
+});
+
+getRedirectResult(auth)
+.then(result => {
+if (result && result.user) {
+console.log("Google sign-in successful:", result.user.email);
+}
+})
+.catch(error => {
+console.error("Google redirect sign-in error:", error.code, error.message);
+alert(
+"Google sign-in error: " +
+(error.code || "unknown error") +
+"\n" +
+(error.message || "Please try again.")
+);
+});
+
+} catch (error) {
+console.error("Firebase initialization failed:", error);
+alert("Firebase could not initialize: " + error.message);
+}
   .catch(error => {
     console.error("Google redirect sign-in error:", error.code, error.message);
   });

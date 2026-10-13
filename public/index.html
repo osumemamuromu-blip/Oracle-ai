@@ -6,76 +6,1820 @@
 <meta name="theme-color" content="#10111a">
 <title>Malie AI — Study & Writing Assistant</title>
 <style>
-:root{color-scheme:dark;--bg:#10111a;--card:#191b28;--card2:#202333;--text:#f5f5fb;--muted:#a4a8bd;--line:#303449;--accent:#9b87ff;--accent2:#7863ef;--good:#64dba5;--bad:#ff8585}
-[data-theme=light]{color-scheme:light;--bg:#f5f6fc;--card:#fff;--card2:#f0f1fa;--text:#202237;--muted:#686d83;--line:#dedfee;--accent:#7258e8;--accent2:#6045d6;--good:#138657;--bad:#c93636}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.6}button,input,textarea,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}.container{width:min(1100px,calc(100% - 32px));margin:auto}header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}.nav{min-height:68px;display:flex;justify-content:space-between;align-items:center;gap:10px}.brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800}.logo{display:grid;place-items:center;width:39px;height:39px;border-radius:13px;background:linear-gradient(135deg,#a797ff,#6650e9);color:white}.nav-actions{display:flex;gap:7px;align-items:center}.btn{border:1px solid var(--line);background:var(--card2);color:var(--text);padding:10px 14px;border-radius:11px;font-weight:650}.btn.primary{background:var(--accent2);border-color:var(--accent2);color:white}.hero{text-align:center;padding:45px 0 30px}.eyebrow{display:inline-block;color:var(--accent);background:var(--card2);padding:6px 12px;border-radius:50px;font-size:13px;font-weight:700}h1{font-size:clamp(34px,6vw,58px);line-height:1.12;letter-spacing:-2px;margin:18px 0}.gradient{background:linear-gradient(90deg,#a99aff,#7aafff);-webkit-background-clip:text;background-clip:text;color:transparent}.hero p{color:var(--muted);max-width:620px;margin:auto}.features{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:25px 0 35px}.feature,.sidebar,.panel{background:var(--card);border:1px solid var(--line);border-radius:17px}.feature{padding:18px}.feature h3{margin:6px 0}.feature p{font-size:13px;color:var(--muted);margin:0}.feature-icon{font-size:25px}.workspace{display:grid;grid-template-columns:220px minmax(0,1fr);gap:17px;padding-bottom:45px;align-items:start}.sidebar,.panel{padding:17px;min-width:0}.sidebar h3{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.tab{display:block;width:100%;text-align:left;border:0;background:transparent;color:var(--muted);padding:12px;border-radius:10px;margin:4px 0;font-weight:650}.tab.active{color:var(--text);background:var(--card2);box-shadow:inset 3px 0 var(--accent)}.panel h2{margin:0 0 5px;font-size:24px}.sub{color:var(--muted);font-size:14px;margin:0 0 20px}.view{display:none}.view.active{display:block}label{display:block;font-size:13px;font-weight:700;margin:14px 0 7px}textarea,input,select{width:100%;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:11px;padding:12px;outline:none}textarea{min-height:145px;resize:vertical}textarea:focus,input:focus,select:focus{border-color:var(--accent)}.short-textarea{min-height:90px}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}.status{min-height:24px;margin:12px 0;font-size:13px;color:var(--muted);overflow-wrap:anywhere}.output{overflow-wrap:anywhere;line-height:1.8;background:var(--card2);border:1px solid var(--line);padding:16px;border-radius:12px;margin-top:12px}.output pre{overflow:auto;background:var(--bg);padding:12px}.output h1,.output h2,.output h3{letter-spacing:normal}.placeholder{color:var(--muted)}.auth-box{padding:13px;border-radius:12px;background:var(--card2);margin-top:20px}.auth-box p{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
-.quiz-question{border:1px solid var(--line);border-radius:12px;padding:15px;margin:13px 0}.quiz-question p{font-weight:700;margin-top:0}.quiz-question label{display:flex;gap:9px;align-items:flex-start;font-weight:400;margin:10px 0}.quiz-question input{width:auto;margin-top:6px}.quiz-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px;margin:14px 0;background:var(--card2);border:1px solid var(--line);border-radius:14px}.quiz-timer{font-size:22px;font-weight:850;font-variant-numeric:tabular-nums}.warning{color:var(--bad);animation:pulse .8s infinite alternate}.quiz-progress{height:7px;width:100%;background:var(--line);border-radius:20px;overflow:hidden}.quiz-progress-fill{height:100%;width:100%;background:var(--accent);transition:width 1s linear}.score-card{margin-top:20px;padding:20px;border:1px solid var(--line);border-radius:18px;background:var(--card2);animation:appear .5s ease both}.score-hero{display:flex;align-items:center;gap:20px;flex-wrap:wrap}.score-ring{width:120px;height:120px;flex:0 0 120px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--accent) var(--angle),var(--line) 0deg);position:relative;animation:pop .6s ease both}.score-ring:before{content:"";position:absolute;inset:9px;background:var(--card2);border-radius:50%}.score-ring-content{z-index:1;text-align:center}.score-number{font-size:25px;font-weight:850}.score-percent,.score-detail{font-size:13px;color:var(--muted)}.score-message{font-size:18px;font-weight:800;margin:0}.quiz-feedback{padding:12px 0;border-bottom:1px solid var(--line)}.quiz-feedback.correct{color:var(--good)}.quiz-feedback.incorrect{color:var(--bad)}.history-card{border:1px solid var(--line);background:var(--card2);border-radius:12px;padding:13px;margin:10px 0}.history-card h4{margin:0 0 5px}.history-card p{font-size:13px;color:var(--muted);margin:4px 0}.history-card summary{cursor:pointer;color:var(--accent)}footer{text-align:center;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding:22px 0}@keyframes pulse{to{opacity:.5}}@keyframes appear{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes pop{from{transform:scale(.75)}to{transform:scale(1)}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}@media(max-width:720px){.workspace{grid-template-columns:1fr}.sidebar{padding:10px}.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}.tab{text-align:center;padding:10px 3px;font-size:12px}.features{grid-template-columns:1fr}.hero{padding-top:35px}.fields{grid-template-columns:1fr}.brand{font-size:18px}.nav-actions .btn{padding:8px;font-size:12px}.panel{padding:13px}}
+:root {
+  color-scheme: dark;
+  --bg: #10111a; --card: #191b28; --card2: #202333;
+  --text: #f5f5fb; --muted: #a4a8bd; --line: #303449;
+  --accent: #9b87ff; --accent2: #7863ef;
+  --good: #64dba5; --bad: #ff8585;
+}
+[data-theme=light] {
+  color-scheme: light;
+  --bg: #f5f6fc; --card: #fff; --card2: #f0f1fa;
+  --text: #202237; --muted: #686d83; --line: #dedfee;
+  --accent: #7258e8; --accent2: #6045d6;
+  --good: #138657; --bad: #c93636;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.6;
+}
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+button:disabled { opacity: .6; cursor: wait; }
+.container { width: min(1100px, calc(100% - 32px)); margin: auto; }
+
+/* Header */
+header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.nav { min-height: 68px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; }
+.logo {
+  display: grid; place-items: center; width: 39px; height: 39px; border-radius: 13px;
+  background: linear-gradient(135deg, #a797ff, #6650e9); color: #fff;
+}
+.nav-actions { display: flex; gap: 7px; align-items: center; }
+
+/* Buttons */
+.btn {
+  border: 1px solid var(--line); background: var(--card2); color: var(--text);
+  padding: 10px 14px; border-radius: 11px; font-weight: 650;
+}
+.btn.primary { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+
+/* Hero & features */
+.hero { text-align: center; padding: 45px 0 30px; }
+.eyebrow {
+  display: inline-block; color: var(--accent); background: var(--card2);
+  padding: 6px 12px; border-radius: 50px; font-size: 13px; font-weight: 700;
+}
+h1 { font-size: clamp(34px, 6vw, 58px); line-height: 1.12; letter-spacing: -2px; margin: 18px 0; }
+.gradient {
+  background: linear-gradient(90deg, #a99aff, #7aafff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero p { color: var(--muted); max-width: 620px; margin: auto; }
+.features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 25px 0 35px; }
+.feature, .sidebar, .panel { background: var(--card); border: 1px solid var(--line); border-radius: 17px; }
+.feature { padding: 18px; }
+.feature h3 { margin: 6px 0; }
+.feature p { font-size: 13px; color: var(--muted); margin: 0; }
+.feature-icon { font-size: 25px; }
+
+/* Workspace */
+.workspace {
+  display: grid; grid-template-columns: 220px minmax(0, 1fr);
+  gap: 17px; padding-bottom: 45px; align-items: start;
+}
+.sidebar, .panel { padding: 17px; min-width: 0; }
+.sidebar h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.tab {
+  display: block; width: 100%; text-align: left; border: 0; background: transparent;
+  color: var(--muted); padding: 12px; border-radius: 10px; margin: 4px 0; font-weight: 650;
+}
+.tab.active { color: var(--text); background: var(--card2); box-shadow: inset 3px 0 var(--accent); }
+.panel h2 { margin: 0 0 5px; font-size: 24px; }
+.sub { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
+.view { display: none; }
+.view.active { display: block; }
+
+/* Forms */
+label { display: block; font-size: 13px; font-weight: 700; margin: 14px 0 7px; }
+textarea, input, select {
+  width: 100%; background: var(--card2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 11px; padding: 12px; outline: none;
+}
+textarea { min-height: 145px; resize: vertical; }
+textarea:focus, input:focus, select:focus { border-color: var(--accent); }
+.short-textarea { min-height: 90px; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 15px; }
+.status { min-height: 24px; margin: 12px 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.status.error { color: var(--bad); }
+
+/* Output */
+.output {
+  overflow-wrap: anywhere; line-height: 1.8; background: var(--card2);
+  border: 1px solid var(--line); padding: 16px; border-radius: 12px; margin-top: 12px;
+}
+.output p { margin: .4em 0; }
+.output pre { overflow: auto; background: var(--bg); padding: 12px; border-radius: 8px; }
+.output h1, .output h2, .output h3 { letter-spacing: normal; }
+.placeholder { color: var(--muted); }
+
+/* Auth box */
+.auth-box { padding: 13px; border-radius: 12px; background: var(--card2); margin-top: 20px; }
+.auth-box p { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+
+/* Quiz */
+.quiz-question { border: 1px solid var(--line); border-radius: 12px; padding: 15px; margin: 13px 0; }
+.quiz-question p { font-weight: 700; margin-top: 0; }
+.quiz-question label { display: flex; gap: 9px; align-items: flex-start; font-weight: 400; margin: 10px 0; }
+.quiz-question input { width: auto; margin-top: 6px; }
+.quiz-toolbar {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 14px; margin: 14px 0; background: var(--card2); border: 1px solid var(--line); border-radius: 14px;
+}
+.quiz-timer { font-size: 22px; font-weight: 850; font-variant-numeric: tabular-nums; }
+.quiz-timer.warning { color: var(--bad); animation: pulse .8s infinite alternate; }
+.quiz-progress { height: 7px; width: 100%; background: var(--line); border-radius: 20px; overflow: hidden; }
+.quiz-progress-fill { height: 100%; width: 100%; background: var(--accent); transition: width 1s linear; }
+.score-card {
+  margin-top: 20px; padding: 20px; border: 1px solid var(--line);
+  border-radius: 18px; background: var(--card2); animation: appear .5s ease both;
+}
+.score-hero { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.score-ring {
+  width: 120px; height: 120px; flex: 0 0 120px; border-radius: 50%; display: grid; place-items: center;
+  background: conic-gradient(var(--accent) var(--angle), var(--line) 0deg); position: relative; animation: pop .6s ease both;
+}
+.score-ring::before { content: ""; position: absolute; inset: 9px; background: var(--card2); border-radius: 50%; }
+.score-ring-content { z-index: 1; text-align: center; }
+.score-number { font-size: 25px; font-weight: 850; }
+.score-percent, .score-detail { font-size: 13px; color: var(--muted); }
+.score-message { font-size: 18px; font-weight: 800; margin: 0; }
+.quiz-feedback { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.quiz-feedback p { margin: 4px 0; }
+.quiz-feedback.correct { color: var(--good); }
+.quiz-feedback.incorrect { color: var(--bad); }
+
+/* History */
+.history-card { border: 1px solid var(--line); background: var(--card2); border-radius: 12px; padding: 13px; margin: 10px 0; }
+.history-card h4 { margin: 0 0 5px; }
+.history-card p { font-size: 13px; color: var(--muted); margin: 4px 0; }
+.history-card summary { cursor: pointer; color: var(--accent); }
+
+footer { text-align: center; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding: 22px 0; }
+
+@keyframes pulse { to { opacity: .5; } }
+@keyframes appear { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pop { from { transform: scale(.75); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+@media (max-width: 720px) {
+  .workspace { grid-template-columns: 1fr; }
+  .sidebar { padding: 10px; }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+  .tab { text-align: center; padding: 10px 3px; font-size: 12px; }
+  .features { grid-template-columns: 1fr; }
+  .hero { padding-top: 35px; }
+  .fields { grid-template-columns: 1fr; }
+  .brand { font-size: 18px; }
+  .nav-actions .btn { padding: 8px; font-size: 12px; }
+  .panel { padding: 13px; }
+}
 </style>
 </head>
 <body>
-<header><div class="container nav"><div class="brand"><div class="logo">M</div><span>Malie AI</span></div><div class="nav-actions"><button class="btn" id="themeToggle">☀️ Light mode</button><button class="btn" id="authButton">Sign in</button></div></div></header>
+
+<header>
+  <div class="container nav">
+    <div class="brand"><div class="logo">M</div><span>Malie AI</span></div>
+    <div class="nav-actions">
+      <button class="btn" id="themeToggle">☀️ Light mode</button>
+      <button class="btn" id="authButton">Sign in</button>
+    </div>
+  </div>
+</header>
+
 <main class="container">
-<section class="hero"><span class="eyebrow">✦ Your personal AI assistant</span><h1>Think better.<br><span class="gradient">Write smarter.</span></h1><p>Improve your writing, ask questions and practise with quizzes using Malie AI.</p></section>
-<section class="features"><article class="feature"><div class="feature-icon">✍️</div><h3>Writing assistant</h3><p>Correct grammar, improve clarity and adjust your writing style.</p></article><article class="feature"><div class="feature-icon">💬</div><h3>AI chat</h3><p>Ask questions and get helpful explanations.</p></article><article class="feature"><div class="feature-icon">📚</div><h3>Quiz mode</h3><p>Practise questions based on your study material.</p></article></section>
-<section class="workspace"><aside class="sidebar"><h3>Your workspace</h3><div class="tabs"><button class="tab active" data-view="writing">✍️ Writing</button><button class="tab" data-view="chat">💬 AI Chat</button><button class="tab" data-view="quiz">📚 Quiz Mode</button></div><div class="auth-box"><strong>Malie AI account</strong><p id="authStatus">Sign in to save quiz history to your account.</p><button class="btn" id="signOutButton" hidden>Sign out</button></div></aside>
-<section class="panel">
-<div class="view active" id="writingView"><h2>Writing assistant</h2><p class="sub">Enter your text and choose how Malie AI should improve it.</p><label for="writingInput">Your text</label><textarea id="writingInput" placeholder="Paste or type your writing here..."></textarea><div class="fields"><div><label for="mode">Task</label><select id="mode"><option value="correct">Correct grammar</option><option value="improve">Improve writing</option><option value="rewrite">Rewrite text</option><option value="summarize">Summarize</option><option value="expand">Expand ideas</option></select></div><div><label for="tone">Tone</label><select id="tone"><option value="natural">Natural</option><option value="formal">Formal</option><option value="academic">Academic</option><option value="friendly">Friendly</option><option value="professional">Professional</option></select></div></div><label for="length">Response length</label><select id="length"><option value="balanced">Balanced</option><option value="short">Short</option><option value="detailed">Detailed</option></select><div class="actions"><button class="btn primary" id="check">Improve my writing</button><button class="btn" id="clearWriting">Clear</button></div><p class="status" id="writingStatus"></p><h3>Result</h3><div class="output" id="writingOutput"><span class="placeholder">Your corrected text will appear here.</span></div><div class="actions"><button class="btn" id="copyWriting">Copy result</button></div></div>
-<div class="view" id="chatView"><h2>Chat with Malie AI</h2><p class="sub">Ask a question, learn something new or get help with a problem.</p><label for="chatInput">Your question</label><textarea class="short-textarea" id="chatInput" placeholder="Ask Malie AI anything..."></textarea><div class="actions"><button class="btn primary" id="ask">Send question</button><button class="btn" id="clearChat">Clear</button></div><p class="status" id="chatStatus"></p><h3>Answer</h3><div class="output" id="chatOutput"><span class="placeholder">Your answer will appear here.</span></div><div class="actions"><button class="btn" id="copyChat">Copy answer</button></div></div>
-<div class="view" id="quizView"><h2>Quiz mode</h2><p class="sub">Upload a PDF or enter your study material to generate practice questions.</p><label for="studyFile">Upload a PDF (optional)</label><input id="studyFile" type="file" accept=".pdf,application/pdf"><label for="studyText">Study material</label><textarea id="studyText" placeholder="Paste your notes or textbook content here..."></textarea><div class="fields"><div><label for="questionCount">Number of questions</label><select id="questionCount"><option value="5">5 questions</option><option value="10" selected>10 questions</option><option value="15">15 questions</option><option value="20">20 questions</option></select></div><div><label for="quizDifficulty">Difficulty</label><select id="quizDifficulty"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></div></div><div class="actions"><button class="btn primary" id="generateQuiz">Generate quiz</button></div><p class="status" id="quizStatus"></p><div id="quizOutput"></div>
-<section style="margin-top:28px"><h3>📚 My past tests</h3><p class="sub">Your completed quizzes saved to your account.</p><div id="quizHistory"><p class="placeholder">Sign in to view your saved tests.</p></div><button class="btn" id="refreshQuizHistory">Refresh history</button> <button class="btn" id="clearQuizHistory">Clear past tests</button></section>
-</div></section></section></main><footer>Malie AI · Your writing and learning companion</footer>
+  <section class="hero">
+    <span class="eyebrow">✦ Your personal AI assistant</span>
+    <h1>Think better.<br><span class="gradient">Write smarter.</span></h1>
+    <p>Improve your writing, ask questions and practise with quizzes using Malie AI.</p>
+  </section>
+
+  <section class="features">
+    <article class="feature"><div class="feature-icon">✍️</div><h3>Writing assistant</h3><p>Correct grammar, improve clarity and adjust your writing style.</p></article>
+    <article class="feature"><div class="feature-icon">💬</div><h3>AI chat</h3><p>Ask questions and get helpful explanations.</p></article>
+    <article class="feature"><div class="feature-icon">📚</div><h3>Quiz mode</h3><p>Practise questions based on your study material.</p></article>
+  </section>
+
+  <section class="workspace">
+    <aside class="sidebar">
+      <h3>Your workspace</h3>
+      <div class="tabs">
+        <button class="tab active" data-view="writing">✍️ Writing</button>
+        <button class="tab" data-view="chat">💬 AI Chat</button>
+        <button class="tab" data-view="quiz">📚 Quiz Mode</button>
+      </div>
+      <div class="auth-box">
+        <strong>Malie AI account</strong>
+        <p id="authStatus">Sign in to save quiz history to your account.</p>
+        <button class="btn" id="signOutButton" hidden>Sign out</button>
+      </div>
+    </aside>
+
+    <section class="panel">
+      <!-- Writing -->
+      <div class="view active" id="writingView">
+        <h2>Writing assistant</h2>
+        <p class="sub">Enter your text and choose how Malie AI should improve it.</p>
+        <label for="writingInput">Your text</label>
+        <textarea id="writingInput" placeholder="Paste or type your writing here..."></textarea>
+        <div class="fields">
+          <div>
+            <label for="mode">Task</label>
+            <select id="mode">
+              <option value="correct">Correct grammar</option>
+              <option value="improve">Improve writing</option>
+              <option value="rewrite">Rewrite text</option>
+              <option value="summarize">Summarize</option>
+              <option value="expand">Expand ideas</option>
+            </select>
+          </div>
+          <div>
+            <label for="tone">Tone</label>
+            <select id="tone">
+              <option value="natural">Natural</option>
+              <option value="formal">Formal</option>
+              <option value="academic">Academic</option>
+              <option value="friendly">Friendly</option>
+              <option value="professional">Professional</option>
+            </select>
+          </div>
+        </div>
+        <label for="length">Response length</label>
+        <select id="length">
+          <option value="balanced">Balanced</option>
+          <option value="short">Short</option>
+          <option value="detailed">Detailed</option>
+        </select>
+        <div class="actions">
+          <button class="btn primary" id="check">Improve my writing</button>
+          <button class="btn" id="clearWriting">Clear</button>
+        </div>
+        <p class="status" id="writingStatus"></p>
+        <h3>Result</h3>
+        <div class="output" id="writingOutput"><span class="placeholder">Your corrected text will appear here.</span></div>
+        <div class="actions"><button class="btn" id="copyWriting">Copy result</button></div>
+      </div>
+
+      <!-- Chat -->
+      <div class="view" id="chatView">
+        <h2>Chat with Malie AI</h2>
+        <p class="sub">Ask a question, learn something new or get help with a problem.</p>
+        <label for="chatInput">Your question</label>
+        <textarea class="short-textarea" id="chatInput" placeholder="Ask Malie AI anything..."></textarea>
+        <div class="actions">
+          <button class="btn primary" id="ask">Send question</button>
+          <button class="btn" id="clearChat">Clear</button>
+        </div>
+        <p class="status" id="chatStatus"></p>
+        <h3>Answer</h3>
+        <div class="output" id="chatOutput"><span class="placeholder">Your answer will appear here.</span></div>
+        <div class="actions"><button class="btn" id="copyChat">Copy answer</button></div>
+      </div>
+
+      <!-- Quiz -->
+      <div class="view" id="quizView">
+        <h2>Quiz mode</h2>
+        <p class="sub">Upload a PDF or enter your study material to generate practice questions.</p>
+        <label for="studyFile">Upload a PDF (optional)</label>
+        <input id="studyFile" type="file" accept=".pdf,application/pdf">
+        <label for="studyText">Study material</label>
+        <textarea id="studyText" placeholder="Paste your notes or textbook content here..."></textarea>
+        <div class="fields">
+          <div>
+            <label for="questionCount">Number of questions</label>
+            <select id="questionCount">
+              <option value="5">5 questions</option>
+              <option value="10" selected>10 questions</option>
+              <option value="15">15 questions</option>
+              <option value="20">20 questions</option>
+            </select>
+          </div>
+          <div>
+            <label for="quizDifficulty">Difficulty</label>
+            <select id="quizDifficulty">
+              <option value="easy">Easy</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions"><button class="btn primary" id="generateQuiz">Generate quiz</button></div>
+        <p class="status" id="quizStatus"></p>
+        <div id="quizOutput"></div>
+
+        <section style="margin-top:28px">
+          <h3>📚 My past tests</h3>
+          <p class="sub">Your completed quizzes saved to your account.</p>
+          <div id="quizHistory"><p class="placeholder">Sign in to view your saved tests.</p></div>
+          <div class="actions">
+            <button class="btn" id="refreshQuizHistory">Refresh history</button>
+            <button class="btn" id="clearQuizHistory">Clear past tests</button>
+          </div>
+        </section>
+      </div>
+    </section>
+  </section>
+</main>
+
+<footer>Malie AI · Your writing and learning companion</footer>
+
 <script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import{getFirestore,collection,addDoc,getDocs,query,orderBy,limit,deleteDoc,doc}from"https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
-const API="https://oracle-ai.osumemamuromu.workers.dev";
-const firebaseConfig={apiKey:"AIzaSyAbHz_yfiQrPNuODTrKujQ9kNcR4sbpNfQ",authDomain:"malie-ai-auth.firebaseapp.com",projectId:"malie-ai-auth",storageBucket:"malie-ai-auth.firebasestorage.app",messagingSenderId:"334163694573",appId:"1:334163694573:web:1d82c54f057ad74e2ecde4",measurementId:"G-7FHDD141B5"};
-const $=id=>document.getElementById(id);
-function esc(s){return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
-function markdown(s){return String(s??"").split(/\n/).map(line=>{const h=line.match(/^(#{1,3})\s+(.+)/);if(h)return"<h"+h[1].length+">"+esc(h[2])+"</h"+h[1].length+">";if(/^\s*[-*]\s+/.test(line))return"<p>• "+esc(line.replace(/^\s*[-*]\s+/,""))+"</p>";return"<p>"+esc(line).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/`([^`]+)`/g,"<code>$1</code>")+"</p>"}).join("")}
-function show(id,s){$(id).innerHTML=markdown(typeof s==="string"?s:JSON.stringify(s,null,2))}
-function status(id,s,bad=false){$(id).textContent=s;$(id).style.color=bad?"var(--bad)":"var(--muted)"}
-function busy(b,on,label){if(on){b.dataset.old=b.textContent;b.disabled=true;b.textContent=label}else{b.disabled=false;b.textContent=b.dataset.old||b.textContent}}
-async function api(path,body){const r=await fetch(API+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const raw=await r.text();let d;try{d=JSON.parse(raw)}catch{throw Error("Unexpected server response. Please try again.")}if(!r.ok||d.error)throw Error(d.error||d.message||"Request failed ("+r.status+").");return d}
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t===b));document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===b.dataset.view+"View"))});
-if(["light","dark"].includes(localStorage.getItem("malie-theme")))document.documentElement.dataset.theme=localStorage.getItem("malie-theme");
-function themeLabel(){$("themeToggle").textContent=document.documentElement.dataset.theme==="dark"?"☀️ Light mode":"🌙 Dark mode"}themeLabel();
-$("themeToggle").onclick=()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme==="dark"?"light":"dark";localStorage.setItem("malie-theme",document.documentElement.dataset.theme);themeLabel()};
-async function copy(id){try{await navigator.clipboard.writeText($(id).innerText);return true}catch{return false}}
-$("copyWriting").onclick=async()=>status("writingStatus",await copy("writingOutput")?"Copied.":"Copy failed; select the text manually.");
-$("copyChat").onclick=async()=>status("chatStatus",await copy("chatOutput")?"Copied.":"Copy failed; select the text manually.");
-$("clearWriting").onclick=()=>{$("writingInput").value="";$("writingOutput").textContent="";status("writingStatus","")};
-$("clearChat").onclick=()=>{$("chatInput").value="";$("chatOutput").textContent="";status("chatStatus","")};
-$("check").onclick=async()=>{const text=$("writingInput").value.trim();if(!text)return status("writingStatus","Please enter your text first.",true);busy($("check"),true,"Working…");status("writingStatus","Malie AI is processing your writing…");try{const d=await api("/api/write",{mode:$("mode").value,text,options:{tone:$("tone").value,length:$("length").value,audience:"general"}});const r=d.result??d.reply??d.output;if(!r)throw Error("No result returned.");show("writingOutput",r);status("writingStatus","Done. Review your result.")}catch(e){status("writingStatus","Error: "+e.message,true)}finally{busy($("check"),false)}};
-$("ask").onclick=async()=>{const message=$("chatInput").value.trim();if(!message)return status("chatStatus","Type a question first.",true);busy($("ask"),true,"Thinking…");status("chatStatus","Waiting for Malie AI…");try{const d=await api("/api/chat",{message}),r=d.reply??d.result??d.output;if(!r)throw Error("No response returned.");show("chatOutput",r);status("chatStatus","Response received.")}catch(e){status("chatStatus","Error: "+e.message,true)}finally{busy($("ask"),false)}};
-$("chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("ask").click()}});
-$("studyFile").onchange=async e=>{const f=e.target.files?.[0];if(!f)return;if(f.type!=="application/pdf"&&!f.name.toLowerCase().endsWith(".pdf"))return status("quizStatus","Please select a PDF.",true);status("quizStatus","Reading PDF…");try{if(!window.pdfjsLib)await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";s.onload=resolve;s.onerror=()=>reject(Error("Could not load PDF reader. Paste your notes instead."));document.head.appendChild(s)});pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;let text="";for(let n=1;n<=pdf.numPages;n++){const p=await pdf.getPage(n),c=await p.getTextContent();text+=c.items.map(x=>x.str).join(" ")+"\n"}$("studyText").value=text.trim();status("quizStatus","PDF loaded: "+pdf.numPages+" page(s).")}catch(e){status("quizStatus",e.message,true)}};
-let app,auth,db,questionsNow=[],timer=null,remaining=0,finished=false;
-try{app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);onAuthStateChanged(auth,async u=>{if(u){$("authButton").textContent="Signed in";$("authStatus").textContent="Signed in as "+(u.email||u.displayName||"your account")+". Quiz history is linked to this account.";$("signOutButton").hidden=false;await loadHistory()}else{$("authButton").textContent="Sign in";$("authStatus").textContent="Sign in with Google to save and access quiz history across devices.";$("signOutButton").hidden=true;$("quizHistory").innerHTML='<p class="placeholder">Sign in to view your saved tests.</p>'}})}catch(e){$("authStatus").textContent="Firebase setup error: "+e.message}
-$("authButton").onclick=async()=>{if(!auth)return status("authStatus","Firebase authentication could not initialise.",true);if(auth.currentUser)return status("authStatus","You are already signed in.");try{await signInWithPopup(auth,new GoogleAuthProvider())}catch(e){status("authStatus","Sign-in failed: "+e.message+" Check Firebase authorised domains.",true)}};
-$("signOutButton").onclick=async()=>{try{await signOut(auth)}catch(e){status("authStatus","Sign-out failed: "+e.message,true)}};
-function historyCollection(){if(!auth?.currentUser)throw Error("Sign in first.");return collection(db,"users",auth.currentUser.uid,"quizHistory")}
-async function loadHistory(){if(!auth?.currentUser)return;const box=$("quizHistory");box.textContent="Loading history…";try{const snap=await getDocs(query(historyCollection(),orderBy("date","desc"),limit(50)));box.innerHTML="";if(snap.empty){box.innerHTML='<p class="placeholder">No saved tests yet. Complete a quiz to save your score.</p>';return}snap.forEach(s=>{const d=s.data(),card=document.createElement("article");card.className="history-card";const h=document.createElement("h4");h.textContent=d.title||"Practice quiz";const p=document.createElement("p");p.textContent=(d.score??0)+" / "+(d.total??0)+" correct · "+(d.percent??0)+"% · "+(d.date?new Date(d.date).toLocaleString():"");card.append(h,p);if(Array.isArray(d.answers)){const details=document.createElement("details"),summary=document.createElement("summary");summary.textContent="Review answers";details.append(summary);d.answers.forEach((a,i)=>{const row=document.createElement("p");row.textContent=(i+1)+". "+a.question+" | Yours: "+a.chosen+" | Correct: "+a.correct;details.append(row)});card.append(details)}box.append(card)})}catch(e){box.textContent="Could not load history: "+e.message+". Check that the Firestore rules are published."}}
-$("refreshQuizHistory").onclick=loadHistory;
-$("clearQuizHistory").onclick=async()=>{if(!auth?.currentUser)return status("quizStatus","Sign in to clear saved history.",true);if(!confirm("Delete all your saved quiz history? This cannot be undone."))return;try{const s=await getDocs(historyCollection());await Promise.all(s.docs.map(x=>deleteDoc(doc(db,"users",auth.currentUser.uid,"quizHistory",x.id))));await loadHistory();status("quizStatus","Saved quiz history cleared.")}catch(e){status("quizStatus","Could not clear history: "+e.message,true)}};
-async function saveResult(record){if(!auth?.currentUser){status("quizStatus","Sign in to save this result. Your score is still shown above.");return}try{await addDoc(historyCollection(),{...record,uid:auth.currentUser.uid,createdAt:Date.now()});status("quizStatus","Score saved to your account. Sign in on another device to access it.");await loadHistory()}catch(e){status("quizStatus","Score shown, but saving failed: "+e.message,true)}}
-$("generateQuiz").onclick=async()=>{const text=$("studyText").value.trim();if(!text)return status("quizStatus","Upload a readable PDF or paste study material first.",true);busy($("generateQuiz"),true,"Generating…");status("quizStatus","Malie AI is preparing your questions…");$("quizOutput").innerHTML="";if(timer)clearInterval(timer);try{const d=await api("/api/quiz",{text,count:Number($("questionCount").value),difficulty:$("quizDifficulty").value});const qs=d.questions??d.result?.questions??(Array.isArray(d.result)?d.result:null);if(!Array.isArray(qs)||!qs.length){const r=d.result??d.reply??d.output;if(r){$("quizOutput").innerHTML=markdown(typeof r==="string"?r:JSON.stringify(r));status("quizStatus","Quiz response received.");return}throw Error("The server did not return quiz questions.")}questionsNow=qs;renderQuiz(qs);status("quizStatus","Quiz ready. Answer before the timer ends.")}catch(e){status("quizStatus","Error: "+e.message,true)}finally{busy($("generateQuiz"),false)}};
-function renderQuiz(qs){if(timer)clearInterval(timer);finished=false;const host=$("quizOutput");host.innerHTML="";const total=Math.max(60,qs.length*60);remaining=total;
-const toolbar=document.createElement("div");toolbar.className="quiz-toolbar";toolbar.innerHTML='<div><strong>⏱ Time remaining</strong><div class="quiz-timer" id="quizTimer"></div></div><div><strong>'+qs.length+' questions</strong><div class="score-detail">One minute per question</div></div><div class="quiz-progress"><div class="quiz-progress-fill" id="quizProgress"></div></div>';host.append(toolbar);
-qs.forEach((q,i)=>{const card=document.createElement("div");card.className="quiz-question";const p=document.createElement("p");p.textContent=(i+1)+". "+(q.question||q.prompt||"Question");card.append(p);const opts=q.options||q.choices||[];if(Array.isArray(opts)&&opts.length){opts.forEach((o,j)=>{const label=document.createElement("label"),input=document.createElement("input"),span=document.createElement("span");input.type="radio";input.name="q"+i;input.value=j;span.textContent=typeof o==="string"?o:o.text??o.label??JSON.stringify(o);label.append(input,span);card.append(label)})}else{const ta=document.createElement("textarea");ta.className="short-textarea";ta.placeholder="Type your answer…";ta.dataset.typed=i;card.append(ta)}host.append(card)});
-const submit=document.createElement("button");submit.className="btn primary";submit.textContent="Submit answers";host.append(submit);const result=document.createElement("div");result.hidden=true;host.append(result);
-function tick(){const t=$("quizTimer");if(!t)return;t.textContent=String(Math.floor(remaining/60)).padStart(2,"0")+":"+String(remaining%60).padStart(2,"0");t.classList.toggle("warning",remaining<=15);$("quizProgress").style.width=100*remaining/total+"%";if(remaining<=0){finish(true);return}remaining--}tick();timer=setInterval(tick,1000);submit.onclick=()=>finish(false);
-async function finish(timesUp){if(finished)return;finished=true;clearInterval(timer);timer=null;let score=0,totalGraded=0;const records=[];
-qs.forEach((q,i)=>{const opts=q.options||q.choices||[],expected=q.answerIndex??q.correctIndex??q.correctAnswerIndex,answer=q.answer??q.correctAnswer,selected=host.querySelector('input[name="q'+i+'"]:checked'),typed=host.querySelector('[data-typed="'+i+'"]');let chosen=selected?(typeof opts[+selected.value]==="string"?opts[+selected.value]:opts[+selected.value]?.text??opts[+selected.value]?.label??selected.value):(typed?.value.trim()||"No answer");let correctAnswer=answer??(expected!=null?(typeof opts[+expected]==="string"?opts[+expected]:opts[+expected]?.text??opts[+expected]?.label??String(expected)):"Not provided");let graded=false,correct=false;if(expected!=null&&selected){graded=true;correct=+selected.value===+expected}else if(answer!=null&&(selected||typed)){graded=true;correct=String(chosen).trim().toLowerCase()===String(answer).trim().toLowerCase()}if(graded){totalGraded++;if(correct)score++}records.push({question:q.question||q.prompt||"Question "+(i+1),chosen:String(chosen),correct:String(correctAnswer),isCorrect:correct,explanation:String(q.explanation||""),graded})});
-host.querySelectorAll("input,textarea").forEach(x=>x.disabled=true);submit.disabled=true;result.hidden=false;result.className="score-card";
-if(!totalGraded){result.innerHTML="<h3>Quiz completed</h3><p>No recognised answer key was returned, so a reliable score cannot be calculated.</p>";records.forEach((r,i)=>{const p=document.createElement("p");p.textContent=(i+1)+". "+r.question+" — Yours: "+r.chosen+"; Correct: "+r.correct;result.append(p)});status("quizStatus","Quiz submitted, but no recognised answer key was available.",true);return}
-const percent=Math.round(score/totalGraded*100),message=percent>=80?"Excellent work! 🎉":percent>=60?"Good effort! Keep practising.":"Keep going — practice makes progress.";
-result.innerHTML='<div class="score-hero"><div class="score-ring" style="--angle:'+percent*3.6+'deg"><div class="score-ring-content"><div class="score-number">'+score+'/'+totalGraded+'</div><div class="score-percent">'+percent+'%</div></div></div><div><p class="score-message">'+message+'</p><div class="score-detail">'+(timesUp?"Time ran out. ":"")+"You answered "+totalGraded+" gradable questions out of "+qs.length+".</div></div></div><h3>Answer review</h3><div id="answerReview"></div>';
-const review=$("answerReview");records.forEach((r,i)=>{const div=document.createElement("div");div.className="quiz-feedback "+(r.graded?(r.isCorrect?"correct":"incorrect"):"");const p=document.createElement("p");p.textContent=(i+1)+". "+(r.graded?(r.isCorrect?"✓ Correct":"✗ Incorrect"):"Not graded")+" — "+r.question;const a=document.createElement("p");a.textContent="Your answer: "+r.chosen+" · Correct answer: "+r.correct;div.append(p,a);if(r.explanation){const ex=document.createElement("p");ex.textContent="Explanation: "+r.explanation;div.append(ex)}review.append(div)});
-status("quizStatus",timesUp?"Time is up. Your quiz has been submitted.":"Quiz submitted. Your score is "+score+" / "+totalGraded+".");
-if(auth?.currentUser){await saveResult({score,total:totalGraded,percent,answers:records,title:$("quizDifficulty").value+" quiz · "+qs.length+" questions",date:new Date().toISOString()})}else{const note=document.createElement("p");note.className="score-detail";note.textContent="Sign in with Google to save this result and access it on other devices.";result.append(note)}
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, deleteDoc, doc }
+  from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+/* ───────── Config ───────── */
+const API = "https://oracle-ai.osumemamuromu.workers.dev";
+const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const MAX_PDF_CHARS = 60000;
+const SECONDS_PER_QUESTION = 60;
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAbHz_yfiQrPNuODTrKujQ9kNcR4sbpNfQ",
+  authDomain: "malie-ai-auth.firebaseapp.com",
+  projectId: "malie-ai-auth",
+  storageBucket: "malie-ai-auth.firebasestorage.app",
+  messagingSenderId: "334163694573",
+  appId: "1:334163694573:web:1d82c54f057ad74e2ecde4",
+  measurementId: "G-7FHDD141B5"
+};
+
+/* ───────── Helpers ───────── */
+const $ = id => document.getElementById(id);
+
+function esc(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
+
+function inline(s) {
+  return esc(s)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+// Minimal, safe markdown: headings, bullets, bold, inline code, fenced code blocks.
+function markdown(text) {
+  const out = [];
+  let inCode = false, codeLines = [];
+  for (const line of String(text ?? "").split("\n")) {
+    if (line.trim().startsWith("```")) {
+      if (inCode) { out.push("<pre><code>" + esc(codeLines.join("\n")) + "</code></pre>"); codeLines = []; }
+      inCode = !inCode;
+      continue;
+    }
+    if (inCode) { codeLines.push(line); continue; }
+    const h = line.match(/^(#{1,3})\s+(.+)/);
+    if (h) out.push(`<h${h[1].length}>${esc(h[2])}</h${h[1].length}>`);
+    else if (/^\s*[-*]\s+/.test(line)) out.push("<p>• " + inline(line.replace(/^\s*[-*]\s+/, "")) + "</p>");
+    else out.push("<p>" + inline(line) + "</p>");
+  }
+  if (inCode) out.push("<pre><code>" + esc(codeLines.join("\n")) + "</code></pre>");
+  return out.join("");
+}
+
+function show(id, value) {
+  $(id).innerHTML = markdown(typeof value === "string" ? value : JSON.stringify(value, null, 2));
+}
+
+function setStatus(id, message, isError = false) {
+  const el = $(id);
+  el.textContent = message;
+  el.classList.toggle("error", isError);
+}
+
+function setBusy(button, on, label) {
+  if (on) {
+    button.dataset.label = button.textContent;
+    button.disabled = true;
+    button.textContent = label;
+  } else {
+    button.disabled = false;
+    button.textContent = button.dataset.label || button.textContent;
+  }
+}
+
+async function api(path, body) {
+  const res = await fetch(API + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const raw = await res.text();
+  let data;
+  try { data = JSON.parse(raw); }
+  catch { throw new Error("Unexpected server response. Please try again."); }
+  if (!res.ok || data.error) throw new Error(data.error || data.message || `Request failed (${res.status}).`);
+  return data;
+}
+
+async function copyText(id) {
+  try { await navigator.clipboard.writeText($(id).innerText); return true; }
+  catch { return false; }
+}
+
+/* ───────── Tabs & theme ───────── */
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t === btn));
+    document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === btn.dataset.view + "View"));
+  };
+});
+
+function safeStorage(action, key, value) {
+  try { return action === "get" ? localStorage.getItem(key) : localStorage.setItem(key, value); }
+  catch { return null; }
+}
+
+const savedTheme = safeStorage("get", "malie-theme");
+if (savedTheme === "light" || savedTheme === "dark") document.documentElement.dataset.theme = savedTheme;
+
+function updateThemeLabel() {
+  $("themeToggle").textContent = document.documentElement.dataset.theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode";
+}
+updateThemeLabel();
+
+$("themeToggle").onclick = () => {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  safeStorage("set", "malie-theme", next);
+  updateThemeLabel();
+};
+
+/* ───────── Writing assistant ───────── */
+$("copyWriting").onclick = async () =>
+  setStatus("writingStatus", (await copyText("writingOutput")) ? "Copied." : "Copy failed; select the text manually.");
+
+$("clearWriting").onclick = () => {
+  $("writingInput").value = "";
+  $("writingOutput").innerHTML = '<span class="placeholder">Your corrected text will appear here.</span>';
+  setStatus("writingStatus", "");
+};
+
+$("check").onclick = async () => {
+  const text = $("writingInput").value.trim();
+  if (!text) return setStatus("writingStatus", "Please enter your text first.", true);
+
+  setBusy($("check"), true, "Working…");
+  setStatus("writingStatus", "Malie AI is processing your writing…");
+  try {
+    const data = await api("/api/write", {
+      mode: $("mode").value,
+      text,
+      options: { tone: $("tone").value, length: $("length").value, audience: "general" }
+    });
+    const result = data.result ?? data.reply ?? data.output;
+    if (!result) throw new Error("No result returned.");
+    show("writingOutput", result);
+    setStatus("writingStatus", "Done. Review your result.");
+  } catch (e) {
+    setStatus("writingStatus", "Error: " + e.message, true);
+  } finally {
+    setBusy($("check"), false);
+  }
+};
+
+/* ───────── Chat ───────── */
+$("copyChat").onclick = async () =>
+  setStatus("chatStatus", (await copyText("chatOutput")) ? "Copied." : "Copy failed; select the text manually.");
+
+$("clearChat").onclick = () => {
+  $("chatInput").value = "";
+  $("chatOutput").innerHTML = '<span class="placeholder">Your answer will appear here.</span>';
+  setStatus("chatStatus", "");
+};
+
+$("ask").onclick = async () => {
+  const message = $("chatInput").value.trim();
+  if (!message) return setStatus("chatStatus", "Type a question first.", true);
+
+  setBusy($("ask"), true, "Thinking…");
+  setStatus("chatStatus", "Waiting for Malie AI…");
+  try {
+    const data = await api("/api/chat", { message });
+    const reply = data.reply ?? data.result ?? data.output;
+    if (!reply) throw new Error("No response returned.");
+    show("chatOutput", reply);
+    setStatus("chatStatus", "Response received.");
+  } catch (e) {
+    setStatus("chatStatus", "Error: " + e.message, true);
+  } finally {
+    setBusy($("ask"), false);
+  }
+};
+
+$("chatInput").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("ask").click(); }
+});
+
+/* ───────── PDF import ───────── */
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = PDFJS_URL;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error("Could not load PDF reader. Paste your notes instead."));
+    document.head.appendChild(s);
+  });
+}
+
+$("studyFile").onchange = async e => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+    return setStatus("quizStatus", "Please select a PDF.", true);
+  }
+
+  setStatus("quizStatus", "Reading PDF…");
+  try {
+    await loadPdfJs();
+    pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+
+    let text = "";
+    for (let n = 1; n <= pdf.numPages && text.length < MAX_PDF_CHARS; n++) {
+      const page = await pdf.getPage(n);
+      const content = await page.getTextContent();
+      text += content.items.map(i => i.str).join(" ") + "\n";
+    }
+    const truncated = text.length > MAX_PDF_CHARS;
+    $("studyText").value = text.slice(0, MAX_PDF_CHARS).trim();
+    setStatus("quizStatus", `PDF loaded: ${pdf.numPages} page(s).` + (truncated ? " Text was shortened to fit." : ""));
+  } catch (err) {
+    setStatus("quizStatus", err.message, true);
+  }
+};
+
+/* ───────── Firebase auth & history ───────── */
+let auth, db;
+
+function historyCollection() {
+  if (!auth?.currentUser) throw new Error("Sign in first.");
+  return collection(db, "users", auth.currentUser.uid, "quizHistory");
+}
+
+async function loadHistory() {
+  if (!auth?.currentUser) return;
+  const box = $("quizHistory");
+  box.textContent = "Loading history…";
+  try {
+    const snap = await getDocs(query(historyCollection(), orderBy("date", "desc"), limit(50)));
+    box.innerHTML = "";
+    if (snap.empty) {
+      box.innerHTML = '<p class="placeholder">No saved tests yet. Complete a quiz to save your score.</p>';
+      return;
+    }
+    snap.forEach(s => {
+      const d = s.data();
+      const card = document.createElement("article");
+      card.className = "history-card";
+
+      const title = document.createElement("h4");
+      title.textContent = d.title || "Practice quiz";
+      const meta = document.createElement("p");
+      meta.textContent = `${d.score ?? 0} / ${d.total ?? 0} correct · ${d.percent ?? 0}% · ` +
+        (d.date ? new Date(d.date).toLocaleString() : "");
+      card.append(title, meta);
+
+      if (Array.isArray(d.answers)) {
+        const details = document.createElement("details");
+        const summary = document.createElement("summary");
+        summary.textContent = "Review answers";
+        details.append(summary);
+        d.answers.forEach((a, i) => {
+          const row = document.createElement("p");
+          row.textContent = `${i + 1}. ${a.question} | Yours: ${a.chosen} | Correct: ${a.correct}`;
+          details.append(row);
+        });
+        card.append(details);
+      }
+      box.append(card);
+    });
+  } catch (e) {
+    box.textContent = "Could not load history: " + e.message + ". Check that the Firestore rules are published.";
+  }
+}
+
+async function saveResult(record) {
+  if (!auth?.currentUser) return;
+  try {
+    await addDoc(historyCollection(), { ...record, uid: auth.currentUser.uid, createdAt: Date.now() });
+    setStatus("quizStatus", "Score saved to your account.");
+    await loadHistory();
+  } catch (e) {
+    setStatus("quizStatus", "Score shown, but saving failed: " + e.message, true);
+  }
+}
+
+try {
+  const app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+
+  onAuthStateChanged(auth, async user => {
+    if (user) {
+      $("authButton").textContent = "Signed in";
+      $("authStatus").textContent = "Signed in as " + (user.email || user.displayName || "your account") + ". Quiz history is linked to this account.";
+      $("signOutButton").hidden = false;
+      await loadHistory();
+    } else {
+      $("authButton").textContent = "Sign in";
+      $("authStatus").textContent = "Sign in with Google to save and access quiz history across devices.";
+      $("signOutButton").hidden = true;
+      $("quizHistory").innerHTML = '<p class="placeholder">Sign in to view your saved tests.</p>';
+    }
+  });
+} catch (e) {
+  $("authStatus").textContent = "Firebase setup error: " + e.message;
+}
+
+$("authButton").onclick = async () => {
+  if (!auth) return setStatus("authStatus", "Firebase authentication could not initialise.", true);
+  if (auth.currentUser) return;
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (e) {
+    setStatus("authStatus", "Sign-in failed: " + e.message + " Check Firebase authorised domains.", true);
+  }
+};
+
+$("signOutButton").onclick = async () => {
+  try { await signOut(auth); }
+  catch (e) { setStatus("authStatus", "Sign-out failed: " + e.message, true); }
+};
+
+$("refreshQuizHistory").onclick = loadHistory;
+
+$("clearQuizHistory").onclick = async () => {
+  if (!auth?.currentUser) return setStatus("quizStatus", "Sign in to clear saved history.", true);
+  if (!confirm("Delete all your saved quiz history? This cannot be undone.")) return;
+  try {
+    const snap = await getDocs(historyCollection());
+    const uid = auth.currentUser.uid;
+    await Promise.all(snap.docs.map(d => deleteDoc(doc(db, "users", uid, "quizHistory", d.id))));
+    await loadHistory();
+    setStatus("quizStatus", "Saved quiz history cleared.");
+  } catch (e) {
+    setStatus("quizStatus", "Could not clear history: " + e.message, true);
+  }
+};
+
+/* ───────── Quiz ───────── */
+let timer = null;
+let finished = false;
+
+const optionText = o => (typeof o === "string" ? o : o?.text ?? o?.label ?? JSON.stringify(o));
+
+// Works out the correct option index (or text answer) from the different key formats the API may return.
+function getAnswerKey(q, opts) {
+  const idx = q.answerIndex ?? q.correctIndex ?? q.correctAnswerIndex;
+  if (idx != null && opts[+idx] !== undefined) return { index: +idx, text: optionText(opts[+idx]) };
+
+  const ans = q.answer ?? q.correctAnswer;
+  if (ans == null) return null;
+
+  // Letter answers such as "B"
+  const letter = String(ans).trim().toUpperCase();
+  if (opts.length && /^[A-Z]$/.test(letter)) {
+    const i = letter.charCodeAt(0) - 65;
+    if (opts[i] !== undefined) return { index: i, text: optionText(opts[i]) };
+  }
+  // Text answers matching an option
+  const match = opts.findIndex(o => optionText(o).trim().toLowerCase() === String(ans).trim().toLowerCase());
+  if (match >= 0) return { index: match, text: optionText(opts[match]) };
+
+  return { index: null, text: String(ans) };
+}
+
+$("generateQuiz").onclick = async () => {
+  const text = $("studyText").value.trim();
+  if (!text) return setStatus("quizStatus", "Upload a readable PDF or paste study material first.", true);
+
+  setBusy($("generateQuiz"), true, "Generating…");
+  setStatus("quizStatus", "Malie AI is preparing your questions…");
+  $("quizOutput").innerHTML = "";
+  if (timer) { clearInterval(timer); timer = null; }
+
+  try {
+    const data = await api("/api/quiz", {
+      text,
+      count: Number($("questionCount").value),
+      difficulty: $("quizDifficulty").value
+    });
+    const questions = data.questions ?? data.result?.questions ?? (Array.isArray(data.result) ? data.result : null);
+
+    if (!Array.isArray(questions) || !questions.length) {
+      const fallback = data.result ?? data.reply ?? data.output;
+      if (fallback) {
+        $("quizOutput").innerHTML = markdown(typeof fallback === "string" ? fallback : JSON.stringify(fallback));
+        setStatus("quizStatus", "Quiz response received.");
+        return;
+      }
+      throw new Error("The server did not return quiz questions.");
+    }
+    renderQuiz(questions);
+    setStatus("quizStatus", "Quiz ready. Answer before the timer ends.");
+  } catch (e) {
+    setStatus("quizStatus", "Error: " + e.message, true);
+  } finally {
+    setBusy($("generateQuiz"), false);
+  }
+};
+
+function renderQuiz(questions) {
+  if (timer) clearInterval(timer);
+  finished = false;
+
+  const host = $("quizOutput");
+  host.innerHTML = "";
+
+  const total = Math.max(60, questions.length * SECONDS_PER_QUESTION);
+  let remaining = total;
+
+  // Toolbar
+  const toolbar = document.createElement("div");
+  toolbar.className = "quiz-toolbar";
+  toolbar.innerHTML =
+    '<div><strong>⏱ Time remaining</strong><div class="quiz-timer" id="quizTimer"></div></div>' +
+    `<div><strong>${questions.length} questions</strong><div class="score-detail">One minute per question</div></div>` +
+    '<div class="quiz-progress"><div class="quiz-progress-fill" id="quizProgress"></div></div>';
+  host.append(toolbar);
+
+  // Questions
+  questions.forEach((q, i) => {
+    const card = document.createElement("div");
+    card.className = "quiz-question";
+
+    const prompt = document.createElement("p");
+    prompt.textContent = `${i + 1}. ${q.question || q.prompt || "Question"}`;
+    card.append(prompt);
+
+    const opts = q.options || q.choices || [];
+    if (Array.isArray(opts) && opts.length) {
+      opts.forEach((o, j) => {
+        const label = document.createElement("label");
+        const input = document.createElement("input");
+        const span = document.createElement("span");
+        input.type = "radio";
+        input.name = "q" + i;
+        input.value = j;
+        span.textContent = optionText(o);
+        label.append(input, span);
+        card.append(label);
+      });
+    } else {
+      const ta = document.createElement("textarea");
+      ta.className = "short-textarea";
+      ta.placeholder = "Type your answer…";
+      ta.dataset.typed = i;
+      card.append(ta);
+    }
+    host.append(card);
+  });
+
+  const submit = document.createElement("button");
+  submit.className = "btn primary";
+  submit.textContent = "Submit answers";
+  host.append(submit);
+
+  const result = document.createElement("div");
+  result.hidden = true;
+  host.append(result);
+
+  function tick() {
+    const t = $("quizTimer");
+    if (!t) return;
+    const m = String(Math.floor(remaining / 60)).padStart(2, "0");
+    const s = String(remaining % 60).padStart(2, "0");
+    t.textContent = `${m}:${s}`;
+    t.classList.toggle("warning", remaining <= 15);
+    $("quizProgress").style.width = (100 * remaining / total) + "%";
+    if (remaining <= 0) return finish(true);
+    remaining--;
+  }
+
+  async function finish(timesUp) {
+    if (finished) return;
+    finished = true;
+    clearInterval(timer);
+    timer = null;
+
+    let score = 0, graded = 0;
+    const records = [];
+
+    questions.forEach((q, i) => {
+      const opts = q.options || q.choices || [];
+      const key = getAnswerKey(q, Array.isArray(opts) ? opts : []);
+      const selected = host.querySelector(`input[name="q${i}"]:checked`);
+      const typed = host.querySelector(`[data-typed="${i}"]`);
+
+      let chosen = "No answer";
+      if (selected) chosen = optionText(opts[+selected.value]);
+      else if (typed?.value.trim()) chosen = typed.value.trim();
+
+      let isGraded = false, isCorrect = false;
+      if (key) {
+        isGraded = true; // unanswered questions count as wrong
+        if (selected && key.index !== null) isCorrect = +selected.value === key.index;
+        else if (chosen !== "No answer") isCorrect = chosen.trim().toLowerCase() === key.text.trim().toLowerCase();
+      }
+      if (isGraded) { graded++; if (isCorrect) score++; }
+
+      records.push({
+        question: q.question || q.prompt || `Question ${i + 1}`,
+        chosen: String(chosen),
+        correct: key ? key.text : "Not provided",
+        isCorrect,
+        explanation: String(q.explanation || ""),
+        graded: isGraded
+      });
+    });
+
+    host.querySelectorAll("input, textarea").forEach(x => (x.disabled = true));
+    submit.disabled = true;
+    result.hidden = false;
+    result.className = "score-card";
+
+    if (!graded) {
+      result.innerHTML = "<h3>Quiz completed</h3><p>No recognised answer key was returned, so a reliable score cannot be calculated.</p>";
+      records.forEach((r, i) => {
+        const p = document.createElement("p");
+        p.textContent = `${i + 1}. ${r.question} — Yours: ${r.chosen}`;
+        result.append(p);
+      });
+      setStatus("quizStatus", "Quiz submitted, but no answer key was available.", true);
+      return;
+    }
+
+    const percent = Math.round(score / graded * 100);
+    const message = percent >= 80 ? "Excellent work! 🎉" : percent >= 60 ? "Good effort! Keep practising." : "Keep going — practice makes progress.";
+
+    result.innerHTML =
+      `<div class="score-hero">
+        <div class="score-ring" style="--angle:${percent * 3.6}deg">
+          <div class="score-ring-content">
+            <div class="score-number">${score}/${graded}</div>
+            <div class="score-percent">${percent}%</div>
+          </div>
+        </div>
+        <div>
+          <p class="score-message">${message}</p>
+          <div class="score-detail">${timesUp ? "Time ran out. " : ""}You scored ${score} out of ${graded} gradable questions.</div>
+        </div>
+      </div>
+      <h3>Answer review</h3><div id="answerReview"></div>`;
+
+    const review = $("answerReview");
+    records.forEach((r, i) => {
+      const div = document.createElement("div");
+      div.className = "quiz-feedback " + (r.graded ? (r.isCorrect ? "correct" : "incorrect") : "");
+
+      const head = document.createElement("p");
+      head.textContent = `${i + 1}. ${r.graded ? (r.isCorrect ? "✓ Correct" : "✗ Incorrect") : "Not graded"} — ${r.question}`;
+      const detail = document.createElement("p");
+      detail.textContent = `Your answer: ${r.chosen} · Correct answer: ${r.correct}`;
+      div.append(head, detail);
+
+      if (r.explanation) {
+        const ex = document.createElement("p");
+        ex.textContent = "Explanation: " + r.explanation;
+        div.append(ex);
+      }
+      review.append(div);
+    });
+
+    setStatus("quizStatus", timesUp ? "Time is up. Your quiz has been submitted." : `Quiz submitted. Your score is ${score} / ${graded}.`);
+
+    if (auth?.currentUser) {
+      await saveResult({
+        score, total: graded, percent, answers: records,
+        title: `${$("quizDifficulty").value} quiz · ${questions.length} questions`,
+        date: new Date().toISOString()
+      });
+    } else {
+      const note = document.createElement("p");
+      note.className = "score-detail";
+      note.textContent = "Sign in with Google to save this result and access it on other devices.";
+      result.append(note);
+    }
+  }
+
+  submit.onclick = () => finish(false);
+  tick();
+  timer = setInterval(tick, 1000);
 }
 </script>
 </body>
-</html>
+</html><!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10111a">
+<title>Malie AI — Study & Writing Assistant</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #10111a; --card: #191b28; --card2: #202333;
+  --text: #f5f5fb; --muted: #a4a8bd; --line: #303449;
+  --accent: #9b87ff; --accent2: #7863ef;
+  --good: #64dba5; --bad: #ff8585;
+}
+[data-theme=light] {
+  color-scheme: light;
+  --bg: #f5f6fc; --card: #fff; --card2: #f0f1fa;
+  --text: #202237; --muted: #686d83; --line: #dedfee;
+  --accent: #7258e8; --accent2: #6045d6;
+  --good: #138657; --bad: #c93636;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.6;
+}
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+button:disabled { opacity: .6; cursor: wait; }
+.container { width: min(1100px, calc(100% - 32px)); margin: auto; }
+
+/* Header */
+header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.nav { min-height: 68px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; }
+.logo {
+  display: grid; place-items: center; width: 39px; height: 39px; border-radius: 13px;
+  background: linear-gradient(135deg, #a797ff, #6650e9); color: #fff;
+}
+.nav-actions { display: flex; gap: 7px; align-items: center; }
+
+/* Buttons */
+.btn {
+  border: 1px solid var(--line); background: var(--card2); color: var(--text);
+  padding: 10px 14px; border-radius: 11px; font-weight: 650;
+}
+.btn.primary { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+
+/* Hero & features */
+.hero { text-align: center; padding: 45px 0 30px; }
+.eyebrow {
+  display: inline-block; color: var(--accent); background: var(--card2);
+  padding: 6px 12px; border-radius: 50px; font-size: 13px; font-weight: 700;
+}
+h1 { font-size: clamp(34px, 6vw, 58px); line-height: 1.12; letter-spacing: -2px; margin: 18px 0; }
+.gradient {
+  background: linear-gradient(90deg, #a99aff, #7aafff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero p { color: var(--muted); max-width: 620px; margin: auto; }
+.features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 25px 0 35px; }
+.feature, .sidebar, .panel { background: var(--card); border: 1px solid var(--line); border-radius: 17px; }
+.feature { padding: 18px; }
+.feature h3 { margin: 6px 0; }
+.feature p { font-size: 13px; color: var(--muted); margin: 0; }
+.feature-icon { font-size: 25px; }
+
+/* Workspace */
+.workspace {
+  display: grid; grid-template-columns: 220px minmax(0, 1fr);
+  gap: 17px; padding-bottom: 45px; align-items: start;
+}
+.sidebar, .panel { padding: 17px; min-width: 0; }
+.sidebar h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.tab {
+  display: block; width: 100%; text-align: left; border: 0; background: transparent;
+  color: var(--muted); padding: 12px; border-radius: 10px; margin: 4px 0; font-weight: 650;
+}
+.tab.active { color: var(--text); background: var(--card2); box-shadow: inset 3px 0 var(--accent); }
+.panel h2 { margin: 0 0 5px; font-size: 24px; }
+.sub { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
+.view { display: none; }
+.view.active { display: block; }
+
+/* Forms */
+label { display: block; font-size: 13px; font-weight: 700; margin: 14px 0 7px; }
+textarea, input, select {
+  width: 100%; background: var(--card2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 11px; padding: 12px; outline: none;
+}
+textarea { min-height: 145px; resize: vertical; }
+textarea:focus, input:focus, select:focus { border-color: var(--accent); }
+.short-textarea { min-height: 90px; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 15px; }
+.status { min-height: 24px; margin: 12px 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.status.error { color: var(--bad); }
+
+/* Output */
+.output {
+  overflow-wrap: anywhere; line-height: 1.8; background: var(--card2);
+  border: 1px solid var(--line); padding: 16px; border-radius: 12px; margin-top: 12px;
+}
+.output p { margin: .4em 0; }
+.output pre { overflow: auto; background: var(--bg); padding: 12px; border-radius: 8px; }
+.output h1, .output h2, .output h3 { letter-spacing: normal; }
+.placeholder { color: var(--muted); }
+
+/* Auth box */
+.auth-box { padding: 13px; border-radius: 12px; background: var(--card2); margin-top: 20px; }
+.auth-box p { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+
+/* Quiz */
+.quiz-question { border: 1px solid var(--line); border-radius: 12px; padding: 15px; margin: 13px 0; }
+.quiz-question p { font-weight: 700; margin-top: 0; }
+.quiz-question label { display: flex; gap: 9px; align-items: flex-start; font-weight: 400; margin: 10px 0; }
+.quiz-question input { width: auto; margin-top: 6px; }
+.quiz-toolbar {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 14px; margin: 14px 0; background: var(--card2); border: 1px solid var(--line); border-radius: 14px;
+}
+.quiz-timer { font-size: 22px; font-weight: 850; font-variant-numeric: tabular-nums; }
+.quiz-timer.warning { color: var(--bad); animation: pulse .8s infinite alternate; }
+.quiz-progress { height: 7px; width: 100%; background: var(--line); border-radius: 20px; overflow: hidden; }
+.quiz-progress-fill { height: 100%; width: 100%; background: var(--accent); transition: width 1s linear; }
+.score-card {
+  margin-top: 20px; padding: 20px; border: 1px solid var(--line);
+  border-radius: 18px; background: var(--card2); animation: appear .5s ease both;
+}
+.score-hero { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.score-ring {
+  width: 120px; height: 120px; flex: 0 0 120px; border-radius: 50%; display: grid; place-items: center;
+  background: conic-gradient(var(--accent) var(--angle), var(--line) 0deg); position: relative; animation: pop .6s ease both;
+}
+.score-ring::before { content: ""; position: absolute; inset: 9px; background: var(--card2); border-radius: 50%; }
+.score-ring-content { z-index: 1; text-align: center; }
+.score-number { font-size: 25px; font-weight: 850; }
+.score-percent, .score-detail { font-size: 13px; color: var(--muted); }
+.score-message { font-size: 18px; font-weight: 800; margin: 0; }
+.quiz-feedback { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.quiz-feedback p { margin: 4px 0; }
+.quiz-feedback.correct { color: var(--good); }
+.quiz-feedback.incorrect { color: var(--bad); }
+
+/* History */
+.history-card { border: 1px solid var(--line); background: var(--card2); border-radius: 12px; padding: 13px; margin: 10px 0; }
+.history-card h4 { margin: 0 0 5px; }
+.history-card p { font-size: 13px; color: var(--muted); margin: 4px 0; }
+.history-card summary { cursor: pointer; color: var(--accent); }
+
+footer { text-align: center; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding: 22px 0; }
+
+@keyframes pulse { to { opacity: .5; } }
+@keyframes appear { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pop { from { transform: scale(.75); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+@media (max-width: 720px) {
+  .workspace { grid-template-columns: 1fr; }
+  .sidebar { padding: 10px; }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+  .tab { text-align: center; padding: 10px 3px; font-size: 12px; }
+  .features { grid-template-columns: 1fr; }
+  .hero { padding-top: 35px; }
+  .fields { grid-template-columns: 1fr; }
+  .brand { font-size: 18px; }
+  .nav-actions .btn { padding: 8px; font-size: 12px; }
+  .panel { padding: 13px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container nav">
+    <div class="brand"><div class="logo">M</div><span>Malie AI</span></div>
+    <div class="nav-actions">
+      <button class="btn" id="themeToggle">☀️ Light mode</button>
+      <button class="btn" id="authButton">Sign in</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <span class="eyebrow">✦ Your personal AI assistant</span>
+    <h1>Think better.<br><span class="gradient">Write smarter.</span></h1>
+    <p>Improve your writing, ask questions and practise with quizzes using Malie AI.</p>
+  </section>
+
+  <section class="features">
+    <article class="feature"><div class="feature-icon">✍️</div><h3>Writing assistant</h3><p>Correct grammar, improve clarity and adjust your writing style.</p></article>
+    <article class="feature"><div class="feature-icon">💬</div><h3>AI chat</h3><p>Ask questions and get helpful explanations.</p></article>
+    <article class="feature"><div class="feature-icon">📚</div><h3>Quiz mode</h3><p>Practise questions based on your study material.</p></article>
+  </section>
+
+  <section class="workspace">
+    <aside class="sidebar">
+      <h3>Your workspace</h3>
+      <div class="tabs">
+        <button class="tab active" data-view="writing">✍️ Writing</button>
+        <button class="tab" data-view="chat">💬 AI Chat</button>
+        <button class="tab" data-view="quiz">📚 Quiz Mode</button>
+      </div>
+      <div class="auth-box">
+        <strong>Malie AI account</strong>
+        <p id="authStatus">Sign in to save quiz history to your account.</p>
+        <button class="btn" id="signOutButton" hidden>Sign out</button>
+      </div>
+    </aside>
+
+    <section class="panel">
+      <!-- Writing -->
+      <div class="view active" id="writingView">
+        <h2>Writing assistant</h2>
+        <p class="sub">Enter your text and choose how Malie AI should improve it.</p>
+        <label for="writingInput">Your text</label>
+        <textarea id="writingInput" placeholder="Paste or type your writing here..."></textarea>
+        <div class="fields">
+          <div>
+            <label for="mode">Task</label>
+            <select id="mode">
+              <option value="correct">Correct grammar</option>
+              <option value="improve">Improve writing</option>
+              <option value="rewrite">Rewrite text</option>
+              <option value="summarize">Summarize</option>
+              <option value="expand">Expand ideas</option>
+            </select>
+          </div>
+          <div>
+            <label for="tone">Tone</label>
+            <select id="tone">
+              <option value="natural">Natural</option>
+              <option value="formal">Formal</option>
+              <option value="academic">Academic</option>
+              <option value="friendly">Friendly</option>
+              <option value="professional">Professional</option>
+            </select>
+          </div>
+        </div>
+        <label for="length">Response length</label>
+        <select id="length">
+          <option value="balanced">Balanced</option>
+          <option value="short">Short</option>
+          <option value="detailed">Detailed</option>
+        </select>
+        <div class="actions">
+          <button class="btn primary" id="check">Improve my writing</button>
+          <button class="btn" id="clearWriting">Clear</button>
+        </div>
+        <p class="status" id="writingStatus"></p>
+        <h3>Result</h3>
+        <div class="output" id="writingOutput"><span class="placeholder">Your corrected text will appear here.</span></div>
+        <div class="actions"><button class="btn" id="copyWriting">Copy result</button></div>
+      </div>
+
+      <!-- Chat -->
+      <div class="view" id="chatView">
+        <h2>Chat with Malie AI</h2>
+        <p class="sub">Ask a question, learn something new or get help with a problem.</p>
+        <label for="chatInput">Your question</label>
+        <textarea class="short-textarea" id="chatInput" placeholder="Ask Malie AI anything..."></textarea>
+        <div class="actions">
+          <button class="btn primary" id="ask">Send question</button>
+          <button class="btn" id="clearChat">Clear</button>
+        </div>
+        <p class="status" id="chatStatus"></p>
+        <h3>Answer</h3>
+        <div class="output" id="chatOutput"><span class="placeholder">Your answer will appear here.</span></div>
+        <div class="actions"><button class="btn" id="copyChat">Copy answer</button></div>
+      </div>
+
+      <!-- Quiz -->
+      <div class="view" id="quizView">
+        <h2>Quiz mode</h2>
+        <p class="sub">Upload a PDF or enter your study material to generate practice questions.</p>
+        <label for="studyFile">Upload a PDF (optional)</label>
+        <input id="studyFile" type="file" accept=".pdf,application/pdf">
+        <label for="studyText">Study material</label>
+        <textarea id="studyText" placeholder="Paste your notes or textbook content here..."></textarea>
+        <div class="fields">
+          <div>
+            <label for="questionCount">Number of questions</label>
+            <select id="questionCount">
+              <option value="5">5 questions</option>
+              <option value="10" selected>10 questions</option>
+              <option value="15">15 questions</option>
+              <option value="20">20 questions</option>
+            </select>
+          </div>
+          <div>
+            <label for="quizDifficulty">Difficulty</label>
+            <select id="quizDifficulty">
+              <option value="easy">Easy</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions"><button class="btn primary" id="generateQuiz">Generate quiz</button></div>
+        <p class="status" id="quizStatus"></p>
+        <div id="quizOutput"></div>
+
+        <section style="margin-top:28px">
+          <h3>📚 My past tests</h3>
+          <p class="sub">Your completed quizzes saved to your account.</p>
+          <div id="quizHistory"><p class="placeholder">Sign in to view your saved tests.</p></div>
+          <div class="actions">
+            <button class="btn" id="refreshQuizHistory">Refresh history</button>
+            <button class="btn" id="clearQuizHistory">Clear past tests</button>
+          </div>
+        </section>
+      </div>
+    </section>
+  </section>
+</main>
+
+<footer>Malie AI · Your writing and learning companion</footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, deleteDoc, doc }
+  from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+/* ───────── Config ───────── */
+const API = "https://oracle-ai.osumemamuromu.workers.dev";
+const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const MAX_PDF_CHARS = 60000;
+const SECONDS_PER_QUESTION = 60;
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAbHz_yfiQrPNuODTrKujQ9kNcR4sbpNfQ",
+  authDomain: "malie-ai-auth.firebaseapp.com",
+  projectId: "malie-ai-auth",
+  storageBucket: "malie-ai-auth.firebasestorage.app",
+  messagingSenderId: "334163694573",
+  appId: "1:334163694573:web:1d82c54f057ad74e2ecde4",
+  measurementId: "G-7FHDD141B5"
+};
+
+/* ───────── Helpers ───────── */
+const $ = id => document.getElementById(id);
+
+function esc(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function inline(s) {
+  return esc(s)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+// Minimal, safe markdown: headings, bullets, bold, inline code, fenced code blocks.
+function markdown(text) {
+  const out = [];
+  let inCode = false, codeLines = [];
+  for (const line of String(text ?? "").split("\n")) {
+    if (line.trim().startsWith("```")) {
+      if (inCode) { out.push("<pre><code>" + esc(codeLines.join("\n")) + "</code></pre>"); codeLines = []; }
+      inCode = !inCode;
+      continue;
+    }
+    if (inCode) { codeLines.push(line); continue; }
+    const h = line.match(/^(#{1,3})\s+(.+)/);
+    if (h) out.push(`<h${h[1].length}>${esc(h[2])}</h${h[1].length}>`);
+    else if (/^\s*[-*]\s+/.test(line)) out.push("<p>• " + inline(line.replace(/^\s*[-*]\s+/, "")) + "</p>");
+    else out.push("<p>" + inline(line) + "</p>");
+  }
+  if (inCode) out.push("<pre><code>" + esc(codeLines.join("\n")) + "</code></pre>");
+  return out.join("");
+}
+
+function show(id, value) {
+  $(id).innerHTML = markdown(typeof value === "string" ? value : JSON.stringify(value, null, 2));
+}
+
+function setStatus(id, message, isError = false) {
+  const el = $(id);
+  el.textContent = message;
+  el.classList.toggle("error", isError);
+}
+
+function setBusy(button, on, label) {
+  if (on) {
+    button.dataset.label = button.textContent;
+    button.disabled = true;
+    button.textContent = label;
+  } else {
+    button.disabled = false;
+    button.textContent = button.dataset.label || button.textContent;
+  }
+}
+
+async function api(path, body) {
+  const res = await fetch(API + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const raw = await res.text();
+  let data;
+  try { data = JSON.parse(raw); }
+  catch { throw new Error("Unexpected server response. Please try again."); }
+  if (!res.ok || data.error) throw new Error(data.error || data.message || `Request failed (${res.status}).`);
+  return data;
+}
+
+async function copyText(id) {
+  try { await navigator.clipboard.writeText($(id).innerText); return true; }
+  catch { return false; }
+}
+
+/* ───────── Tabs & theme ───────── */
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t === btn));
+    document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === btn.dataset.view + "View"));
+  };
+});
+
+function safeStorage(action, key, value) {
+  try { return action === "get" ? localStorage.getItem(key) : localStorage.setItem(key, value); }
+  catch { return null; }
+}
+
+const savedTheme = safeStorage("get", "malie-theme");
+if (savedTheme === "light" || savedTheme === "dark") document.documentElement.dataset.theme = savedTheme;
+
+function updateThemeLabel() {
+  $("themeToggle").textContent = document.documentElement.dataset.theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode";
+}
+updateThemeLabel();
+
+$("themeToggle").onclick = () => {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  safeStorage("set", "malie-theme", next);
+  updateThemeLabel();
+};
+
+/* ───────── Writing assistant ───────── */
+$("copyWriting").onclick = async () =>
+  setStatus("writingStatus", (await copyText("writingOutput")) ? "Copied." : "Copy failed; select the text manually.");
+
+$("clearWriting").onclick = () => {
+  $("writingInput").value = "";
+  $("writingOutput").innerHTML = '<span class="placeholder">Your corrected text will appear here.</span>';
+  setStatus("writingStatus", "");
+};
+
+$("check").onclick = async () => {
+  const text = $("writingInput").value.trim();
+  if (!text) return setStatus("writingStatus", "Please enter your text first.", true);
+
+  setBusy($("check"), true, "Working…");
+  setStatus("writingStatus", "Malie AI is processing your writing…");
+  try {
+    const data = await api("/api/write", {
+      mode: $("mode").value,
+      text,
+      options: { tone: $("tone").value, length: $("length").value, audience: "general" }
+    });
+    const result = data.result ?? data.reply ?? data.output;
+    if (!result) throw new Error("No result returned.");
+    show("writingOutput", result);
+    setStatus("writingStatus", "Done. Review your result.");
+  } catch (e) {
+    setStatus("writingStatus", "Error: " + e.message, true);
+  } finally {
+    setBusy($("check"), false);
+  }
+};
+
+/* ───────── Chat ───────── */
+$("copyChat").onclick = async () =>
+  setStatus("chatStatus", (await copyText("chatOutput")) ? "Copied." : "Copy failed; select the text manually.");
+
+$("clearChat").onclick = () => {
+  $("chatInput").value = "";
+  $("chatOutput").innerHTML = '<span class="placeholder">Your answer will appear here.</span>';
+  setStatus("chatStatus", "");
+};
+
+$("ask").onclick = async () => {
+  const message = $("chatInput").value.trim();
+  if (!message) return setStatus("chatStatus", "Type a question first.", true);
+
+  setBusy($("ask"), true, "Thinking…");
+  setStatus("chatStatus", "Waiting for Malie AI…");
+  try {
+    const data = await api("/api/chat", { message });
+    const reply = data.reply ?? data.result ?? data.output;
+    if (!reply) throw new Error("No response returned.");
+    show("chatOutput", reply);
+    setStatus("chatStatus", "Response received.");
+  } catch (e) {
+    setStatus("chatStatus", "Error: " + e.message, true);
+  } finally {
+    setBusy($("ask"), false);
+  }
+};
+
+$("chatInput").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("ask").click(); }
+});
+
+/* ───────── PDF import ───────── */
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = PDFJS_URL;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error("Could not load PDF reader. Paste your notes instead."));
+    document.head.appendChild(s);
+  });
+}
+
+$("studyFile").onchange = async e => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+    return setStatus("quizStatus", "Please select a PDF.", true);
+  }
+
+  setStatus("quizStatus", "Reading PDF…");
+  try {
+    await loadPdfJs();
+    pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+
+    let text = "";
+    for (let n = 1; n <= pdf.numPages && text.length < MAX_PDF_CHARS; n++) {
+      const page = await pdf.getPage(n);
+      const content = await page.getTextContent();
+      text += content.items.map(i => i.str).join(" ") + "\n";
+    }
+    const truncated = text.length > MAX_PDF_CHARS;
+    $("studyText").value = text.slice(0, MAX_PDF_CHARS).trim();
+    setStatus("quizStatus", `PDF loaded: ${pdf.numPages} page(s).` + (truncated ? " Text was shortened to fit." : ""));
+  } catch (err) {
+    setStatus("quizStatus", err.message, true);
+  }
+};
+
+/* ───────── Firebase auth & history ───────── */
+let auth, db;
+
+function historyCollection() {
+  if (!auth?.currentUser) throw new Error("Sign in first.");
+  return collection(db, "users", auth.currentUser.uid, "quizHistory");
+}
+
+async function loadHistory() {
+  if (!auth?.currentUser) return;
+  const box = $("quizHistory");
+  box.textContent = "Loading history…";
+  try {
+    const snap = await getDocs(query(historyCollection(), orderBy("date", "desc"), limit(50)));
+    box.innerHTML = "";
+    if (snap.empty) {
+      box.innerHTML = '<p class="placeholder">No saved tests yet. Complete a quiz to save your score.</p>';
+      return;
+    }
+    snap.forEach(s => {
+      const d = s.data();
+      const card = document.createElement("article");
+      card.className = "history-card";
+
+      const title = document.createElement("h4");
+      title.textContent = d.title || "Practice quiz";
+      const meta = document.createElement("p");
+      meta.textContent = `${d.score ?? 0} / ${d.total ?? 0} correct · ${d.percent ?? 0}% · ` +
+        (d.date ? new Date(d.date).toLocaleString() : "");
+      card.append(title, meta);
+
+      if (Array.isArray(d.answers)) {
+        const details = document.createElement("details");
+        const summary = document.createElement("summary");
+        summary.textContent = "Review answers";
+        details.append(summary);
+        d.answers.forEach((a, i) => {
+          const row = document.createElement("p");
+          row.textContent = `${i + 1}. ${a.question} | Yours: ${a.chosen} | Correct: ${a.correct}`;
+          details.append(row);
+        });
+        card.append(details);
+      }
+      box.append(card);
+    });
+  } catch (e) {
+    box.textContent = "Could not load history: " + e.message + ". Check that the Firestore rules are published.";
+  }
+}
+
+async function saveResult(record) {
+  if (!auth?.currentUser) return;
+  try {
+    await addDoc(historyCollection(), { ...record, uid: auth.currentUser.uid, createdAt: Date.now() });
+    setStatus("quizStatus", "Score saved to your account.");
+    await loadHistory();
+  } catch (e) {
+    setStatus("quizStatus", "Score shown, but saving failed: " + e.message, true);
+  }
+}
+
+try {
+  const app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+
+  onAuthStateChanged(auth, async user => {
+    if (user) {
+      $("authButton").textContent = "Signed in";
+      $("authStatus").textContent = "Signed in as " + (user.email || user.displayName || "your account") + ". Quiz history is linked to this account.";
+      $("signOutButton").hidden = false;
+      await loadHistory();
+    } else {
+      $("authButton").textContent = "Sign in";
+      $("authStatus").textContent = "Sign in with Google to save and access quiz history across devices.";
+      $("signOutButton").hidden = true;
+      $("quizHistory").innerHTML = '<p class="placeholder">Sign in to view your saved tests.</p>';
+    }
+  });
+} catch (e) {
+  $("authStatus").textContent = "Firebase setup error: " + e.message;
+}
+
+$("authButton").onclick = async () => {
+  if (!auth) return setStatus("authStatus", "Firebase authentication could not initialise.", true);
+  if (auth.currentUser) return;
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (e) {
+    setStatus("authStatus", "Sign-in failed: " + e.message + " Check Firebase authorised domains.", true);
+  }
+};
+
+$("signOutButton").onclick = async () => {
+  try { await signOut(auth); }
+  catch (e) { setStatus("authStatus", "Sign-out failed: " + e.message, true); }
+};
+
+$("refreshQuizHistory").onclick = loadHistory;
+
+$("clearQuizHistory").onclick = async () => {
+  if (!auth?.currentUser) return setStatus("quizStatus", "Sign in to clear saved history.", true);
+  if (!confirm("Delete all your saved quiz history? This cannot be undone.")) return;
+  try {
+    const snap = await getDocs(historyCollection());
+    const uid = auth.currentUser.uid;
+    await Promise.all(snap.docs.map(d => deleteDoc(doc(db, "users", uid, "quizHistory", d.id))));
+    await loadHistory();
+    setStatus("quizStatus", "Saved quiz history cleared.");
+  } catch (e) {
+    setStatus("quizStatus", "Could not clear history: " + e.message, true);
+  }
+};
+
+/* ───────── Quiz ───────── */
+let timer = null;
+let finished = false;
+
+const optionText = o => (typeof o === "string" ? o : o?.text ?? o?.label ?? JSON.stringify(o));
+
+// Works out the correct option index (or text answer) from the different key formats the API may return.
+function getAnswerKey(q, opts) {
+  const idx = q.answerIndex ?? q.correctIndex ?? q.correctAnswerIndex;
+  if (idx != null && opts[+idx] !== undefined) return { index: +idx, text: optionText(opts[+idx]) };
+
+  const ans = q.answer ?? q.correctAnswer;
+  if (ans == null) return null;
+
+  // Letter answers such as "B"
+  const letter = String(ans).trim().toUpperCase();
+  if (opts.length && /^[A-Z]$/.test(letter)) {
+    const i = letter.charCodeAt(0) - 65;
+    if (opts[i] !== undefined) return { index: i, text: optionText(opts[i]) };
+  }
+  // Text answers matching an option
+  const match = opts.findIndex(o => optionText(o).trim().toLowerCase() === String(ans).trim().toLowerCase());
+  if (match >= 0) return { index: match, text: optionText(opts[match]) };
+
+  return { index: null, text: String(ans) };
+}
+
+$("generateQuiz").onclick = async () => {
+  const text = $("studyText").value.trim();
+  if (!text) return setStatus("quizStatus", "Upload a readable PDF or paste study material first.", true);
+
+  setBusy($("generateQuiz"), true, "Generating…");
+  setStatus("quizStatus", "Malie AI is preparing your questions…");
+  $("quizOutput").innerHTML = "";
+  if (timer) { clearInterval(timer); timer = null; }
+
+  try {
+    const data = await api("/api/quiz", {
+      text,
+      count: Number($("questionCount").value),
+      difficulty: $("quizDifficulty").value
+    });
+    const questions = data.questions ?? data.result?.questions ?? (Array.isArray(data.result) ? data.result : null);
+
+    if (!Array.isArray(questions) || !questions.length) {
+      const fallback = data.result ?? data.reply ?? data.output;
+      if (fallback) {
+        $("quizOutput").innerHTML = markdown(typeof fallback === "string" ? fallback : JSON.stringify(fallback));
+        setStatus("quizStatus", "Quiz response received.");
+        return;
+      }
+      throw new Error("The server did not return quiz questions.");
+    }
+    renderQuiz(questions);
+    setStatus("quizStatus", "Quiz ready. Answer before the timer ends.");
+  } catch (e) {
+    setStatus("quizStatus", "Error: " + e.message, true);
+  } finally {
+    setBusy($("generateQuiz"), false);
+  }
+};
+
+function renderQuiz(questions) {
+  if (timer) clearInterval(timer);
+  finished = false;
+
+  const host = $("quizOutput");
+  host.innerHTML = "";
+
+  const total = Math.max(60, questions.length * SECONDS_PER_QUESTION);
+  let remaining = total;
+
+  // Toolbar
+  const toolbar = document.createElement("div");
+  toolbar.className = "quiz-toolbar";
+  toolbar.innerHTML =
+    '<div><strong>⏱ Time remaining</strong><div class="quiz-timer" id="quizTimer"></div></div>' +
+    `<div><strong>${questions.length} questions</strong><div class="score-detail">One minute per question</div></div>` +
+    '<div class="quiz-progress"><div class="quiz-progress-fill" id="quizProgress"></div></div>';
+  host.append(toolbar);
+
+  // Questions
+  questions.forEach((q, i) => {
+    const card = document.createElement("div");
+    card.className = "quiz-question";
+
+    const prompt = document.createElement("p");
+    prompt.textContent = `${i + 1}. ${q.question || q.prompt || "Question"}`;
+    card.append(prompt);
+
+    const opts = q.options || q.choices || [];
+    if (Array.isArray(opts) && opts.length) {
+      opts.forEach((o, j) => {
+        const label = document.createElement("label");
+        const input = document.createElement("input");
+        const span = document.createElement("span");
+        input.type = "radio";
+        input.name = "q" + i;
+        input.value = j;
+        span.textContent = optionText(o);
+        label.append(input, span);
+        card.append(label);
+      });
+    } else {
+      const ta = document.createElement("textarea");
+      ta.className = "short-textarea";
+      ta.placeholder = "Type your answer…";
+      ta.dataset.typed = i;
+      card.append(ta);
+    }
+    host.append(card);
+  });
+
+  const submit = document.createElement("button");
+  submit.className = "btn primary";
+  submit.textContent = "Submit answers";
+  host.append(submit);
+
+  const result = document.createElement("div");
+  result.hidden = true;
+  host.append(result);
+
+  function tick() {
+    const t = $("quizTimer");
+    if (!t) return;
+    const m = String(Math.floor(remaining / 60)).padStart(2, "0");
+    const s = String(remaining % 60).padStart(2, "0");
+    t.textContent = `${m}:${s}`;
+    t.classList.toggle("warning", remaining <= 15);
+    $("quizProgress").style.width = (100 * remaining / total) + "%";
+    if (remaining <= 0) return finish(true);
+    remaining--;
+  }
+
+  async function finish(timesUp) {
+    if (finished) return;
+    finished = true;
+    clearInterval(timer);
+    timer = null;
+
+    let score = 0, graded = 0;
+    const records = [];
+
+    questions.forEach((q, i) => {
+      const opts = q.options || q.choices || [];
+      const key = getAnswerKey(q, Array.isArray(opts) ? opts : []);
+      const selected = host.querySelector(`input[name="q${i}"]:checked`);
+      const typed = host.querySelector(`[data-typed="${i}"]`);
+
+      let chosen = "No answer";
+      if (selected) chosen = optionText(opts[+selected.value]);
+      else if (typed?.value.trim()) chosen = typed.value.trim();
+
+      let isGraded = false, isCorrect = false;
+      if (key) {
+        isGraded = true; // unanswered questions count as wrong
+        if (selected && key.index !== null) isCorrect = +selected.value === key.index;
+        else if (chosen !== "No answer") isCorrect = chosen.trim().toLowerCase() === key.text.trim().toLowerCase();
+      }
+      if (isGraded) { graded++; if (isCorrect) score++; }
+
+      records.push({
+        question: q.question || q.prompt || `Question ${i + 1}`,
+        chosen: String(chosen),
+        correct: key ? key.text : "Not provided",
+        isCorrect,
+        explanation: String(q.explanation || ""),
+        graded: isGraded
+      });
+    });
+
+    host.querySelectorAll("input, textarea").forEach(x => (x.disabled = true));
+    submit.disabled = true;
+    result.hidden = false;
+    result.className = "score-card";
+
+    if (!graded) {
+      result.innerHTML = "<h3>Quiz completed</h3><p>No recognised answer key was returned, so a reliable score cannot be calculated.</p>";
+      records.forEach((r, i) => {
+        const p = document.createElement("p");
+        p.textContent = `${i + 1}. ${r.question} — Yours: ${r.chosen}`;
+        result.append(p);
+      });
+      setStatus("quizStatus", "Quiz submitted, but no answer key was available.", true);
+      return;
+    }
+
+    const percent = Math.round(score / graded * 100);
+    const message = percent >= 80 ? "Excellent work! 🎉" : percent >= 60 ? "Good effort! Keep practising." : "Keep going — practice makes progress.";
+
+    result.innerHTML =
+      `<div class="score-hero">
+        <div class="score-ring" style="--angle:${percent * 3.6}deg">
+          <div class="score-ring-content">
+            <div class="score-number">${score}/${graded}</div>
+            <div class="score-percent">${percent}%</div>
+          </div>
+        </div>
+        <div>
+          <p class="score-message">${message}</p>
+          <div class="score-detail">${timesUp ? "Time ran out. " : ""}You scored ${score} out of ${graded} gradable questions.</div>
+        </div>
+      </div>
+      <h3>Answer review</h3><div id="answerReview"></div>`;
+
+    const review = $("answerReview");
+    records.forEach((r, i) => {
+      const div = document.createElement("div");
+      div.className = "quiz-feedback " + (r.graded ? (r.isCorrect ? "correct" : "incorrect") : "");
+
+      const head = document.createElement("p");
+      head.textContent = `${i + 1}. ${r.graded ? (r.isCorrect ? "✓ Correct" : "✗ Incorrect") : "Not graded"} — ${r.question}`;
+      const detail = document.createElement("p");
+      detail.textContent = `Your answer: ${r.chosen} · Correct answer: ${r.correct}`;
+      div.append(head, detail);
+
+      if (r.explanation) {
+        const ex = document.createElement("p");
+        ex.textContent = "Explanation: " + r.explanation;
+        div.append(ex);
+      }
+      review.append(div);
+    });
+
+    setStatus("quizStatus", timesUp ? "Time is up. Your quiz has been submitted." : `Quiz submitted. Your score is ${score} / ${graded}.`);
+
+    if (auth?.currentUser) {
+      await saveResult({
+        score, total: graded, percent, answers: records,
+        title: `${$("quizDifficulty").value} quiz · ${questions.length} questions`,
+        date: new Date().toISOString()
+      });
+    } else {
+      const note = document.createElement("p");
+      note.className = "score-detail";
+      note.textContent = "Sign in with Google to save this result and access it on other devices.";
+      result.append(note);
+    }
+  }
+
+  submit.onclick = () => finish(false);
+  tick();
+  timer = setInterval(tick, 1000);
+}
+</script>
+</body>
+  </html>

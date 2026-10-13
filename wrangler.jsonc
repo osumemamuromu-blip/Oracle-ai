@@ -1,17 +1,20 @@
 {
-"$schema": "node_modules/wrangler/config-schema.json",
-"name": "oracle-ai",
-"main": "worker.js",
-"compatibility_date": "2026-10-12",
-"observability": {
-"enabled": true
-},
-"ai": {
-"directory": "./public",
-"binding": "AI",
-"run_worker_first": ["/api/*"]
-},
-"vars": {
-"GEMINI_MODEL": "gemini-3.5-flash-lite"
-}
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "oracle-ai",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-12",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "ai": {
+    "binding": "AI"
+  },
+  "vars": {
+    "GEMINI_MODEL": "gemini-3.5-flash-lite"
+  }
 }

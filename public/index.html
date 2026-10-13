@@ -289,6 +289,16 @@ let auth = null, db = null, currentUser = null;
 try {
   const app = initializeApp(firebaseConfig);
   auth = getAuth(app);
+  getRedirectResult(auth)
+  .then(result => {
+    if (result && result.user) {
+      console.log("Google sign-in successful:", result.user.email);
+    }
+  })
+  .catch(error => {
+    console.error("Google redirect sign-in error:", error.code, error.message);
+  });
+
   db = getFirestore(app);
 } catch(e) {
   console.warn("Firebase initialization failed:", e);

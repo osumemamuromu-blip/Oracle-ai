@@ -307,21 +307,21 @@ console.error("Firebase persistence error:", error.code, error.message);
 });
 
 getRedirectResult(auth)
-.then(result => {
-if (result && result.user) {
-console.log("Google sign-in successful:", result.user.email);
-}
-})
-.catch(error => {
-console.error("Google redirect sign-in error:", error.code, error.message);
-alert(
-"Google sign-in error: " +
-(error.code || "unknown error") +
-"\n" +
-(error.message || "Please try again.")
-);
-});
-
+  .then(result => {
+    if (result && result.user) {
+      alert("Google sign-in completed for: " + result.user.email);
+    } else {
+      console.log("No Google redirect result was returned.");
+    }
+  })
+  .catch(error => {
+    alert(
+      "Google sign-in problem: " +
+      (error.code || "unknown") +
+      "\n" +
+      (error.message || "No details available")
+    );
+  });
 } catch (error) {
 console.error("Firebase initialization failed:", error);
 alert("Firebase could not initialize: " + error.message);

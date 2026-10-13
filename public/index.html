@@ -20,7 +20,6 @@
   --accent: #7258e8; --accent2: #6045d6;
   --good: #138657; --bad: #c93636;
 }
-
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body {
@@ -32,7 +31,6 @@ button { cursor: pointer; }
 button:disabled { opacity: .6; cursor: wait; }
 .container { width: min(1100px, calc(100% - 32px)); margin: auto; }
 
-/* Header */
 header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
 .nav { min-height: 68px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; }
@@ -42,7 +40,6 @@ header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bot
 }
 .nav-actions { display: flex; gap: 7px; align-items: center; }
 
-/* Buttons */
 .btn {
   border: 1px solid var(--line); background: var(--card2); color: var(--text);
   padding: 10px 14px; border-radius: 11px; font-weight: 650;
@@ -51,10 +48,11 @@ header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bot
 .btn.avatar {
   width: 40px; height: 40px; padding: 0; border-radius: 50%;
   display: grid; place-items: center; font-size: 17px; font-weight: 800; line-height: 1;
-  background: var(--accent2); border-color: var(--accent2); color: #fff; cursor: default;
+  background: var(--accent2); border-color: var(--accent2); color: #fff;
+  transition: transform .25s cubic-bezier(.22,1,.36,1);
 }
+.btn.avatar:active { transform: scale(.88); }
 
-/* Hero & features */
 .hero { text-align: center; padding: 45px 0 30px; }
 .eyebrow {
   display: inline-block; color: var(--accent); background: var(--card2);
@@ -73,7 +71,6 @@ h1 { font-size: clamp(34px, 6vw, 58px); line-height: 1.12; letter-spacing: -2px;
 .feature p { font-size: 13px; color: var(--muted); margin: 0; }
 .feature-icon { font-size: 25px; }
 
-/* Workspace */
 .workspace {
   display: grid; grid-template-columns: 220px minmax(0, 1fr);
   gap: 17px; padding-bottom: 45px; align-items: start;
@@ -90,7 +87,6 @@ h1 { font-size: clamp(34px, 6vw, 58px); line-height: 1.12; letter-spacing: -2px;
 .view { display: none; }
 .view.active { display: block; }
 
-/* Forms */
 label { display: block; font-size: 13px; font-weight: 700; margin: 14px 0 7px; }
 textarea, input, select {
   width: 100%; background: var(--card2); color: var(--text);
@@ -102,9 +98,8 @@ textarea:focus, input:focus, select:focus { border-color: var(--accent); }
 .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 15px; }
 .status { min-height: 24px; margin: 12px 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
-.status.error, .auth-box p.error { color: var(--bad); }
+.status.error { color: var(--bad); }
 
-/* Output */
 .output {
   overflow-wrap: anywhere; line-height: 1.8; background: var(--card2);
   border: 1px solid var(--line); padding: 16px; border-radius: 12px; margin-top: 12px;
@@ -114,7 +109,6 @@ textarea:focus, input:focus, select:focus { border-color: var(--accent); }
 .output h1, .output h2, .output h3 { letter-spacing: normal; }
 .placeholder { color: var(--muted); }
 
-/* Chat */
 .chat-box {
   display: flex; flex-direction: column; background: var(--bg);
   border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
@@ -157,11 +151,61 @@ textarea:focus, input:focus, select:focus { border-color: var(--accent); }
   display: grid; place-items: center; font-size: 17px;
 }
 
-/* Auth box */
-.auth-box { padding: 13px; border-radius: 12px; background: var(--card2); margin-top: 20px; }
-.auth-box p { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+/* ───── Account menu (liquid full-screen) ───── */
+.blob, .menu {
+  position: fixed; inset: 0; --ox: calc(100% - 36px); --oy: 34px;
+  clip-path: circle(0px at var(--ox) var(--oy)); visibility: hidden;
+}
+.blob { z-index: 19; background: var(--accent2); transition: clip-path .7s cubic-bezier(.77,0,.18,1), visibility 0s .7s; }
+.menu {
+  z-index: 20; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch;
+  transition: clip-path .8s cubic-bezier(.77,0,.18,1) 0s, visibility 0s .8s;
+}
+.blob.open { clip-path: circle(150vmax at var(--ox) var(--oy)); visibility: visible; transition: clip-path 1s cubic-bezier(.22,1,.36,1), visibility 0s; }
+.menu.open { clip-path: circle(150vmax at var(--ox) var(--oy)); visibility: visible; transition: clip-path 1s cubic-bezier(.22,1,.36,1) .09s, visibility 0s; }
+.menu-inner { width: min(560px, calc(100% - 32px)); margin: auto; padding: 18px 0 50px; }
+.menu-top { display: flex; justify-content: space-between; align-items: center; min-height: 52px; }
+.menu-close {
+  width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--card2); color: var(--text); font-size: 18px; display: grid; place-items: center; padding: 0;
+  transition: transform .4s cubic-bezier(.22,1,.36,1);
+}
+.menu.open .menu-close:hover { transform: rotate(90deg); }
+.menu-item { opacity: 0; transform: translateY(22px) scale(.97); transition: opacity .4s ease, transform .6s cubic-bezier(.22,1,.36,1); }
+.menu.open .menu-item { opacity: 1; transform: none; transition-delay: calc(.28s + var(--i) * 70ms); }
+.menu:not(.open) .menu-item { transition-delay: 0s; transition-duration: .2s; }
+.profile { display: flex; align-items: center; gap: 14px; margin: 14px 0 22px; }
+.profile .big {
+  width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; font-size: 25px;
+  font-weight: 800; background: var(--accent2); color: #fff; flex: 0 0 58px;
+}
+.profile strong { display: block; font-size: 18px; overflow-wrap: anywhere; }
+.profile span { font-size: 13px; color: var(--muted); }
+.premium {
+  padding: 18px; border-radius: 18px; color: #fff; margin-bottom: 22px;
+  background: linear-gradient(135deg, #8a74ff, #5a8bff);
+}
+.premium h3 { margin: 0 0 4px; }
+.premium p { margin: 0 0 12px; font-size: 13px; opacity: .9; }
+.premium .btn { background: rgba(255,255,255,.2); border-color: rgba(255,255,255,.35); color: #fff; }
+.menu h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 22px 0 8px; }
+.recent {
+  display: block; width: 100%; text-align: left; background: var(--card); border: 1px solid var(--line);
+  color: var(--text); border-radius: 13px; padding: 12px 14px; margin: 7px 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.recent small { display: block; color: var(--muted); font-size: 12px; }
+.menu-empty { color: var(--muted); font-size: 14px; margin: 6px 0; }
+.signout { width: 100%; margin-top: 26px; color: var(--bad); }
 
-/* Quiz */
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 30px); opacity: 0; z-index: 30;
+  background: var(--card2); border: 1px solid var(--line); padding: 10px 16px; border-radius: 12px;
+  font-size: 14px; transition: .35s cubic-bezier(.22,1,.36,1); pointer-events: none; max-width: 90%;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.error { color: var(--bad); }
+
 .quiz-question { border: 1px solid var(--line); border-radius: 12px; padding: 15px; margin: 13px 0; }
 .quiz-question p { font-weight: 700; margin-top: 0; }
 .quiz-question label { display: flex; gap: 9px; align-items: flex-start; font-weight: 400; margin: 10px 0; }
@@ -175,7 +219,6 @@ textarea:focus, input:focus, select:focus { border-color: var(--accent); }
 .quiz-timer.warning { color: var(--bad); animation: pulse .8s infinite alternate; }
 .quiz-progress { height: 7px; width: 100%; background: var(--line); border-radius: 20px; overflow: hidden; }
 .quiz-progress-fill { height: 100%; width: 100%; background: var(--accent); transition: width 1s linear; }
-.timer-note { font-size: 12px; color: var(--muted); margin: 10px 0 0; width: 100%; }
 .score-card {
   margin-top: 20px; padding: 20px; border: 1px solid var(--line);
   border-radius: 18px; background: var(--card2); animation: appear .5s ease both;
@@ -195,7 +238,6 @@ textarea:focus, input:focus, select:focus { border-color: var(--accent); }
 .quiz-feedback.correct { color: var(--good); }
 .quiz-feedback.incorrect { color: var(--bad); }
 
-/* History */
 .history-card { border: 1px solid var(--line); background: var(--card2); border-radius: 12px; padding: 13px; margin: 10px 0; }
 .history-card h4 { margin: 0 0 5px; }
 .history-card p { font-size: 13px; color: var(--muted); margin: 4px 0; }
@@ -236,6 +278,38 @@ footer { text-align: center; color: var(--muted); font-size: 12px; border-top: 1
   </div>
 </header>
 
+<!-- Account menu -->
+<div class="blob" id="menuBlob"></div>
+<div class="menu" id="accountMenu" role="dialog" aria-label="Account menu" aria-hidden="true">
+  <div class="menu-inner">
+    <div class="menu-top menu-item" style="--i:0">
+      <strong>Account</strong>
+      <button class="menu-close" id="menuClose" aria-label="Close menu">✕</button>
+    </div>
+    <div class="profile menu-item" style="--i:1">
+      <div class="big" id="menuAvatar">U</div>
+      <div><strong id="menuName">Signed in</strong><span>Quiz history is linked to this account.</span></div>
+    </div>
+    <div class="premium menu-item" style="--i:2">
+      <h3>✦ Malie Premium</h3>
+      <p>Longer study material, more quizzes and priority speed.</p>
+      <button class="btn" id="premiumBtn">Get Premium</button>
+    </div>
+    <div class="menu-item" style="--i:3">
+      <h4>Recent chats</h4>
+      <div id="recentChats"></div>
+    </div>
+    <div class="menu-item" style="--i:4">
+      <h4>Recent quizzes</h4>
+      <div id="recentQuizzes"></div>
+    </div>
+    <div class="menu-item" style="--i:5">
+      <button class="btn signout" id="signOutButton">Sign out</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
 <main class="container">
   <section class="hero">
     <span class="eyebrow">✦ Your personal AI assistant</span>
@@ -257,15 +331,9 @@ footer { text-align: center; color: var(--muted); font-size: 12px; border-top: 1
         <button class="tab" data-view="chat">💬 AI Chat</button>
         <button class="tab" data-view="quiz">📚 Quiz Mode</button>
       </div>
-      <div class="auth-box">
-        <strong>Malie AI account</strong>
-        <p id="authStatus">Sign in to save quiz history to your account.</p>
-        <button class="btn" id="signOutButton" hidden>Sign out</button>
-      </div>
     </aside>
 
     <section class="panel">
-      <!-- Writing -->
       <div class="view active" id="writingView">
         <h2>Writing assistant</h2>
         <p class="sub">Enter your text and choose how Malie AI should improve it.</p>
@@ -309,7 +377,6 @@ footer { text-align: center; color: var(--muted); font-size: 12px; border-top: 1
         <div class="actions"><button class="btn" id="copyWriting">Copy result</button></div>
       </div>
 
-      <!-- Chat -->
       <div class="view" id="chatView">
         <h2>Chat with Malie AI</h2>
         <p class="sub">Ask a question, learn something new or get help with a problem.</p>
@@ -326,7 +393,6 @@ footer { text-align: center; color: var(--muted); font-size: 12px; border-top: 1
         <p class="status" id="chatStatus"></p>
       </div>
 
-      <!-- Quiz -->
       <div class="view" id="quizView">
         <h2>Quiz mode</h2>
         <p class="sub">Upload a PDF or enter your study material to generate practice questions.</p>
@@ -431,14 +497,11 @@ function esc(s) {
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-
 function inline(s) {
   return esc(s)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/`([^`]+)`/g, "<code>$1</code>");
 }
-
-// Minimal, safe markdown: headings, bullets, bold, inline code, fenced code blocks.
 function markdown(text) {
   const out = [];
   let inCode = false, codeLines = [];
@@ -457,17 +520,23 @@ function markdown(text) {
   if (inCode) out.push("<pre><code>" + esc(codeLines.join("\n")) + "</code></pre>");
   return out.join("");
 }
-
 function show(id, value) {
   $(id).innerHTML = markdown(typeof value === "string" ? value : JSON.stringify(value, null, 2));
 }
-
 function setStatus(id, message, isError = false) {
   const el = $(id);
   el.textContent = message;
   el.classList.toggle("error", isError);
 }
-
+let toastTimer;
+function toast(message, isError = false) {
+  const t = $("toast");
+  t.textContent = message;
+  t.classList.toggle("error", isError);
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 3500);
+}
 function setBusy(button, on, label) {
   if (on) {
     button.dataset.label = button.textContent;
@@ -478,7 +547,6 @@ function setBusy(button, on, label) {
     button.textContent = button.dataset.label || button.textContent;
   }
 }
-
 async function api(path, body) {
   const res = await fetch(API + path, {
     method: "POST",
@@ -492,25 +560,22 @@ async function api(path, body) {
   if (!res.ok || data.error) throw new Error(data.error || data.message || `Request failed (${res.status}).`);
   return data;
 }
-
 async function copyText(id) {
   try { await navigator.clipboard.writeText($(id).innerText); return true; }
   catch { return false; }
 }
 
 /* ───────── Tabs & theme ───────── */
-document.querySelectorAll(".tab").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t === btn));
-    document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === btn.dataset.view + "View"));
-  };
-});
+function openView(name) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === name));
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === name + "View"));
+}
+document.querySelectorAll(".tab").forEach(btn => { btn.onclick = () => openView(btn.dataset.view); });
 
 function safeStorage(action, key, value) {
   try { return action === "get" ? localStorage.getItem(key) : localStorage.setItem(key, value); }
   catch { return null; }
 }
-
 const savedTheme = safeStorage("get", "malie-theme");
 if (savedTheme === "light" || savedTheme === "dark") document.documentElement.dataset.theme = savedTheme;
 
@@ -518,13 +583,87 @@ function updateThemeLabel() {
   $("themeToggle").textContent = document.documentElement.dataset.theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode";
 }
 updateThemeLabel();
-
 $("themeToggle").onclick = () => {
   const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
   safeStorage("set", "malie-theme", next);
   updateThemeLabel();
 };
+
+/* ───────── Recent chats (stored on this device) ───────── */
+function getRecent() {
+  try { return JSON.parse(safeStorage("get", "malie-recent-chats") || "[]"); } catch { return []; }
+}
+function addRecent(text) {
+  const list = getRecent().filter(r => r.t !== text);
+  list.unshift({ t: text, ts: Date.now() });
+  safeStorage("set", "malie-recent-chats", JSON.stringify(list.slice(0, 15)));
+}
+
+/* ───────── Account menu ───────── */
+let quizCache = [];
+const menu = $("accountMenu"), blob = $("menuBlob");
+
+function renderMenuLists() {
+  const chats = $("recentChats");
+  chats.innerHTML = "";
+  const recent = getRecent();
+  if (!recent.length) chats.innerHTML = '<p class="menu-empty">No chats yet. Ask Malie AI something!</p>';
+  recent.forEach(r => {
+    const b = document.createElement("button");
+    b.className = "recent";
+    b.textContent = r.t;
+    const small = document.createElement("small");
+    small.textContent = new Date(r.ts).toLocaleString();
+    b.append(small);
+    b.onclick = () => {
+      closeMenu();
+      openView("chat");
+      chatInput.value = r.t;
+      resizeChatInput();
+      chatInput.focus();
+    };
+    chats.append(b);
+  });
+
+  const quizzes = $("recentQuizzes");
+  quizzes.innerHTML = "";
+  if (!quizCache.length) quizzes.innerHTML = '<p class="menu-empty">No saved quizzes yet.</p>';
+  quizCache.slice(0, 5).forEach(q => {
+    const b = document.createElement("button");
+    b.className = "recent";
+    b.textContent = `${q.title || "Practice quiz"} — ${q.percent ?? 0}%`;
+    const small = document.createElement("small");
+    small.textContent = `${q.score ?? 0}/${q.total ?? 0} correct`;
+    b.append(small);
+    b.onclick = () => { closeMenu(); openView("quiz"); $("quizHistory").scrollIntoView({ behavior: "smooth" }); };
+    quizzes.append(b);
+  });
+}
+
+function openMenu() {
+  const r = $("authButton").getBoundingClientRect();
+  const x = r.left + r.width / 2, y = r.top + r.height / 2;
+  for (const el of [menu, blob]) {
+    el.style.setProperty("--ox", x + "px");
+    el.style.setProperty("--oy", y + "px");
+  }
+  renderMenuLists();
+  document.body.style.overflow = "hidden";
+  menu.setAttribute("aria-hidden", "false");
+  void menu.offsetWidth;
+  blob.classList.add("open");
+  menu.classList.add("open");
+}
+function closeMenu() {
+  blob.classList.remove("open");
+  menu.classList.remove("open");
+  menu.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+}
+$("menuClose").onclick = closeMenu;
+document.addEventListener("keydown", e => { if (e.key === "Escape" && menu.classList.contains("open")) closeMenu(); });
+$("premiumBtn").onclick = () => toast("Premium is coming soon ✦");
 
 /* ───────── Writing assistant ───────── */
 $("copyWriting").onclick = async () =>
@@ -564,15 +703,11 @@ const thread = $("chatThread");
 const chatInput = $("chatInput");
 let chatBusy = false;
 
-function scrollThread() {
-  thread.scrollTop = thread.scrollHeight;
-}
+function scrollThread() { thread.scrollTop = thread.scrollHeight; }
 
-// Adds a message row to the thread and returns its bubble element.
 function addMessage(role) {
   const empty = $("chatEmpty");
   if (empty) empty.remove();
-
   const row = document.createElement("div");
   row.className = "msg " + role;
   const bubble = document.createElement("div");
@@ -582,11 +717,9 @@ function addMessage(role) {
   scrollThread();
   return bubble;
 }
-
 function typingDots() {
   return '<span class="typing" aria-label="Malie AI is typing"><span></span><span></span><span></span></span>';
 }
-
 function resizeChatInput() {
   chatInput.style.height = "auto";
   chatInput.style.height = Math.min(chatInput.scrollHeight, 140) + "px";
@@ -600,12 +733,11 @@ async function sendChat() {
   $("ask").disabled = true;
   setStatus("chatStatus", "");
 
-  // Your message
   addMessage("user").textContent = message;
+  addRecent(message);
   chatInput.value = "";
   resizeChatInput();
 
-  // Malie AI bubble starts as typing dots, then the reply replaces them in the same spot
   const bubble = addMessage("bot");
   bubble.innerHTML = typingDots();
 
@@ -626,12 +758,10 @@ async function sendChat() {
 }
 
 $("ask").onclick = sendChat;
-
 chatInput.addEventListener("input", resizeChatInput);
 chatInput.addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); }
 });
-
 $("clearChat").onclick = () => {
   thread.innerHTML = '<div class="chat-empty" id="chatEmpty">👋 Ask Malie AI anything to get started.</div>';
   chatInput.value = "";
@@ -657,13 +787,11 @@ $("studyFile").onchange = async e => {
   if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
     return setStatus("quizStatus", "Please select a PDF.", true);
   }
-
   setStatus("quizStatus", "Reading PDF…");
   try {
     await loadPdfJs();
     pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
     const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-
     let text = "";
     for (let n = 1; n <= pdf.numPages && text.length < MAX_PDF_CHARS; n++) {
       const page = await pdf.getPage(n);
@@ -686,16 +814,17 @@ function historyCollection() {
   return collection(db, "users", auth.currentUser.uid, "quizHistory");
 }
 
-// Shows a circle with the first letter of the user's email in the header.
 function showAvatar(user) {
   const btn = $("authButton");
   const label = user.email || user.displayName || "Signed in";
-  btn.textContent = (label.trim().charAt(0) || "U").toUpperCase();
+  const letter = (label.trim().charAt(0) || "U").toUpperCase();
+  btn.textContent = letter;
   btn.classList.add("avatar");
   btn.title = label;
-  btn.setAttribute("aria-label", "Signed in as " + label);
+  btn.setAttribute("aria-label", "Open account menu for " + label);
+  $("menuAvatar").textContent = letter;
+  $("menuName").textContent = label;
 }
-
 function showSignInButton() {
   const btn = $("authButton");
   btn.textContent = "Sign in";
@@ -711,12 +840,14 @@ async function loadHistory() {
   try {
     const snap = await getDocs(query(historyCollection(), orderBy("date", "desc"), limit(50)));
     box.innerHTML = "";
+    quizCache = [];
     if (snap.empty) {
       box.innerHTML = '<p class="placeholder">No saved tests yet. Complete a quiz to save your score.</p>';
       return;
     }
     snap.forEach(s => {
       const d = s.data();
+      quizCache.push(d);
       const card = document.createElement("article");
       card.className = "history-card";
 
@@ -765,36 +896,31 @@ try {
   onAuthStateChanged(auth, async user => {
     if (user) {
       showAvatar(user);
-      $("authStatus").textContent = "Signed in as " + (user.email || user.displayName || "your account") + ". Quiz history is linked to this account.";
-      $("authStatus").classList.remove("error");
-      $("signOutButton").hidden = false;
       await loadHistory();
     } else {
+      closeMenu();
       showSignInButton();
-      $("authStatus").textContent = "Sign in with Google to save and access quiz history across devices.";
-      $("authStatus").classList.remove("error");
-      $("signOutButton").hidden = true;
+      quizCache = [];
       $("quizHistory").innerHTML = '<p class="placeholder">Sign in to view your saved tests.</p>';
     }
   });
 } catch (e) {
-  $("authStatus").textContent = "Firebase setup error: " + e.message;
-  $("authStatus").classList.add("error");
+  toast("Firebase setup error: " + e.message, true);
 }
 
 $("authButton").onclick = async () => {
-  if (!auth) return setStatus("authStatus", "Firebase authentication could not initialise.", true);
-  if (auth.currentUser) return;
+  if (!auth) return toast("Firebase authentication could not initialise.", true);
+  if (auth.currentUser) return openMenu();
   try {
     await signInWithPopup(auth, new GoogleAuthProvider());
   } catch (e) {
-    setStatus("authStatus", "Sign-in failed: " + e.message + " Check Firebase authorised domains.", true);
+    toast("Sign-in failed: " + e.message + " Check Firebase authorised domains.", true);
   }
 };
 
 $("signOutButton").onclick = async () => {
   try { await signOut(auth); }
-  catch (e) { setStatus("authStatus", "Sign-out failed: " + e.message, true); }
+  catch (e) { toast("Sign-out failed: " + e.message, true); }
 };
 
 $("refreshQuizHistory").onclick = loadHistory;
@@ -820,7 +946,6 @@ let finished = false;
 const optionText = o => (typeof o === "string" ? o : o?.text ?? o?.label ?? JSON.stringify(o));
 const formatTime = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
 
-// Works out the correct option index (or text answer) from the different key formats the API may return.
 function getAnswerKey(q, opts) {
   const idx = q.answerIndex ?? q.correctIndex ?? q.correctAnswerIndex;
   if (idx != null && opts[+idx] !== undefined) return { index: +idx, text: optionText(opts[+idx]) };
@@ -828,13 +953,11 @@ function getAnswerKey(q, opts) {
   const ans = q.answer ?? q.correctAnswer;
   if (ans == null) return null;
 
-  // Letter answers such as "B"
   const letter = String(ans).trim().toUpperCase();
   if (opts.length && /^[A-Z]$/.test(letter)) {
     const i = letter.charCodeAt(0) - 65;
     if (opts[i] !== undefined) return { index: i, text: optionText(opts[i]) };
   }
-  // Text answers matching an option
   const match = opts.findIndex(o => optionText(o).trim().toLowerCase() === String(ans).trim().toLowerCase());
   if (match >= 0) return { index: match, text: optionText(opts[match]) };
 
@@ -895,7 +1018,6 @@ function renderQuiz(questions) {
   let qRemaining = perQuestion;
   let current = 0;
 
-  // Toolbar with the general timer and/or the per-question timer
   const toolbar = document.createElement("div");
   toolbar.className = "quiz-toolbar";
   const parts = [];
@@ -919,7 +1041,6 @@ function renderQuiz(questions) {
   toolbar.innerHTML = parts.join("");
   host.append(toolbar);
 
-  // Questions
   const cards = [];
   questions.forEach((q, i) => {
     const card = document.createElement("div");
@@ -949,13 +1070,11 @@ function renderQuiz(questions) {
       ta.dataset.typed = i;
       card.append(ta);
     }
-    // With a per-question timer, only the current question is shown.
     card.hidden = hasPerQ && i !== 0;
     cards.push(card);
     host.append(card);
   });
 
-  // Buttons
   const actions = document.createElement("div");
   actions.className = "actions";
   const nextBtn = document.createElement("button");
@@ -985,14 +1104,12 @@ function renderQuiz(questions) {
   function lockCard(i) {
     cards[i].querySelectorAll("input, textarea").forEach(x => (x.disabled = true));
   }
-
   function paintTotal() {
     const t = $("quizTimer");
     t.textContent = formatTime(remaining);
     t.classList.toggle("warning", remaining <= 15);
     $("quizProgress").style.width = (100 * remaining / total) + "%";
   }
-
   function paintQuestion() {
     const t = $("qTimer");
     t.textContent = formatTime(qRemaining);
@@ -1001,7 +1118,6 @@ function renderQuiz(questions) {
     $("qCounter").textContent = `Question ${current + 1} of ${count}`;
   }
 
-  // Moves to the next question (button click or when the question timer runs out).
   function goNext() {
     if (finished) return;
     lockCard(current);
@@ -1050,7 +1166,7 @@ function renderQuiz(questions) {
 
       let isGraded = false, isCorrect = false;
       if (key) {
-        isGraded = true; // unanswered questions count as wrong
+        isGraded = true;
         if (selected && key.index !== null) isCorrect = +selected.value === key.index;
         else if (chosen !== "No answer") isCorrect = chosen.trim().toLowerCase() === key.text.trim().toLowerCase();
       }
@@ -1106,13 +1222,11 @@ function renderQuiz(questions) {
     records.forEach((r, i) => {
       const div = document.createElement("div");
       div.className = "quiz-feedback " + (r.graded ? (r.isCorrect ? "correct" : "incorrect") : "");
-
       const head = document.createElement("p");
       head.textContent = `${i + 1}. ${r.graded ? (r.isCorrect ? "✓ Correct" : "✗ Incorrect") : "Not graded"} — ${r.question}`;
       const detail = document.createElement("p");
       detail.textContent = `Your answer: ${r.chosen} · Correct answer: ${r.correct}`;
       div.append(head, detail);
-
       if (r.explanation) {
         const ex = document.createElement("p");
         ex.textContent = "Explanation: " + r.explanation;

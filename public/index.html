@@ -498,12 +498,19 @@ signOutButton.onclick = async () => {
   }
 };
 
+
 async function handleGoogleSignIn() {
-  if (!auth) { alert("Firebase initialization is missing or invalid."); return; }
+  if (!auth) {
+    alert("Firebase authentication is not initialized.");
+    return;
+  }
+
   try {
-    await signInWithPopup(auth, new GoogleAuthProvider());
-  } catch(err) {
-    alert("Sign in failed: " + err.message);
+    const provider = new GoogleAuthProvider();
+    await signInWithRedirect(auth, provider);
+  } catch (err) {
+    console.error("Google sign-in error:", err);
+    alert("Sign-in failed: " + err.message);
   }
 }
 

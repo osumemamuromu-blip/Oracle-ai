@@ -395,11 +395,10 @@ footer { text-align: center; color: var(--muted); font-size: 12px; border-top: 1
 
       <div class="view" id="quizView">
         <h2>Quiz mode</h2>
-        <p class="sub">Upload a PDF or enter your study material to generate practice questions.</p>
-        <label for="studyFile">Upload a PDF (optional)</label>
+        <!-- CHANGED: text updated, study material box removed -->
+        <p class="sub">Upload a PDF and Malie AI will generate practice questions from it.</p>
+        <label for="studyFile">Upload a PDF</label>
         <input id="studyFile" type="file" accept=".pdf,application/pdf">
-        <label for="studyText">Study material</label>
-        <textarea id="studyText" placeholder="Paste your notes or textbook content here..."></textarea>
         <div class="fields">
           <div>
             <label for="questionCount">Number of questions</label>
@@ -770,19 +769,23 @@ $("clearChat").onclick = () => {
 };
 
 /* ───────── PDF import ───────── */
+// CHANGED: the PDF text is now kept in this variable instead of a text box
+let studyContent = "";
+
 function loadPdfJs() {
   if (window.pdfjsLib) return Promise.resolve();
   return new Promise((resolve, reject) => {
     const s = document.createElement("script");
     s.src = PDFJS_URL;
     s.onload = resolve;
-    s.onerror = () => reject(new Error("Could not load PDF reader. Paste your notes instead."));
+    s.onerror = () => reject(new Error("Could not load PDF reader. Check your connection and try again."));
     document.head.appendChild(s);
   });
 }
 
 $("studyFile").onchange = async e => {
   const file = e.target.files?.[0];
+  studyContent = "";
   if (!file) return;
   if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
     return setStatus("quizStatus", "Please select a PDF.", true);
@@ -799,9 +802,14 @@ $("studyFile").onchange = async e => {
       text += content.items.map(i => i.str).join(" ") + "\n";
     }
     const truncated = text.length > MAX_PDF_CHARS;
-    $("studyText").value = text.slice(0, MAX_PDF_CHARS).trim();
-    setStatus("quizStatus", `PDF loaded: ${pdf.numPages} page(s).` + (truncated ? " Text was shortened to fit." : ""));
+    studyContent = text.slice(0, MAX_PDF_CHARS).trim();
+
+    if (!studyContent) {
+      return setStatus("quizStatus", "This PDF has no readable text (it may be a scanned image). Try another PDF.", true);
+    }
+    setStatus("quizStatus", `PDF loaded: ${pdf.numPages} page(s). Ready to generate your quiz.` + (truncated ? " Text was shortened to fit." : ""));
   } catch (err) {
+    studyContent = "";
     setStatus("quizStatus", err.message, true);
   }
 };
@@ -965,8 +973,9 @@ function getAnswerKey(q, opts) {
 }
 
 $("generateQuiz").onclick = async () => {
-  const text = $("studyText").value.trim();
-  if (!text) return setStatus("quizStatus", "Upload a readable PDF or paste study material first.", true);
+  // CHANGED: uses the text extracted from the uploaded PDF
+  const text = studyContent.trim();
+  if (!text) return setStatus("quizStatus", "Please upload a PDF with readable text first.", true);
 
   setBusy($("generateQuiz"), true, "Generating…");
   setStatus("quizStatus", "Malie AI is preparing your questions…");
@@ -1261,4 +1270,4 @@ function renderQuiz(questions) {
 }
 </script>
 </body>
-</html>
+          </html>

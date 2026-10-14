@@ -895,8 +895,8 @@ $("overlay").onclick = closeSidebar;
 /* ───────── Saved conversations (stored on this device) ─────────
    Each conversation: { id, title, ts, messages: [ { role: "user"|"assistant", text, files? } ] }
    The selected conversation stays active until "New chat" is pressed. */
-const CHATS_KEY = "malie-conversations-v1";
-let conversations = loadConversations();
+let CHATS_KEY = "malie-conversations-v1";
+let conversations = [];
 let activeId = null;
 
 function loadConversations() {

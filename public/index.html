@@ -497,23 +497,155 @@ function inline(s) {
     .replace(/`([^`]+)`/g, "<code>$1</code>");
 }
 function markdown(text) {
+  const lines = String(text ?? "").split("\n");
   const out = [];
-  let inCode = false, codeLines = [];
-  for (const line of String(text ?? "").split("\n")) {
+  let i = 0;
+  let inCode = false;
+  let codeLines = [];
+
+  function inline(s) {
+    return esc(s)
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(/~~(.+?)~~/g, "<del>$1</del>");
+  }
+
+  function isRule(s) {
+    return /^\s*(---+|___+|\*\*\*+)\s*$/.test(s);
+  }
+
+  function isTableSeparator(s) {
+    return /^\s*\|?[\s:|-]+\|[\s:|-]*$/.test(s) &&
+      s.includes("-");
+  }
+
+  function cells(s) {
+    return s.trim().replace(/^\|/, "").replace(/\|$/, "")
+      .split("|").map(v => v.trim());
+  }
+
+  function isBullet(s) {
+    return /^\s*[-*+]\s+/.test(s);
+  }
+
+  function isNumbered(s) {
+    return /^\s*\d+[.)]\s+/.test(s);
+  }
+
+  function isHeading(s) {
+    return /^#{1,3}\s+/.test(s);
+  }
+
+  function isSpecial(s) {
+    return !s.trim() || isRule(s) || isHeading(s) ||
+      s.trim().startsWith("```") || isBullet(s) ||
+      isNumbered(s);
+  }
+
+  while (i < lines.length) {
+    const line = lines[i];
+
     if (line.trim().startsWith("```")) {
-      if (inCode) { out.push("<pre><code>" + esc(codeLines.join("\n")) + "</code></pre>"); codeLines = []; }
-      inCode = !inCode;
+      if (!inCode) {
+        inCode = true;
+        codeLines = [];
+      } else {
+        out.push("<pre><code>" +
+          esc(codeLines.join("\n")) + "</code></pre>");
+        inCode = false;
+        codeLines = [];
+      }
+      i++;
       continue;
     }
-    if (inCode) { codeLines.push(line); continue; }
-    const h = line.match(/^(#{1,3})\s+(.+)/);
-    if (h) out.push(`<h${h[1].length}>${esc(h[2])}</h${h[1].length}>`);
-    else if (/^\s*[-*]\s+/.test(line)) out.push("<p>• " + inline(line.replace(/^\s*[-*]\s+/, "")) + "</p>");
-    else out.push("<p>" + inline(line) + "</p>");
+
+    if (inCode) {
+      codeLines.push(line);
+      i++;
+      continue;
+    }
+
+    if (!line.trim()) {
+      i++;
+      continue;
+    }
+
+    if (isRule(line)) {
+      out.push("<hr>");
+      i++;
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,3})\s+(.+)/);
+    if (heading) {
+      const level = heading[1].length;
+      out.push("<h" + level + ">" +
+        inline(heading[2]) + "</h" + level + ">");
+      i++;
+      continue;
+    }
+
+    if (i + 1 < lines.length &&
+        line.includes("|") && isTableSeparator(lines[i + 1])) {
+      const headers = cells(line);
+      out.push('<div class="md-table-wrap"><table class="md-table"><thead><tr>');
+      headers.forEach(cell => {
+        out.push("<th>" + inline(cell) + "</th>");
+      });
+      out.push("</tr></thead><tbody>");
+      i += 2;
+
+      while (i < lines.length && lines[i].includes("|") &&
+             lines[i].trim()) {
+        out.push("<tr>");
+        cells(lines[i]).forEach(cell => {
+          out.push("<td>" + inline(cell) + "</td>");
+        });
+        out.push("</tr>");
+        i++;
+      }
+
+      out.push("</tbody></table></div>");
+      continue;
+    }
+
+    if (isBullet(line)) {
+      out.push("<ul>");
+      while (i < lines.length && isBullet(lines[i])) {
+        out.push("<li>" +
+          inline(lines[i].replace(/^\s*[-*+]\s+/, "")) +
+          "</li>");
+        i++;
+      }
+      out.push("</ul>");
+      continue;
+    }
+
+    if (isNumbered(line)) {
+      out.push("<ol>");
+      while (i < lines.length && isNumbered(lines[i])) {
+        out.push("<li>" +
+          inline(lines[i].replace(/^\s*\d+[.)]\s+/, "")) +
+          "</li>");
+        i++;
+      }
+      out.push("</ol>");
+      continue;
+    }
+
+    out.push("<p>" + inline(line) + "</p>");
+    i++;
   }
-  if (inCode) out.push("<pre><code>" + esc(codeLines.join("\n")) + "</code></pre>");
+
+  if (inCode) {
+    out.push("<pre><code>" +
+      esc(codeLines.join("\n")) + "</code></pre>");
+  }
+
   return out.join("");
 }
+
 function show(id, value) {
   $(id).innerHTML = markdown(typeof value === "string" ? value : JSON.stringify(value, null, 2));
 }

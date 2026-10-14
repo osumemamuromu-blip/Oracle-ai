@@ -227,6 +227,11 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .recent{display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:13px;padding:12px 14px;margin:7px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
 .recent:hover{border-color:var(--accent)}
 .recent small{display:block;color:var(--muted);font-size:11px}
+.recent-row{display:flex;gap:8px;align-items:stretch;margin:7px 0}
+.recent-row .recent{margin:0;flex:1;min-width:0}
+.recent.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--panel))}
+.recent-del{flex:0 0 42px;width:42px;border:1px solid var(--border);background:var(--panel);color:var(--muted);border-radius:13px;font-size:14px;padding:0}
+.recent-del:hover{color:var(--danger);border-color:var(--danger)}
 .menu-empty{color:var(--muted);font-size:13px;margin:6px 0}
 .signout{width:100%;margin-top:26px;color:var(--danger);padding:12px}
 
@@ -490,6 +495,9 @@ const CHAT_FILE_CHARS = 30000;   // max text per chat attachment
 const OCR_MAX_PAGES = 30;        // scanned pages read per PDF
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MAX_ATTACHMENTS = 5;
+const MAX_SAVED_CHATS = 30;      // conversations kept on this device
+const HISTORY_CONTEXT_CHARS = 6000; // how much earlier conversation is sent as context
+const HISTORY_MSG_CHARS = 1500;     // max chars kept per earlier message in that context
 
 const firebaseConfig = {
   apiKey: "AIzaSyAbHz_yfiQrPNuODTrKujQ9kNcR4sbpNfQ",
@@ -520,10 +528,8 @@ function inline(s) {
 }
 
 /* ───────── Math (LaTeX) support ───────── */
-// Matches \[ ... \], \( ... \), $$ ... $$ and $ ... $ — across multiple lines for the first three.
 const MATH_RE = /\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$\$[\s\S]+?\$\$|\$(?!\s)[^$\n]*?[^\s$]\$(?!\d)/g;
 
-// Some servers double-escape the delimiters (\\[ instead of \[). Fix only the delimiters.
 function normalizeMathDelimiters(text) {
   return String(text ?? "")
     .replace(/\\\\\[/g, "\\[")
@@ -532,7 +538,6 @@ function normalizeMathDelimiters(text) {
     .replace(/\\\\\)/g, "\\)");
 }
 
-// Re-run MathJax on an element, waiting for MathJax to finish loading if needed.
 function typeset(el) {
   if (!el) return;
   const run = () => {
@@ -552,7 +557,6 @@ function typeset(el) {
 }
 
 function markdown(text) {
-  // 1) Pull every math expression out of the WHOLE text first (so multi-line math survives)
   const mathParts = [];
   let source = normalizeMathDelimiters(text).replace(MATH_RE, m => {
     mathParts.push(m);
@@ -669,7 +673,6 @@ function markdown(text) {
     out.push("<pre><code>" + esc(codeLines.join("\n")) + "</code></pre>");
   }
 
-  // 2) Put the math back (HTML-escaped so < and > inside formulas are safe)
   return out.join("").replace(/MATHPLACEHOLDER(\d+)ENDMATH/g, (m, idx) =>
     mathParts[Number(idx)] !== undefined ? esc(mathParts[Number(idx)]) : m
   );
@@ -782,7 +785,6 @@ async function extractPdfText(file, onStatus) {
       const content = await page.getTextContent();
       let pageText = content.items.map(i => i.str).join(" ").trim();
 
-      // Very little text on the page = probably a scan/photo, so read it with OCR
       if (pageText.length < 40 && ocrPages < OCR_MAX_PAGES) {
         onStatus(`Scanning page ${n} of ${pdf.numPages} (OCR, this takes a moment)…`);
         worker = worker || await getOcrWorker();
@@ -866,15 +868,68 @@ document.querySelectorAll("[data-open-view]").forEach(b => b.addEventListener("c
 $("menuToggle").onclick = () => { $("sidebar").classList.toggle("open"); $("overlay").classList.toggle("show"); };
 $("overlay").onclick = closeSidebar;
 
-/* ───────── Recent chats (stored on this device) ───────── */
-function getRecent() {
-  try { return JSON.parse(safeStorage("get", "malie-recent-chats") || "[]"); } catch { return []; }
+/* ───────── Saved conversations (stored on this device) ─────────
+   Each conversation: { id, title, ts, messages: [ { role: "user"|"assistant", text, files? } ] }
+   The selected conversation stays active until "New chat" is pressed. */
+const CHATS_KEY = "malie-conversations-v1";
+let conversations = loadConversations();
+let activeId = null;
+
+function loadConversations() {
+  try {
+    const list = JSON.parse(safeStorage("get", CHATS_KEY) || "[]");
+    return Array.isArray(list) ? list.filter(c => c && c.id && Array.isArray(c.messages)) : [];
+  } catch { return []; }
 }
-function addRecent(text) {
-  if (!text) return;
-  const list = getRecent().filter(r => r.t !== text);
-  list.unshift({ t: text, ts: Date.now() });
-  safeStorage("set", "malie-recent-chats", JSON.stringify(list.slice(0, 15)));
+function persistConversations() {
+  conversations.sort((a, b) => b.ts - a.ts);
+  conversations = conversations.slice(0, MAX_SAVED_CHATS);
+  // If storage is full, drop the oldest chats until it fits
+  while (true) {
+    try {
+      localStorage.setItem(CHATS_KEY, JSON.stringify(conversations));
+      return;
+    } catch {
+      if (conversations.length <= 1) return;
+      conversations.pop();
+    }
+  }
+}
+function getActiveConversation() {
+  return conversations.find(c => c.id === activeId) || null;
+}
+function newConversation(title) {
+  const c = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    title: (title || "New chat").slice(0, 70),
+    ts: Date.now(),
+    messages: []
+  };
+  conversations.unshift(c);
+  activeId = c.id;
+  return c;
+}
+function deleteConversation(id) {
+  conversations = conversations.filter(c => c.id !== id);
+  persistConversations();
+  if (activeId === id) resetChatView();
+}
+
+// Earlier messages of the active conversation, so the AI can follow the discussion
+function buildHistoryContext(conv) {
+  if (!conv || !conv.messages.length) return "";
+  const parts = [];
+  let total = 0;
+  for (let i = conv.messages.length - 1; i >= 0; i--) {
+    const m = conv.messages[i];
+    let t = String(m.text || "");
+    if (t.length > HISTORY_MSG_CHARS) t = t.slice(0, HISTORY_MSG_CHARS) + "…";
+    const line = (m.role === "user" ? "User: " : "Malie: ") + t;
+    if (total + line.length > HISTORY_CONTEXT_CHARS && parts.length) break;
+    parts.unshift(line);
+    total += line.length;
+  }
+  return parts.join("\n\n");
 }
 
 /* ───────── Account menu ───────── */
@@ -884,23 +939,37 @@ const menu = $("accountMenu"), blob = $("menuBlob");
 function renderMenuLists() {
   const chats = $("recentChats");
   chats.innerHTML = "";
-  const recent = getRecent();
-  if (!recent.length) chats.innerHTML = '<p class="menu-empty">No chats yet. Ask Malie something!</p>';
-  recent.forEach(r => {
+  if (!conversations.length) chats.innerHTML = '<p class="menu-empty">No chats yet. Ask Malie something!</p>';
+  conversations.forEach(c => {
+    const row = document.createElement("div");
+    row.className = "recent-row";
+
     const b = document.createElement("button");
-    b.className = "recent";
-    b.textContent = r.t;
+    b.type = "button";
+    b.className = "recent" + (c.id === activeId ? " active" : "");
+    b.textContent = c.title;
     const small = document.createElement("small");
-    small.textContent = new Date(r.ts).toLocaleString();
+    const n = c.messages.length;
+    small.textContent = `${n} message${n === 1 ? "" : "s"} · ${new Date(c.ts).toLocaleString()}`;
     b.append(small);
-    b.onclick = () => {
-      closeMenu();
-      switchView("explore");
-      promptBox.value = r.t;
-      resizeInput();
-      promptBox.focus();
+    b.onclick = () => openConversation(c.id);
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "recent-del";
+    del.setAttribute("aria-label", "Delete chat: " + c.title);
+    del.title = "Delete chat";
+    del.textContent = "✕";
+    del.onclick = e => {
+      e.stopPropagation();
+      if (chatBusy && c.id === activeId) return toast("Wait for Malie to finish replying.", true);
+      if (!confirm("Delete this chat?")) return;
+      deleteConversation(c.id);
+      renderMenuLists();
     };
-    chats.append(b);
+
+    row.append(b, del);
+    chats.append(row);
   });
 
   const quizzes = $("recentQuizzes");
@@ -946,7 +1015,7 @@ $("premiumBtn").onclick = () => { closeMenu(); switchView("premium"); };
 /* ───────── Chat (Explore) with attachments ───────── */
 const form = $("chatForm"), promptBox = $("prompt"), sendBtn = $("sendBtn");
 const chat = $("chat"), welcome = $("welcome"), attachRow = $("attachRow");
-let chatBusy = false, firstMessage = true;
+let chatBusy = false;
 let userLetter = "U";
 let attachments = [];
 
@@ -1049,7 +1118,7 @@ function addMessage(role) {
 function fillUserBubble(bubble, text, atts) {
   bubble.textContent = "";
   if (text) { const t = document.createElement("div"); t.textContent = text; bubble.append(t); }
-  if (atts.length) {
+  if (atts && atts.length) {
     const wrap = document.createElement("div");
     wrap.className = "sent-files";
     atts.forEach(a => wrap.append(makeChip(a, false)));
@@ -1071,6 +1140,48 @@ function addCopyButton(body, text) {
   body.append(actions);
 }
 
+// Show a saved conversation exactly as it was, with no AI call
+function renderConversation(conv) {
+  chat.replaceChildren();
+  welcome.style.display = "none";
+  conv.messages.forEach(m => {
+    if (m.role === "user") {
+      const files = (m.files || []).map(f => ({ name: f.name, kind: f.kind, status: "ready", note: "Ready", thumb: null }));
+      fillUserBubble(addMessage("user").bubble, m.text, files);
+    } else {
+      const { body, bubble } = addMessage("assistant");
+      bubble.innerHTML = markdown(m.text);
+      typeset(bubble);
+      addCopyButton(body, m.text);
+    }
+  });
+  window.scrollTo({ top: document.body.scrollHeight });
+}
+
+function resetChatView() {
+  activeId = null;
+  chat.replaceChildren();
+  welcome.style.display = "block";
+  promptBox.value = "";
+  attachments = [];
+  renderAttachments();
+  resizeInput();
+}
+
+function openConversation(id) {
+  if (chatBusy) { toast("Wait for Malie to finish replying.", true); return; }
+  const conv = conversations.find(c => c.id === id);
+  if (!conv) return;
+  closeMenu();
+  switchView("explore");
+  activeId = conv.id;
+  attachments = [];
+  renderAttachments();
+  renderConversation(conv);
+  side("Chat opened");
+  promptBox.focus();
+}
+
 async function sendChat(typed) {
   if (chatBusy) return;
   if (attachments.some(a => a.status === "reading")) return toast("Still reading your attachment…");
@@ -1087,12 +1198,30 @@ async function sendChat(typed) {
     message += `\n\n--- Attached ${a.kind === "image" ? "picture (text read with OCR)" : "file"}: ${a.name} ---\n${body}`;
   });
 
+  // Use the chat that is already open, or start a new one
+  const isNew = !getActiveConversation();
+  const conv = getActiveConversation() || newConversation(shown || (ready[0] && ready[0].name) || "New chat");
+
+  // Give the AI the earlier part of THIS conversation as context
+  const history = buildHistoryContext(conv);
+  const payload = history
+    ? `Here is our conversation so far, for context:\n\n${history}\n\n---\nContinue the conversation. Reply only to the new message below.\n\nNew message from the user:\n${message}`
+    : message;
+
+  const userMsg = {
+    role: "user",
+    text: shown,
+    files: ready.map(a => ({ name: a.name, kind: a.kind }))
+  };
+  conv.messages.push(userMsg);
+  conv.ts = Date.now();
+  persistConversations();
+
   chatBusy = true;
   promptBox.disabled = true;
-  if (firstMessage) { welcome.style.display = "none"; firstMessage = false; }
+  welcome.style.display = "none";
 
   fillUserBubble(addMessage("user").bubble, shown, ready);
-  addRecent(shown);
   promptBox.value = "";
   resizeInput();
   attachments = [];
@@ -1103,18 +1232,31 @@ async function sendChat(typed) {
   side("Connecting to AI…");
 
   try {
-    const data = await api("/api/chat", { message });
+    const data = await api("/api/chat", { message: payload });
     const reply = data.reply ?? data.result ?? data.output;
     if (!reply) throw new Error("No response returned.");
     const text = typeof reply === "string" ? reply : JSON.stringify(reply, null, 2);
     bubble.innerHTML = markdown(text);
     typeset(bubble);
     addCopyButton(body, text);
+
+    conv.messages.push({ role: "assistant", text });
+    conv.ts = Date.now();
+    persistConversations();
     side("AI response received", "online");
   } catch (e) {
     bubble.classList.add("error");
     bubble.textContent = "Error: " + e.message;
     side("Connection needs attention", "error");
+
+    // Don't keep an unanswered message in the saved chat
+    const idx = conv.messages.indexOf(userMsg);
+    if (idx >= 0) conv.messages.splice(idx, 1);
+    if (!conv.messages.length) {
+      conversations = conversations.filter(c => c.id !== conv.id);
+      if (isNew) activeId = null;
+    }
+    persistConversations();
   } finally {
     chatBusy = false;
     promptBox.disabled = false;
@@ -1131,13 +1273,7 @@ document.querySelectorAll("[data-prompt]").forEach(b => b.addEventListener("clic
 
 $("newChat").onclick = () => {
   if (chatBusy) return;
-  chat.replaceChildren();
-  welcome.style.display = "block";
-  firstMessage = true;
-  promptBox.value = "";
-  attachments = [];
-  renderAttachments();
-  resizeInput();
+  resetChatView();
   switchView("explore");
   side("Ready for a new chat");
   promptBox.focus();
@@ -1398,7 +1534,6 @@ async function fetchQuestions(text, count, difficulty) {
     const reply = data.reply ?? data.result ?? data.output ?? data.questions ?? data;
     return parseQuizReply(reply);
   } catch (first) {
-    // Fall back to the dedicated quiz endpoint if the chat reply could not be used
     try {
       const data = await api("/api/quiz", { text: text.slice(0, QUIZ_PROMPT_CHARS), count, difficulty });
       const qs = data.questions ?? data.result?.questions ?? (Array.isArray(data.result) ? data.result : null);
@@ -1544,7 +1679,6 @@ function renderQuiz(questions) {
   result.hidden = true;
   toolbar.after(result);
 
-  // Render any LaTeX in the questions/options
   typeset(host);
 
   function syncButtons() {
@@ -1648,7 +1782,6 @@ function renderQuiz(questions) {
     actions.hidden = true;
     toolbar.hidden = true;
 
-    // Review mode: show every question, blank out the wrong options, light up the correct one, add the explanation table
     cards.forEach((card, i) => {
       card.hidden = false;
       card.classList.add("reviewed");
@@ -1674,7 +1807,6 @@ function renderQuiz(questions) {
       card.append(buildExplainTable(records[i]));
     });
 
-    // Render LaTeX in the explanations too
     typeset(host);
 
     result.hidden = false;
@@ -1731,4 +1863,4 @@ function renderQuiz(questions) {
 }
 </script>
 </body>
-  </html>
+</html>

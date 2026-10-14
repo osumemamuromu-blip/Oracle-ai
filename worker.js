@@ -295,8 +295,18 @@ export default {
               error: "Your message is too long. Please shorten it."
             }, 400);
           }
+        
+const identityQuestion =
+  /\b(?:who\s+(?:created|made|built|developed|owns|founded)\s+(?:you|malie(?:\s+ai)?|this\s+(?:ai|assistant|product))|who\s+(?:is\s+)?(?:the\s+)?(?:creator|founder|owner)\s+of\s+(?:malie(?:\s+ai)?|you|this\s+(?:ai|assistant|product))|who\s+(?:is\s+)?your\s+(?:creator|founder|owner)|who\s+is\s+behind\s+(?:malie(?:\s+ai)?|you)|(?:are\s+you|is\s+malie(?:\s+ai)?)\s+(?:created|made|built|developed)\s+by)\b/i;
 
-          const reply = await callAI(
+if (identityQuestion.test(message)) {
+  return respond({
+    reply:
+      "I am Malie AI, developed by Campus Creative, founded by Osume Prosper. My underlying AI model is Google's Gemma, provided through Cloudflare Workers AI. Google provides the model technology; Campus Creative created the Malie AI product."
+  });
+}
+
+        const reply = await callAI(
             env,
             [
               "Respond to the user's message as Malie AI.",

@@ -456,7 +456,7 @@ if (identityQuestion.test(message)) {
             ].join("\n")
           );
 
-          return respond({ reply });
+          return respond({ reply, usage });
         }
 
         if (path === "/api/write") {
@@ -479,6 +479,7 @@ if (identityQuestion.test(message)) {
           const instruction =
             taskInstructions[mode] || taskInstructions.correct;
 
+          const usage = await reserveDailyUsage(env, userId);
           const result = await callAI(
             env,
             [
@@ -493,7 +494,7 @@ if (identityQuestion.test(message)) {
             ].join("\n")
           );
 
-          return respond({ result });
+          return respond({ result, usage });
         }
 
         if (path === "/api/quiz") {

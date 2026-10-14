@@ -14,6 +14,13 @@
   "ai": {
     "binding": "AI"
   },
+"d1_databases": [
+  {
+    "binding": "DB",
+    "database_name": "malie-ai-db",
+    "database_id": "2989b1e8-df80-4bea-a45e-17aed86174d6"
+  }
+],
   "vars": {
     "GEMINI_MODEL": "gemini-3.5-flash-lite"
   }

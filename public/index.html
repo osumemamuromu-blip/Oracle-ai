@@ -725,7 +725,7 @@ async function api(path, body) {
   catch { throw new Error("Unexpected server response. Please try again."); }
   if (!res.ok || data.error) throw new Error(data.error || data.message || `Request failed (${res.status}).`);
   return data;
-}
+  }
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; }
   catch { return false; }

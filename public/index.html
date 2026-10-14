@@ -517,33 +517,35 @@ function markdown(text) {
   let inCode = false;
   let codeLines = [];
   
+
 function inline(s) {
-  return esc(s)
-    .replace(/\$\$([\s\S]+?)\$\$/g, function(_, formula) {
-      return '<div class="math-block">' +
-        formula
-          .replace(/\\_/g, "_")
-          .replace(/\\rightarrow/g, "→")
-          .replace(/\\times/g, "×")
-          .replace(/\\cdot/g, "·")
-          .replace(/\\div/g, "÷")
-          .replace(/\\ /g, " ")
-        + '</div>';
-    })
-    .replace(/\$([^$\n]+)\$/g, function(_, formula) {
-      return '<span class="math-inline">' +
-        formula
-          .replace(/\\_/g, "_")
-          .replace(/\\rightarrow/g, "→")
-          .replace(/\\times/g, "×")
-          .replace(/\\cdot/g, "·")
-          .replace(/\\div/g, "÷")
-        + '</span>';
-    })
+  const parts = [];
+  let source = String(s ?? "");
+
+  // Protect complete LaTeX math expressions from Markdown processing.
+  source = source.replace(
+    /\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|\$\$([\s\S]+?)\$\$|\$([^$\n]+)\$/g,
+    function(match) {
+      const index = parts.length;
+      parts.push(match);
+      return "MATHPLACEHOLDER" + index + "ENDMATH";
+    }
+  );
+
+  let result = esc(source)
     .replace(/`([^`]+)`/g, "<code>$1</code>")
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/~~(.+?)~~/g, "<del>$1</del>");
+
+  result = result.replace(
+    /MATHPLACEHOLDER(\d+)ENDMATH/g,
+    function(match, index) {
+      return parts[Number(index)] || match;
+    }
+  );
+
+  return result;
 }
 
   function isRule(s) {
@@ -611,21 +613,16 @@ function inline(s) {
       i++;
       continue;
     }
-
-    const cleanLine = line.replace(/^\s*#{1,6}\s*/, "");
-const heading = line.match(/^\s*#{1,6}\s+(.+)/);
+  const heading = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+const plainNumberHeading = line.match(/^\s*#{1,6}\s+(\d+[.)]?\s+.+)$/);
 
 if (heading) {
-  const level = Math.min(
-    3,
-    (line.match(/^\s*#+/) || ["#"])[0].trim().length
-  );
-      out.push("<h" + level + ">" +
-        inline(heading[2]) + "</h" + level + ">");
-      i++;
-      continue;
-    }
-
+  const level = Math.min(3, heading[1].length);
+  out.push("<h" + level + ">" +
+    inline(heading[2]) + "</h" + level + ">");
+  i++;
+  continue;
+}
     if (i + 1 < lines.length &&
         line.includes("|") && isTableSeparator(lines[i + 1])) {
       const headers = cells(line);
@@ -1122,8 +1119,13 @@ async function sendChat(typed) {
     const data = await api("/api/chat", { message });
     const reply = data.reply ?? data.result ?? data.output;
     if (!reply) throw new Error("No response returned.");
-    const text = typeof reply === "string" ? reply : JSON.stringify(reply, null, 2);
-    bubble.innerHTML = markdown(text);
+    const text = typeof reply === "string" ? reply : JSON.stringify(reply, null, 2);    
+bubble.innerHTML = markdown(text);
+if (window.MathJax && window.MathJax.typesetPromise) {
+  window.MathJax.typesetPromise([bubble]).catch(function(err) {
+    console.error("MathJax rendering error:", err);
+  });
+}
     addCopyButton(body, text);
     side("AI response received", "online");
   } catch (e) {

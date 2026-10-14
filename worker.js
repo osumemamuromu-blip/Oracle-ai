@@ -302,7 +302,7 @@ const identityQuestion =
 if (identityQuestion.test(message)) {
   return respond({
     reply:
-      "I am Malie AI, developed by Campus Creative, founded by Osume Prosper. My underlying AI model is Google's Gemma, provided through Cloudflare Workers AI. Google provides the model technology; Campus Creative created the Malie AI product."
+      "I am Malie AI, developed by Campus Creative, founded by Osume Prosper. Google provides the model technology; Campus Creative created the Malie AI product."
   });
 }
 

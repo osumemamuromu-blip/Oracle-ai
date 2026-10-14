@@ -242,6 +242,140 @@ function getErrorStatus(error) {
   return 500;
 }
 
+async function authenticateFirebase(request, env) {
+  if (!env.FIREBASE_WEB_API_KEY) {
+    const error = new Error(
+      "Firebase verification is not configured."
+    );
+    error.status = 500;
+    throw error;
+  }
+
+  const authorization = request.headers.get("Authorization") || "";
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+
+  if (!match) {
+    const error = new Error(
+      "Please sign in with Google to use Malie AI."
+    );
+    error.status = 401;
+    throw error;
+  }
+
+  let response;
+
+  try {
+    response = await fetch(
+      "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" +
+        encodeURIComponent(env.FIREBASE_WEB_API_KEY),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken: match[1] })
+      }
+    );
+  } catch {
+    const error = new Error(
+      "Could not verify your sign-in. Please try again."
+    );
+    error.status = 503;
+    throw error;
+  }
+
+  if (!response.ok) {
+    const error = new Error(
+      "Your sign-in session is invalid or expired. Please sign in again."
+    );
+    error.status = 401;
+    throw error;
+  }
+
+  const data = await response.json();
+  const user = data.users?.[0];
+
+  if (!user?.localId) {
+    const error = new Error("Could not verify your sign-in.");
+    error.status = 401;
+    throw error;
+  }
+
+  return user.localId;
+}
+
+function getUsageDate() {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Lagos",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+
+  const values = {};
+
+  for (const part of parts) {
+    if (part.type !== "literal") {
+      values[part.type] = part.value;
+    }
+  }
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+async function reserveDailyUsage(env, userId) {
+  if (!env.DB) {
+    const error = new Error(
+      "Usage tracking is not connected. Please try again later."
+    );
+    error.status = 500;
+    throw error;
+  }
+
+  const subscription = await env.DB.prepare(
+    `SELECT plan, status, current_period_end
+     FROM subscriptions
+     WHERE user_id = ?`
+  ).bind(userId).first();
+
+  const isPremium =
+    subscription?.plan === "premium" &&
+    subscription?.status === "active" &&
+    subscription?.current_period_end &&
+    Date.parse(subscription.current_period_end) > Date.now();
+
+  const plan = isPremium ? "premium" : "free";
+  const limit = isPremium ? 100 : 8;
+  const usageDate = getUsageDate();
+
+  const result = await env.DB.prepare(
+    `INSERT INTO daily_usage (user_id, usage_date, used)
+     VALUES (?, ?, 1)
+     ON CONFLICT(user_id, usage_date)
+     DO UPDATE SET used = used + 1
+     WHERE used < ?
+     RETURNING used`
+  ).bind(userId, usageDate, limit).first();
+
+  if (!result) {
+    const error = new Error(
+      `You've reached your ${limit} daily requests on the ${plan} plan. ${
+        plan === "free"
+          ? "Upgrade to Premium for 100 daily requests."
+          : "Your daily limit will reset tomorrow."
+      }`
+    );
+    error.status = 429;
+    throw error;
+  }
+
+  return {
+    plan,
+    used: result.used,
+    limit,
+    remaining: limit - result.used,
+    date: usageDate
+  };
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {

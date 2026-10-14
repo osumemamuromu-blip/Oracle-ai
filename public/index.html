@@ -714,18 +714,42 @@ function setBusy(button, on, label) {
   }
 }
 async function api(path, body) {
+  if (!auth?.currentUser) {
+    throw new Error("Please sign in with Google to use Malie AI.");
+  }
+
+  const token = await auth.currentUser.getIdToken();
+
   const res = await fetch(API + path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
     body: JSON.stringify(body)
   });
+
   const raw = await res.text();
   let data;
-  try { data = JSON.parse(raw); }
-  catch { throw new Error("Unexpected server response. Please try again."); }
-  if (!res.ok || data.error) throw new Error(data.error || data.message || `Request failed (${res.status}).`);
-  return data;
+
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error("Unexpected server response. Please try again.");
   }
+
+  if (res.status === 401) {
+    throw new Error("Your sign-in session may have expired. Please sign in again.");
+  }
+
+  if (!res.ok || data.error) {
+    throw new Error(
+      data.error || data.message || `Request failed (${res.status}).`
+    );
+  }
+
+  return data;
+}
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; }
   catch { return false; }

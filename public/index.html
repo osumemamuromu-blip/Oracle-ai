@@ -1,7 +1,12 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-  <script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#08090a">
+<meta name="description" content="Malie AI by Campus Creative — think, write, and learn better.">
+<title>malie. — by Campus Creative</title>
+<script>
   window.MathJax = {
     tex: {
       inlineMath: [['\\(', '\\)'], ['$', '$']],
@@ -14,12 +19,6 @@
   };
 </script>
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#08090a">
-<meta name="description" content="Malie AI by Campus Creative — think, write, and learn better.">
-<title>malie. — by Campus Creative</title>
 <style>
 :root{color-scheme:dark;--bg:#08090a;--panel:#101112;--panel2:#171819;--border:#292a2c;--text:#f5f5f2;--muted:#9a9b9b;--accent:#d6f36a;--accent-ink:#171a0c;--danger:#ff8b8b;--good:#9ce7b4;--shadow:0 20px 70px #0005}
 [data-theme="light"]{color-scheme:light;--bg:#f7f7f4;--panel:#fff;--panel2:#f0f0eb;--border:#e3e3dc;--text:#191a17;--muted:#696b65;--accent:#c8e95b;--accent-ink:#202512;--danger:#b72d3a;--good:#197c44;--shadow:0 20px 70px #25271912}
@@ -92,6 +91,11 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .bubble p{margin:.3em 0}
 .bubble h1,.bubble h2,.bubble h3{letter-spacing:normal;margin:.5em 0 .2em;font-size:15px}
 .bubble pre,.result-box pre{overflow:auto;background:var(--bg);padding:10px;border-radius:8px;font-size:12px}
+.bubble mjx-container[display="true"],.result-box mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden;max-width:100%}
+.md-table-wrap{overflow-x:auto;margin:.6em 0}
+.md-table{border-collapse:collapse;width:100%;font-size:12px}
+.md-table th,.md-table td{border:1px solid var(--border);padding:7px 10px;text-align:left}
+.md-table th{background:var(--panel2)}
 .message-actions{margin-top:6px}
 .mini-btn{border:0;background:transparent;color:var(--muted);font-size:10px;padding:5px}
 .mini-btn:hover{color:var(--text)}
@@ -505,79 +509,77 @@ function esc(s) {
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
+
+/* Inline Markdown (math is already protected by markdown() before this runs) */
 function inline(s) {
   return esc(s)
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>");
-}
-function markdown(text) {
-  const lines = String(text ?? "").split("\n");
-  const out = [];
-  let i = 0;
-  let inCode = false;
-  let codeLines = [];
-  
-
-function inline(s) {
-  const parts = [];
-  let source = String(s ?? "");
-
-  // Protect complete LaTeX math expressions from Markdown processing.
-  source = source.replace(
-    /\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|\$\$([\s\S]+?)\$\$|\$([^$\n]+)\$/g,
-    function(match) {
-      const index = parts.length;
-      parts.push(match);
-      return "MATHPLACEHOLDER" + index + "ENDMATH";
-    }
-  );
-
-  let result = esc(source)
     .replace(/`([^`]+)`/g, "<code>$1</code>")
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/~~(.+?)~~/g, "<del>$1</del>");
-
-  result = result.replace(
-    /MATHPLACEHOLDER(\d+)ENDMATH/g,
-    function(match, index) {
-      return parts[Number(index)] || match;
-    }
-  );
-
-  return result;
 }
+
+/* ───────── Math (LaTeX) support ───────── */
+// Matches \[ ... \], \( ... \), $$ ... $$ and $ ... $ — across multiple lines for the first three.
+const MATH_RE = /\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$\$[\s\S]+?\$\$|\$(?!\s)[^$\n]*?[^\s$]\$(?!\d)/g;
+
+// Some servers double-escape the delimiters (\\[ instead of \[). Fix only the delimiters.
+function normalizeMathDelimiters(text) {
+  return String(text ?? "")
+    .replace(/\\\\\[/g, "\\[")
+    .replace(/\\\\\]/g, "\\]")
+    .replace(/\\\\\(/g, "\\(")
+    .replace(/\\\\\)/g, "\\)");
+}
+
+// Re-run MathJax on an element, waiting for MathJax to finish loading if needed.
+function typeset(el) {
+  if (!el) return;
+  const run = () => {
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([el]).catch(err => console.error("MathJax rendering error:", err));
+    }
+  };
+  if (window.MathJax && window.MathJax.typesetPromise) {
+    const ready = window.MathJax.startup && window.MathJax.startup.promise;
+    (ready || Promise.resolve()).then(run);
+  } else {
+    window.addEventListener("load", () => {
+      const ready = window.MathJax && window.MathJax.startup && window.MathJax.startup.promise;
+      (ready || Promise.resolve()).then(run);
+    }, { once: true });
+  }
+}
+
+function markdown(text) {
+  // 1) Pull every math expression out of the WHOLE text first (so multi-line math survives)
+  const mathParts = [];
+  let source = normalizeMathDelimiters(text).replace(MATH_RE, m => {
+    mathParts.push(m);
+    return "MATHPLACEHOLDER" + (mathParts.length - 1) + "ENDMATH";
+  });
+
+  const lines = source.split("\n");
+  const out = [];
+  let i = 0;
+  let inCode = false;
+  let codeLines = [];
 
   function isRule(s) {
     return /^\s*(---+|___+|\*\*\*+)\s*$/.test(s);
   }
-
   function isTableSeparator(s) {
-    return /^\s*\|?[\s:|-]+\|[\s:|-]*$/.test(s) &&
-      s.includes("-");
+    return /^\s*\|?[\s:|-]+\|[\s:|-]*$/.test(s) && s.includes("-");
   }
-
   function cells(s) {
     return s.trim().replace(/^\|/, "").replace(/\|$/, "")
       .split("|").map(v => v.trim());
   }
-
   function isBullet(s) {
     return /^\s*[-*+]\s+/.test(s);
   }
-
   function isNumbered(s) {
     return /^\s*\d+[.)]\s+/.test(s);
-  }
-
-  function isHeading(s) {
-    return /^#{1,3}\s+/.test(s);
-  }
-
-  function isSpecial(s) {
-    return !s.trim() || isRule(s) || isHeading(s) ||
-      s.trim().startsWith("```") || isBullet(s) ||
-      isNumbered(s);
   }
 
   while (i < lines.length) {
@@ -588,8 +590,7 @@ function inline(s) {
         inCode = true;
         codeLines = [];
       } else {
-        out.push("<pre><code>" +
-          esc(codeLines.join("\n")) + "</code></pre>");
+        out.push("<pre><code>" + esc(codeLines.join("\n")) + "</code></pre>");
         inCode = false;
         codeLines = [];
       }
@@ -613,32 +614,25 @@ function inline(s) {
       i++;
       continue;
     }
-  const heading = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
-const plainNumberHeading = line.match(/^\s*#{1,6}\s+(\d+[.)]?\s+.+)$/);
 
-if (heading) {
-  const level = Math.min(3, heading[1].length);
-  out.push("<h" + level + ">" +
-    inline(heading[2]) + "</h" + level + ">");
-  i++;
-  continue;
-}
-    if (i + 1 < lines.length &&
-        line.includes("|") && isTableSeparator(lines[i + 1])) {
+    const heading = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (heading) {
+      const level = Math.min(3, heading[1].length);
+      out.push("<h" + level + ">" + inline(heading[2]) + "</h" + level + ">");
+      i++;
+      continue;
+    }
+
+    if (i + 1 < lines.length && line.includes("|") && isTableSeparator(lines[i + 1])) {
       const headers = cells(line);
       out.push('<div class="md-table-wrap"><table class="md-table"><thead><tr>');
-      headers.forEach(cell => {
-        out.push("<th>" + inline(cell) + "</th>");
-      });
+      headers.forEach(cell => out.push("<th>" + inline(cell) + "</th>"));
       out.push("</tr></thead><tbody>");
       i += 2;
 
-      while (i < lines.length && lines[i].includes("|") &&
-             lines[i].trim()) {
+      while (i < lines.length && lines[i].includes("|") && lines[i].trim()) {
         out.push("<tr>");
-        cells(lines[i]).forEach(cell => {
-          out.push("<td>" + inline(cell) + "</td>");
-        });
+        cells(lines[i]).forEach(cell => out.push("<td>" + inline(cell) + "</td>"));
         out.push("</tr>");
         i++;
       }
@@ -650,9 +644,7 @@ if (heading) {
     if (isBullet(line)) {
       out.push("<ul>");
       while (i < lines.length && isBullet(lines[i])) {
-        out.push("<li>" +
-          inline(lines[i].replace(/^\s*[-*+]\s+/, "")) +
-          "</li>");
+        out.push("<li>" + inline(lines[i].replace(/^\s*[-*+]\s+/, "")) + "</li>");
         i++;
       }
       out.push("</ul>");
@@ -662,9 +654,7 @@ if (heading) {
     if (isNumbered(line)) {
       out.push("<ol>");
       while (i < lines.length && isNumbered(lines[i])) {
-        out.push("<li>" +
-          inline(lines[i].replace(/^\s*\d+[.)]\s+/, "")) +
-          "</li>");
+        out.push("<li>" + inline(lines[i].replace(/^\s*\d+[.)]\s+/, "")) + "</li>");
         i++;
       }
       out.push("</ol>");
@@ -676,11 +666,13 @@ if (heading) {
   }
 
   if (inCode) {
-    out.push("<pre><code>" +
-      esc(codeLines.join("\n")) + "</code></pre>");
+    out.push("<pre><code>" + esc(codeLines.join("\n")) + "</code></pre>");
   }
 
-  return out.join("");
+  // 2) Put the math back (HTML-escaped so < and > inside formulas are safe)
+  return out.join("").replace(/MATHPLACEHOLDER(\d+)ENDMATH/g, (m, idx) =>
+    mathParts[Number(idx)] !== undefined ? esc(mathParts[Number(idx)]) : m
+  );
 }
 
 function show(id, value) {
@@ -688,12 +680,7 @@ function show(id, value) {
   el.innerHTML = markdown(
     typeof value === "string" ? value : JSON.stringify(value, null, 2)
   );
-
-  if (window.MathJax && window.MathJax.typesetPromise) {
-    window.MathJax.typesetPromise([el]).catch(function(err) {
-      console.error("MathJax rendering error:", err);
-    });
-  }
+  typeset(el);
 }
 function side(message, state = "") {
   $("sideStatus").textContent = message.length > 42 ? message.slice(0, 42) + "…" : message;
@@ -1119,13 +1106,9 @@ async function sendChat(typed) {
     const data = await api("/api/chat", { message });
     const reply = data.reply ?? data.result ?? data.output;
     if (!reply) throw new Error("No response returned.");
-    const text = typeof reply === "string" ? reply : JSON.stringify(reply, null, 2);    
-bubble.innerHTML = markdown(text);
-if (window.MathJax && window.MathJax.typesetPromise) {
-  window.MathJax.typesetPromise([bubble]).catch(function(err) {
-    console.error("MathJax rendering error:", err);
-  });
-}
+    const text = typeof reply === "string" ? reply : JSON.stringify(reply, null, 2);
+    bubble.innerHTML = markdown(text);
+    typeset(bubble);
     addCopyButton(body, text);
     side("AI response received", "online");
   } catch (e) {
@@ -1289,6 +1272,7 @@ async function loadHistory() {
       }
       box.append(card);
     });
+    typeset(box);
   } catch (e) {
     box.textContent = "Could not load history: " + e.message + ". Check that the Firestore rules are published.";
   }
@@ -1560,6 +1544,9 @@ function renderQuiz(questions) {
   result.hidden = true;
   toolbar.after(result);
 
+  // Render any LaTeX in the questions/options
+  typeset(host);
+
   function syncButtons() {
     if (hasPerQ) {
       nextBtn.hidden = current >= count - 1;
@@ -1687,6 +1674,9 @@ function renderQuiz(questions) {
       card.append(buildExplainTable(records[i]));
     });
 
+    // Render LaTeX in the explanations too
+    typeset(host);
+
     result.hidden = false;
     result.className = "score-card";
 
@@ -1741,4 +1731,4 @@ function renderQuiz(questions) {
 }
 </script>
 </body>
-                                     </html>
+  </html>

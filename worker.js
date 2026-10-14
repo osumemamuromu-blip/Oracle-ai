@@ -415,6 +415,7 @@ export default {
       }
 
       try {
+        const userId = await authenticateFirebase(request, env);
         if (path === "/api/chat") {
           const message = String(body.message || "").trim();
 

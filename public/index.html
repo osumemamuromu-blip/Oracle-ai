@@ -1,6 +1,20 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
+  <script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['\\(', '\\)'], ['$', '$']],
+      displayMath: [['\\[', '\\]'], ['$$', '$$']],
+      processEscapes: true
+    },
+    options: {
+      skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#08090a">
@@ -673,7 +687,16 @@ if (heading) {
 }
 
 function show(id, value) {
-  $(id).innerHTML = markdown(typeof value === "string" ? value : JSON.stringify(value, null, 2));
+  const el = $(id);
+  el.innerHTML = markdown(
+    typeof value === "string" ? value : JSON.stringify(value, null, 2)
+  );
+
+  if (window.MathJax && window.MathJax.typesetPromise) {
+    window.MathJax.typesetPromise([el]).catch(function(err) {
+      console.error("MathJax rendering error:", err);
+    });
+  }
 }
 function side(message, state = "") {
   $("sideStatus").textContent = message.length > 42 ? message.slice(0, 42) + "…" : message;

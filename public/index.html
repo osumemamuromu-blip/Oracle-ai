@@ -495,7 +495,7 @@ const CHAT_FILE_CHARS = 30000;   // max text per chat attachment
 const OCR_MAX_PAGES = 30;        // scanned pages read per PDF
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MAX_ATTACHMENTS = 5;
-const MAX_SAVED_CHATS = 30;      // conversations kept on this device
+const MAX_SAVED_CHATS = 30;      // conversations kept per account on this device
 const HISTORY_CONTEXT_CHARS = 6000; // how much earlier conversation is sent as context
 const HISTORY_MSG_CHARS = 1500;     // max chars kept per earlier message in that context
 
@@ -892,26 +892,41 @@ document.querySelectorAll("[data-open-view]").forEach(b => b.addEventListener("c
 $("menuToggle").onclick = () => { $("sidebar").classList.toggle("open"); $("overlay").classList.toggle("show"); };
 $("overlay").onclick = closeSidebar;
 
-/* ───────── Saved conversations (stored on this device) ─────────
+/* ───────── Saved conversations (stored on this device, separately for each account) ─────────
    Each conversation: { id, title, ts, messages: [ { role: "user"|"assistant", text, files? } ] }
-   The selected conversation stays active until "New chat" is pressed. */
-let CHATS_KEY = "malie-conversations-v1";
+   The selected conversation stays active until "New chat" is pressed.
+   Storage key is "malie-conversations-v2-<uid>", so accounts never see each other's chats. */
+const CHATS_PREFIX = "malie-conversations-v2-";
+let currentUid = null;   // uid of the signed-in account (null = signed out)
 let conversations = [];
 let activeId = null;
 
+// Remove the old shared storage from earlier versions (it could not be tied to one account)
+try {
+  localStorage.removeItem("malie-conversations-v1");
+  localStorage.removeItem("malie-recent-chats");
+} catch {}
+
+function chatsKey() {
+  return currentUid ? CHATS_PREFIX + currentUid : null;
+}
 function loadConversations() {
+  const key = chatsKey();
+  if (!key) return [];
   try {
-    const list = JSON.parse(safeStorage("get", CHATS_KEY) || "[]");
+    const list = JSON.parse(safeStorage("get", key) || "[]");
     return Array.isArray(list) ? list.filter(c => c && c.id && Array.isArray(c.messages)) : [];
   } catch { return []; }
 }
 function persistConversations() {
+  const key = chatsKey();
+  if (!key) return; // never save while signed out
   conversations.sort((a, b) => b.ts - a.ts);
   conversations = conversations.slice(0, MAX_SAVED_CHATS);
   // If storage is full, drop the oldest chats until it fits
   while (true) {
     try {
-      localStorage.setItem(CHATS_KEY, JSON.stringify(conversations));
+      localStorage.setItem(key, JSON.stringify(conversations));
       return;
     } catch {
       if (conversations.length <= 1) return;
@@ -1210,6 +1225,8 @@ async function sendChat(typed) {
   if (chatBusy) return;
   if (attachments.some(a => a.status === "reading")) return toast("Still reading your attachment…");
 
+  if (!currentUid) return toast("Please sign in with Google to use Malie AI.", true);
+
   const ready = attachments.filter(a => a.status === "ready");
   const shown = (typed || "").trim();
   if (!shown && !ready.length) return;
@@ -1221,6 +1238,9 @@ async function sendChat(typed) {
       : "[This picture contained no readable text. Malie can only read text in pictures, not describe the image itself.]";
     message += `\n\n--- Attached ${a.kind === "image" ? "picture (text read with OCR)" : "file"}: ${a.name} ---\n${body}`;
   });
+
+  // Remember which account this message belongs to, in case the user signs out mid-reply
+  const ownerUid = currentUid;
 
   // Use the chat that is already open, or start a new one
   const isNew = !getActiveConversation();
@@ -1257,6 +1277,10 @@ async function sendChat(typed) {
 
   try {
     const data = await api("/api/chat", { message: payload });
+
+    // The account changed while Malie was replying: discard the reply
+    if (currentUid !== ownerUid) return;
+
     const reply = data.reply ?? data.result ?? data.output;
     if (!reply) throw new Error("No response returned.");
     const text = typeof reply === "string" ? reply : JSON.stringify(reply, null, 2);
@@ -1269,6 +1293,8 @@ async function sendChat(typed) {
     persistConversations();
     side("AI response received", "online");
   } catch (e) {
+    if (currentUid !== ownerUid) return;
+
     bubble.classList.add("error");
     bubble.textContent = "Error: " + e.message;
     side("Connection needs attention", "error");
@@ -1285,7 +1311,7 @@ async function sendChat(typed) {
     chatBusy = false;
     promptBox.disabled = false;
     updateSendState();
-    promptBox.focus();
+    if (currentUid === ownerUid) promptBox.focus();
   }
 }
 form.addEventListener("submit", e => { e.preventDefault(); sendChat(promptBox.value); });
@@ -1393,6 +1419,35 @@ function showSignInButton() {
   setGreeting("");
 }
 
+// Wipe everything on screen that belongs to the previous account
+function clearWorkspace() {
+  // Chat
+  conversations = [];
+  chatBusy = false;
+  promptBox.disabled = false;
+  resetChatView();
+  updateSendState();
+
+  // Quiz
+  if (timer) { clearInterval(timer); timer = null; }
+  finished = false;
+  quizCache = [];
+  $("quizOutput").innerHTML = "";
+  $("studyText").value = "";
+  $("studyFile").value = "";
+  setStatus("quizStatus", "");
+  $("quizHistory").innerHTML = '<p class="placeholder">Sign in to view your saved tests.</p>';
+
+  // Writing Lab
+  $("writingInput").value = "";
+  $("writingOutput").innerHTML = '<span class="placeholder">Your corrected text will appear here.</span>';
+  setStatus("writingStatus", "");
+
+  // Menu lists
+  $("recentChats").innerHTML = "";
+  $("recentQuizzes").innerHTML = "";
+}
+
 async function loadHistory() {
   if (!auth?.currentUser) return;
   const box = $("quizHistory");
@@ -1456,13 +1511,24 @@ try {
 
   onAuthStateChanged(auth, async user => {
     if (user) {
+      // A different account than before (or first sign-in): start clean, then load THIS account's chats
+      if (user.uid !== currentUid) {
+        clearWorkspace();
+        currentUid = user.uid;
+        conversations = loadConversations();
+        activeId = null;
+        switchView("explore");
+      }
       showAvatar(user);
       await loadHistory();
     } else {
+      // Signed out: remove all of the previous account's work from the screen
       closeMenu();
+      currentUid = null;
+      clearWorkspace();
       showSignInButton();
-      quizCache = [];
-      $("quizHistory").innerHTML = '<p class="placeholder">Sign in to view your saved tests.</p>';
+      switchView("explore");
+      side("Signed out");
     }
   });
 } catch (e) {
@@ -1571,6 +1637,7 @@ $("generateQuiz").onclick = async () => {
   const text = $("studyText").value.trim();
   if (!text) return setStatus("quizStatus", "Upload a PDF or photo, or paste study material first.", true);
 
+  const ownerUid = currentUid;
   setBusy($("generateQuiz"), true, "Generating…");
   setStatus("quizStatus", "Malie is preparing your questions…");
   $("quizOutput").innerHTML = "";
@@ -1578,11 +1645,13 @@ $("generateQuiz").onclick = async () => {
 
   try {
     const questions = await fetchQuestions(text, Number($("questionCount").value), $("quizDifficulty").value);
+    if (currentUid !== ownerUid) return; // account changed while generating
     renderQuiz(questions);
     const timed = Number($("quizTotalTime").value) > 0 || Number($("quizQuestionTime").value) > 0;
     setStatus("quizStatus", timed ? "Quiz ready. Answer before the timer ends." : "Quiz ready. Take your time.");
     $("quizOutput").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {
+    if (currentUid !== ownerUid) return;
     setStatus("quizStatus", "Error: " + e.message, true);
   } finally {
     setBusy($("generateQuiz"), false);
@@ -1721,12 +1790,14 @@ function renderQuiz(questions) {
   }
   function paintTotal() {
     const t = $("quizTimer");
+    if (!t) return;
     t.textContent = formatTime(remaining);
     t.classList.toggle("warning", remaining <= 15);
     $("quizProgress").style.width = (100 * remaining / total) + "%";
   }
   function paintQuestion() {
     const t = $("qTimer");
+    if (!t) return;
     t.textContent = formatTime(qRemaining);
     t.classList.toggle("warning", qRemaining <= 5);
     $("qProgress").style.width = (100 * qRemaining / perQuestion) + "%";
@@ -1887,4 +1958,4 @@ function renderQuiz(questions) {
 }
 </script>
 </body>
-</html>
+  </html>

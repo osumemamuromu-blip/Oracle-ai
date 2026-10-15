@@ -6,7 +6,8 @@
   "observability": {
     "enabled": true
   },
-  "assets": {
+  compatibility_flags = ["nodejs_compat"]
+"assets": {
     "directory": "./public",
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]

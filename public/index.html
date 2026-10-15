@@ -2322,4 +2322,101 @@ function renderQuiz(questions) {
       if (isGraded) { graded++; if (isCorrect) score++; }
 
       const rec = {
-        question: q.question || q
+        question: q.question || q.prompt || `Question ${i + 1}`,
+        chosen: String(chosen),
+        correct: key ? key.text : "Not provided",
+        isCorrect,
+        explanation: String(q.explanation || q.reason || q.rationale || ""),
+        graded: isGraded
+      };
+      records.push(rec);
+      review.push({ key, selectedIdx: selected ? +selected.value : null });
+    });
+
+    host.querySelectorAll("input, textarea").forEach(x => (x.disabled = true));
+    host.querySelectorAll(".quiz-timer").forEach(t => t.classList.remove("warning"));
+    actions.hidden = true;
+    toolbar.hidden = true;
+
+    cards.forEach((card, i) => {
+      card.hidden = false;
+      card.classList.add("reviewed");
+      const { key, selectedIdx } = review[i];
+      const labels = [...card.querySelectorAll(".quiz-option")];
+      if (key && key.index !== null) {
+        labels.forEach((lab, j) => {
+          const tag = document.createElement("span");
+          tag.className = "opt-tag";
+          if (j === key.index) {
+            lab.classList.add("correct");
+            tag.textContent = "✓ Correct";
+            lab.append(tag);
+          } else if (j === selectedIdx) {
+            lab.classList.add("picked-wrong");
+            tag.textContent = "Your answer";
+            lab.append(tag);
+          } else {
+            lab.classList.add("wrong");
+          }
+        });
+      }
+      card.append(buildExplainTable(records[i]));
+    });
+
+    typeset(host);
+
+    result.hidden = false;
+    result.className = "score-card";
+
+    if (!graded) {
+      result.innerHTML = "<h3>Quiz completed</h3><p class='score-detail'>No recognised answer key was returned, so a reliable score cannot be calculated.</p>";
+      setStatus("quizStatus", "Quiz submitted, but no answer key was available.", true);
+      return;
+    }
+
+    const percent = Math.round(score / graded * 100);
+    const message = percent >= 80 ? "Excellent work! 🎉" : percent >= 60 ? "Good effort! Keep practising." : "Keep going — practice makes progress.";
+
+    result.innerHTML =
+      `<div class="score-hero">
+        <div class="score-ring" style="--angle:${percent * 3.6}deg">
+          <div class="score-ring-content">
+            <div class="score-number">${score}/${graded}</div>
+            <div class="score-percent">${percent}%</div>
+          </div>
+        </div>
+        <div>
+          <p class="score-message">${message}</p>
+          <div class="score-detail">${timesUp ? "Time ran out. " : ""}You scored ${score} out of ${graded}. Scroll down to see the correct answers and explanations.</div>
+        </div>
+      </div>`;
+    result.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    setStatus("quizStatus", timesUp ? "Time is up. Your quiz has been submitted." : `Quiz submitted. Your score is ${score} / ${graded}.`);
+
+    if (auth?.currentUser) {
+      await saveResult({
+        score, total: graded, percent, answers: records,
+        title: `${$("quizDifficulty").value} quiz · ${count} questions`,
+        date: new Date().toISOString()
+      });
+    } else {
+      const note = document.createElement("p");
+      note.className = "score-detail";
+      note.style.marginTop = "12px";
+      note.textContent = "Sign in with Google to save this result and access it on other devices.";
+      result.append(note);
+    }
+  }
+
+  nextBtn.onclick = goNext;
+  submit.onclick = () => finish(false);
+
+  if (hasTotal || hasPerQ) {
+    tick();
+    timer = setInterval(tick, 1000);
+  }
+}
+</script>
+</body>
+</html>

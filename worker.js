@@ -161,6 +161,32 @@ async function callAI(env, prompt, jsonMode = false) {
 
   const model = "@cf/google/gemma-4-26b-a4b-it";
 
+  const identityRules = [
+    "You are Malie AI, the AI assistant created and developed by Campus Creative, founded by Osume Prosper.",
+    "IDENTITY RULE: When asked who created you, who made you, who developed you, who owns Malie AI, or who your founder is, answer clearly that Malie AI was created and developed by Campus Creative, founded by Osume Prosper.",
+    "Never answer that Google, Gemini, Google AI, Cloudflare, or another technology provider created Malie AI. They may provide underlying technology, but Campus Creative is the company behind the Malie AI product.",
+    "If asked who provides your underlying AI technology, explain that Malie AI currently runs on Cloudflare Workers AI and uses the configured Gemma model.",
+    "Be truthful, consistent, and confident about your identity. Do not confuse the creator of Malie AI with the provider of its underlying AI model."
+  ];
+
+  const tutorRules = [
+    "You are Malie AI, a helpful, patient, accurate AI tutor and writing assistant.",
+    "Teach rather than merely give answers.",
+    "When answering educational questions, explain the reasoning step by step in simple language.",
+    "Define unfamiliar terms and use a relevant example when it helps.",
+    "For calculations, show the method, the working, and the final answer with units where appropriate.",
+    "For science questions, explain why the answer is correct, not just what the answer is.",
+    "For writing tasks, follow the requested task and preserve the user's meaning and facts.",
+    "Use headings or numbered steps when they improve clarity.",
+    "If the request is unclear, ask a brief clarifying question rather than inventing details.",
+    "Be honest about uncertainty and do not invent facts, sources, or citations."
+  ];
+
+  const systemPrompt = (jsonMode
+    ? identityRules
+    : [...identityRules, ...tutorRules]
+  ).join(" ");
+
   let result;
 
   try {
@@ -168,25 +194,7 @@ async function callAI(env, prompt, jsonMode = false) {
       messages: [
         {
           role: "system",
-          content: jsonMode
-            ? [
-"You are Malie AI, the AI assistant created and developed by Campus Creative, founded by Osume Prosper.",
-"IDENTITY RULE: When asked who created you, who made you, who developed you, who owns Malie AI, or who your founder is, answer clearly that Malie AI was created and developed by Campus Creative, founded by Osume Prosper.",
-"Never answer that Google, Gemini, Google AI, Cloudflare, or another technology provider created Malie AI. They may provide underlying technology, but Campus Creative is the company behind the Malie AI product.",
-"If asked who provides your underlying AI technology, explain that Malie AI currently runs on Cloudflare Workers AI and uses the configured Gemma model.",
-"Be truthful, consistent, and confident about your identity. Do not confuse the creator of Malie AI with the provider of its underlying AI model.", ].join(" ")
-            : [
-                "You are Malie AI, a helpful, patient, accurate AI tutor and writing assistant.",
-                "Teach rather than merely give answers.",
-                "When answering educational questions, explain the reasoning step by step in simple language.",
-                "Define unfamiliar terms and use a relevant example when it helps.",
-                "For calculations, show the method, the working, and the final answer with units where appropriate.",
-                "For science questions, explain why the answer is correct, not just what the answer is.",
-                "For writing tasks, follow the requested task and preserve the user's meaning and facts.",
-                "Use headings or numbered steps when they improve clarity.",
-                "If the request is unclear, ask a brief clarifying question rather than inventing details.",
-                "Be honest about uncertainty and do not invent facts, sources, or citations."
-              ].join(" ")
+          content: systemPrompt
         },
         {
           role: "user",
@@ -402,12 +410,17 @@ export default {
       });
     }
 
-    
     // Create a payment request for Premium or Pro.
     if (request.method === "POST" && path === "/api/payment/request") {
       try {
         const userId = await authenticateFirebase(request, env);
-        const body = await request.json();
+
+        let body;
+        try {
+          body = await request.json();
+        } catch {
+          return respond({ error: "Please send valid JSON." }, 400);
+        }
 
         const plan = String(body.plan || "").toLowerCase();
         const billingPeriod = String(
@@ -419,11 +432,11 @@ export default {
           pro: { monthly: 7500, annual: 85000 }
         };
 
-        
-          transferReference.length > 120
-        ) {
+        const amount = prices[plan]?.[billingPeriod];
+
+        if (!amount) {
           return respond({
-            error: "Please provide a valid request ID and transfer reference."
+            error: "Invalid plan or billing period."
           }, 400);
         }
 
@@ -433,51 +446,46 @@ export default {
           }, 503);
         }
 
-        const result = await env.DB.prepare(`
-          UPDATE payment_requests
-          SET payment_reference = ?
-          WHERE id = ?
-            AND user_id = ?
-            AND status = 'pending'
-        `).bind(
-          transferReference,
-          requestId,
-          userId
-        ).run();
+        const created = await env.DB.prepare(`
+          INSERT INTO payment_requests
+            (user_id, plan, amount, billing_period, status)
+          VALUES (?, ?, ?, ?, 'pending')
+          RETURNING id
+        `).bind(userId, plan, amount, billingPeriod).first();
 
-        if (!result.success) {
-          throw new Error("Reference could not be saved.");
-        }
-
-        if (result.meta?.changes !== 1) {
-          return respond({
-            error: "Payment request not found, already processed, or reference already used."
-          }, 409);
+        if (!created?.id) {
+          throw new Error("Payment request could not be created.");
         }
 
         return respond({
           ok: true,
+          requestId: created.id,
+          plan,
+          billingPeriod,
+          amount,
+          currency: "NGN",
+          paymentDetails: {
+            bankName: env.BANK_NAME || null,
+            accountName: env.BANK_ACCOUNT_NAME || null,
+            accountNumber: env.BANK_ACCOUNT_NUMBER || null
+          },
           message:
-            "Transfer reference submitted. Your payment must be verified before your subscription is activated."
+            "Payment request created. Make the transfer, then submit your transfer reference."
         });
       } catch (error) {
-        console.error("Payment reference error:", error.message);
+        console.error("Payment request error:", error.message);
 
-        if (
-          String(error.message || "").includes("UNIQUE constraint failed")
-        ) {
-          return respond({
-            error: "That transfer reference has already been submitted."
-          }, 409);
+        if (error.status === 401 || error.status === 503) {
+          return respond({ error: error.message }, error.status);
         }
 
         return respond({
-          error: "Could not submit your transfer reference."
+          error: "Could not create your payment request."
         }, 500);
       }
     }
 
-   // Save a transfer reference without activating a subscription.
+    // Save a transfer reference without activating a subscription.
     if (
       request.method === "POST" &&
       path === "/api/payment/submit-reference"
@@ -538,6 +546,10 @@ export default {
       } catch (error) {
         console.error("Payment reference error:", error.message);
 
+        if (error.status === 401 || error.status === 503) {
+          return respond({ error: error.message }, error.status);
+        }
+
         if (
           String(error.message || "").includes("UNIQUE constraint failed")
         ) {
@@ -550,7 +562,9 @@ export default {
           error: "Could not submit your transfer reference."
         }, 500);
       }
-      // Admin-only payment approval.
+    }
+
+    // Admin-only payment approval.
     if (
       request.method === "POST" &&
       path === "/api/admin/approve-payment"
@@ -665,6 +679,7 @@ export default {
         return respond({ error: "Could not approve this payment." }, 500);
       }
     }
+
     if (
       request.method === "POST" &&
       ["/api/chat", "/api/write", "/api/quiz"].includes(path)
@@ -679,6 +694,7 @@ export default {
 
       try {
         const userId = await authenticateFirebase(request, env);
+
         if (path === "/api/chat") {
           const message = String(body.message || "").trim();
 
@@ -693,54 +709,55 @@ export default {
               error: "Your message is too long. Please shorten it."
             }, 400);
           }
-     
-const requestedMode = String(body.mode || "").trim().toLowerCase();
 
-if (requestedMode === "excel") {
-  if (!env.DB) {
-    return respond({
-      error: "Premium verification is temporarily unavailable."
-    }, 503);
-  }
+          const requestedMode = String(body.mode || "").trim().toLowerCase();
 
-  const subscription = await env.DB.prepare(
-    `SELECT plan, status, current_period_end
-     FROM subscriptions
-     WHERE user_id = ?
-     LIMIT 1`
-  ).bind(userId).first();
+          if (requestedMode === "excel") {
+            if (!env.DB) {
+              return respond({
+                error: "Premium verification is temporarily unavailable."
+              }, 503);
+            }
 
-  const expiry = subscription?.current_period_end
-    ? Date.parse(subscription.current_period_end)
-    : null;
+            const subscription = await env.DB.prepare(
+              `SELECT plan, status, current_period_end
+               FROM subscriptions
+               WHERE user_id = ?
+               LIMIT 1`
+            ).bind(userId).first();
 
-  const isPremium =
-    String(subscription?.plan || "").toLowerCase() === "premium" &&
-    String(subscription?.status || "").toLowerCase() === "active" &&
-    expiry !== null &&
-    Number.isFinite(expiry) &&
-    expiry > Date.now();
+            const expiry = subscription?.current_period_end
+              ? Date.parse(subscription.current_period_end)
+              : null;
 
-  if (!isPremium) {
-    return respond({
-      error: "Please subscribe to Premium to use this feature."
-    }, 403);
-  }
-}
+            const isPremium =
+              String(subscription?.plan || "").toLowerCase() === "premium" &&
+              String(subscription?.status || "").toLowerCase() === "active" &&
+              expiry !== null &&
+              Number.isFinite(expiry) &&
+              expiry > Date.now();
+
+            if (!isPremium) {
+              return respond({
+                error: "Please subscribe to Premium to use this feature."
+              }, 403);
+            }
+          }
 
           const usage = await reserveDailyUsage(env, userId);
-        
-const identityQuestion =
-  /\b(?:who\s+(?:created|made|built|developed|owns|founded)\s+(?:you|malie(?:\s+ai)?|this\s+(?:ai|assistant|product))|who\s+(?:is\s+)?(?:the\s+)?(?:creator|founder|owner)\s+of\s+(?:malie(?:\s+ai)?|you|this\s+(?:ai|assistant|product))|who\s+(?:is\s+)?your\s+(?:creator|founder|owner)|who\s+is\s+behind\s+(?:malie(?:\s+ai)?|you)|(?:are\s+you|is\s+malie(?:\s+ai)?)\s+(?:created|made|built|developed)\s+by)\b/i;
 
-if (identityQuestion.test(message)) {
-  return respond({
-    reply:
-      "I am Malie AI, developed by Campus Creative, founded by Osume Prosper. Google provides the model technology; Campus Creative created the Malie AI product."
-  });
-}
+          const identityQuestion =
+            /\b(?:who\s+(?:created|made|built|developed|owns|founded)\s+(?:you|malie(?:\s+ai)?|this\s+(?:ai|assistant|product))|who\s+(?:is\s+)?(?:the\s+)?(?:creator|founder|owner)\s+of\s+(?:malie(?:\s+ai)?|you|this\s+(?:ai|assistant|product))|who\s+(?:is\s+)?your\s+(?:creator|founder|owner)|who\s+is\s+behind\s+(?:malie(?:\s+ai)?|you)|(?:are\s+you|is\s+malie(?:\s+ai)?)\s+(?:created|made|built|developed)\s+by)\b/i;
 
-        const reply = await callAI(
+          if (identityQuestion.test(message)) {
+            return respond({
+              reply:
+                "I am Malie AI, developed by Campus Creative, founded by Osume Prosper. Google provides the model technology; Campus Creative created the Malie AI product.",
+              usage
+            });
+          }
+
+          const reply = await callAI(
             env,
             [
               "Respond to the user's message as Malie AI.",
@@ -748,18 +765,18 @@ if (identityQuestion.test(message)) {
               "For calculations, show the working and explain how the result was obtained.",
               "For school subjects, use simple explanations and examples appropriate to the question.",
               "If the user asks for a direct answer, give it first and then explain it briefly.",
-        
+
               ...(requestedMode === "excel" ? [
-  "You are now Malie AI's Premium Excel Assistant.",
-  "Help with Excel formulas, spreadsheet assignments, data analysis, and troubleshooting spreadsheet errors.",
-  "For formulas, give the exact formula, explain where to enter it, and explain how it works.",
-  "For calculations, show the steps and check the arithmetic where possible.",
-  "For spreadsheet errors, explain the likely cause and provide a specific fix.",
-  "When users paste tables, analyze only the data they provide. Never invent missing data.",
-  "If cell references or column meanings are unclear, ask a brief clarifying question.",
-  "Do not claim to open, edit, or generate an Excel file unless a file-processing feature actually performed that action.",
-  "Workbook uploads and downloadable Excel file editing are not available yet."
-] : []),
+                "You are now Malie AI's Premium Excel Assistant.",
+                "Help with Excel formulas, spreadsheet assignments, data analysis, and troubleshooting spreadsheet errors.",
+                "For formulas, give the exact formula, explain where to enter it, and explain how it works.",
+                "For calculations, show the steps and check the arithmetic where possible.",
+                "For spreadsheet errors, explain the likely cause and provide a specific fix.",
+                "When users paste tables, analyze only the data they provide. Never invent missing data.",
+                "If cell references or column meanings are unclear, ask a brief clarifying question.",
+                "Do not claim to open, edit, or generate an Excel file unless a file-processing feature actually performed that action.",
+                "Workbook uploads and downloadable Excel file editing are not available yet."
+              ] : []),
 
               "",
               "User message:",
@@ -788,9 +805,10 @@ if (identityQuestion.test(message)) {
           }
 
           const instruction =
-            taskInstructions[mode] || taskInstructions.correct
+            taskInstructions[mode] || taskInstructions.correct;
 
           const usage = await reserveDailyUsage(env, userId);
+
           const result = await callAI(
             env,
             [

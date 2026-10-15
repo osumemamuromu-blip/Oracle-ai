@@ -669,6 +669,70 @@ paymentDetails: {
       }
     }
 
+    
+    // Admin-only list of pending payment requests.
+    if (
+      request.method === "POST" &&
+      path === "/api/admin/pending-payments"
+    ) {
+      try {
+        const adminUid = env.MALIE_ADMIN_UID;
+
+        if (!adminUid) {
+          return respond(
+            { error: "Admin access is not configured." },
+            500
+          );
+        }
+
+        const authenticatedUid = await authenticateFirebase(request, env);
+
+        if (authenticatedUid !== adminUid) {
+          return respond({ error: "Unauthorized." }, 403);
+        }
+
+        if (!env.DB) {
+          return respond(
+            { error: "Payment service unavailable." },
+            503
+          );
+        }
+
+        const result = await env.DB.prepare(`
+          SELECT id, user_id, plan, amount, billing_period,
+                 payment_reference, status, created_at
+          FROM payment_requests
+          WHERE status = 'pending'
+          ORDER BY created_at ASC
+          LIMIT 100
+        `).all();
+
+        return respond({
+          ok: true,
+          payments: (result.results || []).map(payment => ({
+            requestId: payment.id,
+            userId: payment.user_id,
+            plan: payment.plan,
+            amount: payment.amount,
+            billingPeriod: payment.billing_period,
+            hasReference: Boolean(payment.payment_reference),
+            transferReference: payment.payment_reference,
+            status: payment.status,
+            createdAt: payment.created_at
+          }))
+        });
+      } catch (error) {
+        console.error("Admin pending-payments error:", error.message);
+
+        return respond(
+          {
+            error: error.message || "Could not load pending payments."
+          },
+          error.status || 500
+        );
+      }
+    } 
+    
     // Admin-only payment approval.
     if (
       request.method === "POST" &&

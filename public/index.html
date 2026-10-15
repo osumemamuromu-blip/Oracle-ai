@@ -112,8 +112,10 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .excel-mode-row{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
 .composer-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}
 .composer-left{display:flex;align-items:center;gap:10px;min-width:0}
-.attach-btn{flex:0 0 auto;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:16px;display:grid;place-items:center;padding:0}
-.attach-btn:hover{border-color:var(--accent)}
+.attach-btn,.mic-btn{flex:0 0 auto;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:16px;display:grid;place-items:center;padding:0}
+.attach-btn:hover,.mic-btn:hover{border-color:var(--accent)}
+.mic-btn.rec{background:var(--danger);color:#fff;border-color:transparent;font-size:13px;animation:recpulse 1.2s infinite}
+.input-hint.recording{color:var(--danger);font-weight:700}
 .attach-row{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
 .chip{display:flex;align-items:center;gap:8px;border:1px solid var(--border);background:var(--panel2);border-radius:12px;padding:6px 8px;font-size:11px;max-width:230px;min-width:0}
 .chip img,.chip .ficon{width:32px;height:32px;border-radius:8px;object-fit:cover;flex:0 0 32px}
@@ -245,6 +247,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 @keyframes flash{to{opacity:.5}}
 @keyframes appear{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pop{from{transform:scale(.75)}to{transform:scale(1)}}
+@keyframes recpulse{0%{box-shadow:0 0 0 0 #ff8b8b99}100%{box-shadow:0 0 0 11px #ff8b8b00}}
 
 /* Plans & payments */
 .seg{display:inline-flex;border:1px solid var(--border);border-radius:99px;padding:3px;margin-bottom:16px;background:var(--panel)}
@@ -288,7 +291,6 @@ button:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:380px){
   .suggestions{grid-template-columns:1fr}
   .suggestion{align-items:center}
-  .input-hint{display:none}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
@@ -385,11 +387,10 @@ button:disabled{opacity:.55;cursor:not-allowed}
 
       <!-- Quiz Mode -->
       <section class="view" id="view-quiz">
-        <div class="section-head"><h1>Quiz Mode<span style="color:var(--accent)">.</span></h1><p>Turn your study material into a quiz. Works with typed PDFs, scanned PDFs and photos of your notes.</p></div>
+        <div class="section-head"><h1>Quiz Mode<span style="color:var(--accent)">.</span></h1><p>Turn your study material into a quiz. Works with every kind of PDF (typed, scanned or snapped), photos of your notes and text files.</p></div>
         <div class="work-card">
           <div class="upload-zone"><strong>Choose a PDF or a photo</strong><p>Typed or scanned PDFs, or snapped pictures of your notes. Scanned pages are read with OCR in your browser.</p><input id="studyFile" type="file" accept=".pdf,application/pdf,image/*,.txt,.md"></div>
-          <div class="field-group" style="margin-top:17px"><label class="field-label" for="studyText">Study material</label><textarea class="work-textarea" id="studyText" placeholder="The text from your file appears here. You can also paste notes directly..."></textarea></div>
-          <div class="field-row">
+          <div class="field-row" style="margin-top:17px">
             <div><label class="field-label" for="questionCount">Number of questions</label>
               <select class="work-select" id="questionCount">
                 <option value="5">5 questions</option>
@@ -460,8 +461,9 @@ button:disabled{opacity:.55;cursor:not-allowed}
           <div class="plan"><h3>Pro</h3><div class="price" data-price="pro"></div><ul><li>Everything in Premium</li></ul><button class="primary" data-choose="pro">Choose Pro</button></div>
         </div>
         <div class="work-card" id="payPanel" hidden></div>
-        
-<button class="primary" id="openAdminPayments" type="button">Admin Payments</button>
+
+<!-- Admin only: hidden for everyone until the server confirms the signed-in account is the admin -->
+<button class="primary" id="openAdminPayments" type="button" hidden>Admin Payments</button>
 
 <div class="work-card" id="adminPaymentsPanel" hidden>
   <h2>Admin Payments</h2>
@@ -485,7 +487,8 @@ button:disabled{opacity:.55;cursor:not-allowed}
         <div class="composer-bottom">
           <div class="composer-left">
             <button class="attach-btn" id="attachBtn" type="button" aria-label="Attach photos or files" title="Attach photos or files">📎</button>
-            <span class="input-hint">Enter to send · Shift + Enter for a new line</span>
+            <button class="mic-btn" id="micBtn" type="button" aria-label="Record voice note" title="Record a voice note">🎤</button>
+            <span class="input-hint" id="composerHint">Enter to send · Shift + Enter for a new line</span>
           </div>
           <button class="send" id="sendBtn" type="submit" aria-label="Send message">↑</button>
         </div>
@@ -531,13 +534,20 @@ import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, delet
 const API = "https://oracle-ai.osumemamuromu.workers.dev";
 let excelMode = false;
 
+/* Optional extra lock for the admin button.
+   Put your admin Google email(s) here, e.g. ["you@gmail.com"].
+   If left empty, the server alone decides who is admin (recommended: your Worker must
+   reject /api/admin/* for everyone except you). */
+const ADMIN_EMAILS = [];
+
 const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
 const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const PDFJS_CMAPS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/";
 const TESS_URL = "https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.5/tesseract.min.js";
 const MAX_PDF_CHARS = 60000;     // max text kept from a file
 const QUIZ_PROMPT_CHARS = 40000; // max text sent when generating a quiz
 const CHAT_FILE_CHARS = 30000;   // max text per chat attachment
-const OCR_MAX_PAGES = 30;        // scanned pages read per PDF
+const OCR_MAX_PAGES = 40;        // scanned pages read per PDF
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MAX_ATTACHMENTS = 5;
 const MAX_SAVED_CHATS = 30;      // conversations kept per account on this device
@@ -553,6 +563,12 @@ const firebaseConfig = {
   appId: "1:334163694573:web:1d82c54f057ad74e2ecde4",
   measurementId: "G-7FHDD141B5"
 };
+
+/* Shared state declared early so every function can safely use it */
+let studyContent = "";   // text read from the uploaded quiz file
+let isAdminUser = false; // true only after the server confirms admin access
+let timer = null;
+let finished = false;
 
 /* ───────── Helpers ───────── */
 const $ = id => document.getElementById(id);
@@ -839,7 +855,7 @@ $("themeToggle").onclick = () => {
   updateThemeButton();
 };
 
-/* ───────── File reading: PDF (typed + scanned), photos (OCR), text ───────── */
+/* ───────── File reading: PDF (typed + scanned + snapped), photos (OCR), text ───────── */
 const scriptCache = {};
 function loadScript(url) {
   if (scriptCache[url]) return scriptCache[url];
@@ -861,35 +877,96 @@ async function getOcrWorker() {
   return Tesseract.createWorker("eng");
 }
 
+function tidyText(t) {
+  return String(t || "")
+    .replace(/\r/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+async function looksLikePdf(file) {
+  try {
+    const head = new Uint8Array(await file.slice(0, 1024).arrayBuffer());
+    return String.fromCharCode(...head).includes("%PDF-");
+  } catch { return false; }
+}
+
 async function extractPdfText(file, onStatus) {
   await loadPdfJs();
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-  let text = "", ocrPages = 0, worker = null;
+  const data = new Uint8Array(await file.arrayBuffer());
+  const task = pdfjsLib.getDocument({
+    data,
+    cMapUrl: PDFJS_CMAPS,
+    cMapPacked: true,
+    useSystemFonts: true,
+    isEvalSupported: false
+  });
+  task.onPassword = (update, reason) => {
+    const pw = prompt(reason === 2
+      ? "Wrong password. Try again:"
+      : "This PDF is password-protected. Enter the password:");
+    if (pw === null) { task.destroy(); return; }
+    update(pw);
+  };
+
+  let pdf;
+  try {
+    pdf = await task.promise;
+  } catch (err) {
+    throw new Error(err && err.name === "PasswordException"
+      ? "This PDF is password-protected."
+      : "Could not open this PDF. The file may be damaged or password-protected.");
+  }
+
+  let text = "", ocrPages = 0, worker = null, failedPages = 0;
   try {
     for (let n = 1; n <= pdf.numPages && text.length < MAX_PDF_CHARS; n++) {
       onStatus(`Reading page ${n} of ${pdf.numPages}…`);
-      const page = await pdf.getPage(n);
-      const content = await page.getTextContent();
-      let pageText = content.items.map(i => i.str).join(" ").trim();
+      let pageText = "";
+      let page = null;
+      try {
+        page = await pdf.getPage(n);
+        try {
+          const content = await page.getTextContent();
+          pageText = content.items.map(i => i.str).join(" ").replace(/\s+/g, " ").trim();
+        } catch { pageText = ""; }
 
-      if (pageText.length < 40 && ocrPages < OCR_MAX_PAGES) {
-        onStatus(`Scanning page ${n} of ${pdf.numPages} (OCR, this takes a moment)…`);
-        worker = worker || await getOcrWorker();
-        const viewport = page.getViewport({ scale: 2 });
-        const canvas = document.createElement("canvas");
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-        const { data } = await worker.recognize(canvas);
-        pageText = (data.text || "").trim();
-        ocrPages++;
+        /* Page has no real text layer (scanned / snapped page): read it with OCR */
+        if (pageText.replace(/\s/g, "").length < 40 && ocrPages < OCR_MAX_PAGES) {
+          onStatus(`Scanning page ${n} of ${pdf.numPages} (OCR, this takes a moment)…`);
+          try {
+            worker = worker || await getOcrWorker();
+            const base = page.getViewport({ scale: 1 });
+            const scale = Math.max(1, Math.min(2.5, 2400 / Math.max(base.width, base.height)));
+            const viewport = page.getViewport({ scale });
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.floor(viewport.width);
+            canvas.height = Math.floor(viewport.height);
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            const res = await worker.recognize(canvas);
+            const ocrText = tidyText(res.data && res.data.text);
+            if (ocrText.length > pageText.length) pageText = ocrText;
+            ocrPages++;
+          } catch (err) {
+            failedPages++;
+          }
+        }
+      } catch (err) {
+        failedPages++;
+      } finally {
+        if (page && page.cleanup) { try { page.cleanup(); } catch {} }
       }
-      text += pageText + "\n\n";
+      if (pageText) text += pageText + "\n\n";
     }
   } finally {
     if (worker) { try { await worker.terminate(); } catch {} }
+    try { await pdf.destroy(); } catch {}
   }
-  return { text: text.slice(0, MAX_PDF_CHARS).trim(), pages: pdf.numPages, ocrPages };
+  return { text: tidyText(text).slice(0, MAX_PDF_CHARS), pages: pdf.numPages, ocrPages, failedPages };
 }
 
 async function imageToCanvas(file, max = 2200) {
@@ -911,7 +988,7 @@ async function ocrImage(file, onStatus) {
   const worker = await getOcrWorker();
   try {
     const { data } = await worker.recognize(canvas);
-    return (data.text || "").trim().slice(0, MAX_PDF_CHARS);
+    return tidyText(data.text).slice(0, MAX_PDF_CHARS);
   } finally {
     try { await worker.terminate(); } catch {}
   }
@@ -921,14 +998,17 @@ const TEXT_EXT = /\.(txt|md|csv|tsv|json|log|xml|html?|css|js|py|java|c|cpp)$/i;
 async function extractAny(file, onStatus = () => {}) {
   const name = file.name.toLowerCase();
   if (file.size > MAX_FILE_BYTES) throw new Error("File is too large (max 25 MB).");
-  if (file.type === "application/pdf" || name.endsWith(".pdf")) {
+  if (file.type === "application/pdf" || name.endsWith(".pdf") || (!file.type && await looksLikePdf(file))) {
     return { ...(await extractPdfText(file, onStatus)), kind: "pdf" };
   }
   if (file.type.startsWith("image/")) {
     return { text: await ocrImage(file, onStatus), kind: "image" };
   }
   if (file.type.startsWith("text/") || TEXT_EXT.test(name)) {
-    return { text: (await file.text()).slice(0, MAX_PDF_CHARS).trim(), kind: "text" };
+    return { text: tidyText(await file.text()).slice(0, MAX_PDF_CHARS), kind: "text" };
+  }
+  if (await looksLikePdf(file)) {
+    return { ...(await extractPdfText(file, onStatus)), kind: "pdf" };
   }
   throw new Error("Unsupported file. Use a PDF, a photo or a text file.");
 }
@@ -943,6 +1023,7 @@ function closeSidebar() {
 }
 function switchView(name) {
   if (!titles[name]) return;
+  if (name !== "explore") stopVoice();
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === "view-" + name));
   document.querySelectorAll(".side-link[data-view]").forEach(b => b.classList.toggle("active", b.dataset.view === name));
   $("pageTitle").textContent = titles[name];
@@ -1128,6 +1209,101 @@ function updateSendState() {
   sendBtn.disabled = chatBusy || attachments.some(a => a.status === "reading");
 }
 
+/* ───────── Voice notes (speech to text) ───────── */
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+const micBtn = $("micBtn");
+const composerHint = $("composerHint");
+const HINT_DEFAULT = "Enter to send · Shift + Enter for a new line";
+let recognition = null, recWanted = false, recBase = "", recFinal = "", recStartedAt = 0, recTick = null;
+
+function paintVoiceUI(on) {
+  micBtn.classList.toggle("rec", on);
+  micBtn.textContent = on ? "■" : "🎤";
+  micBtn.title = on ? "Stop voice note" : "Record a voice note";
+  micBtn.setAttribute("aria-label", micBtn.title);
+  composerHint.classList.toggle("recording", on);
+  if (!on) composerHint.textContent = HINT_DEFAULT;
+}
+function paintVoiceTime() {
+  const s = Math.floor((Date.now() - recStartedAt) / 1000);
+  composerHint.textContent = `● Listening… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} · tap ■ to stop`;
+}
+function writeVoiceToPrompt(interim) {
+  const spoken = (recFinal + interim).replace(/\s+/g, " ").trim();
+  const sep = recBase && !/\s$/.test(recBase) && spoken ? " " : "";
+  promptBox.value = (recBase + sep + spoken).slice(0, 12000);
+  resizeInput();
+}
+function startVoice() {
+  if (!SpeechRec) return toast("Voice notes aren't supported in this browser. Try Chrome, Edge or Safari.", true);
+  if (chatBusy) return;
+  if (!currentUid) return toast("Please sign in with Google to use Malie AI.", true);
+
+  recognition = new SpeechRec();
+  recognition.lang = navigator.language || "en-US";
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recBase = promptBox.value;
+  recFinal = "";
+
+  recognition.onresult = e => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      if (r.isFinal) recFinal += r[0].transcript + " ";
+      else interim += r[0].transcript;
+    }
+    writeVoiceToPrompt(interim);
+  };
+  recognition.onerror = e => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      recWanted = false;
+      toast("Microphone access is blocked. Allow it in your browser settings.", true);
+    } else if (e.error === "audio-capture") {
+      recWanted = false;
+      toast("No microphone was found.", true);
+    } else if (e.error === "network") {
+      recWanted = false;
+      toast("Voice notes need an internet connection.", true);
+    }
+  };
+  recognition.onend = () => {
+    /* Browsers stop listening after a pause; keep going until the user taps stop */
+    if (recWanted) {
+      recBase = promptBox.value;
+      recFinal = "";
+      try { recognition.start(); return; } catch {}
+    }
+    endVoiceUI();
+  };
+
+  try {
+    recWanted = true;
+    recognition.start();
+    recStartedAt = Date.now();
+    paintVoiceUI(true);
+    paintVoiceTime();
+    clearInterval(recTick);
+    recTick = setInterval(paintVoiceTime, 500);
+    promptBox.focus();
+  } catch {
+    recWanted = false;
+    endVoiceUI();
+    toast("Could not start the microphone.", true);
+  }
+}
+function endVoiceUI() {
+  clearInterval(recTick);
+  recTick = null;
+  paintVoiceUI(false);
+}
+function stopVoice() {
+  recWanted = false;
+  if (recognition) { try { recognition.stop(); } catch {} }
+  endVoiceUI();
+}
+micBtn.onclick = () => (recWanted ? stopVoice() : startVoice());
+
 function makeChip(a, removable) {
   const chip = document.createElement("div");
   chip.className = "chip" + (a.status === "error" ? " err" : "");
@@ -1254,6 +1430,7 @@ function renderConversation(conv) {
 }
 
 function resetChatView() {
+  stopVoice();
   activeId = null;
   chat.replaceChildren();
   welcome.style.display = "block";
@@ -1279,6 +1456,8 @@ function openConversation(id) {
 
 async function sendChat(typed) {
   if (chatBusy) return;
+  stopVoice();
+  typed = typed || promptBox.value;
   if (attachments.some(a => a.status === "reading")) return toast("Still reading your attachment…");
 
   if (!currentUid) return toast("Please sign in with Google to use Malie AI.", true);
@@ -1422,19 +1601,22 @@ $("check").onclick = async () => {
 $("studyFile").onchange = async e => {
   const file = e.target.files?.[0];
   if (!file) return;
+  studyContent = "";
   setStatus("quizStatus", "Opening file…");
   try {
     const r = await extractAny(file, m => setStatus("quizStatus", m));
     if (!r.text) {
       throw new Error(r.kind === "image"
         ? "No readable text was found in that photo. Try a clearer, well-lit picture."
-        : "No readable text was found in that file.");
+        : "No readable text was found in that file. If it is a scan, try a clearer copy.");
     }
-    $("studyText").value = r.text;
+    studyContent = r.text;
     const extra = r.ocrPages ? ` ${r.ocrPages} scanned page(s) were read with OCR.` : "";
     const pages = r.pages ? ` ${r.pages} page(s).` : "";
-    setStatus("quizStatus", `Loaded "${file.name}".${pages}${extra} Check the text, then generate your quiz.`);
+    const skipped = r.failedPages ? ` ${r.failedPages} page(s) could not be read.` : "";
+    setStatus("quizStatus", `Loaded "${file.name}".${pages}${extra}${skipped} Choose your options, then generate your quiz.`);
   } catch (err) {
+    studyContent = "";
     setStatus("quizStatus", err.message, true);
   }
 };
@@ -1476,6 +1658,7 @@ function showSignInButton() {
 }
 
 function clearWorkspace() {
+  stopVoice();
   conversations = [];
   chatBusy = false;
   promptBox.disabled = false;
@@ -1485,8 +1668,8 @@ function clearWorkspace() {
   if (timer) { clearInterval(timer); timer = null; }
   finished = false;
   quizCache = [];
+  studyContent = "";
   $("quizOutput").innerHTML = "";
-  $("studyText").value = "";
   $("studyFile").value = "";
   setStatus("quizStatus", "");
   $("quizHistory").innerHTML = '<p class="placeholder">Sign in to view your saved tests.</p>';
@@ -1498,6 +1681,7 @@ function clearWorkspace() {
   $("recentChats").innerHTML = "";
   $("recentQuizzes").innerHTML = "";
 
+  setAdminUI(false);
   resetPlans();
 }
 
@@ -1572,6 +1756,7 @@ try {
         switchView("explore");
       }
       showAvatar(user);
+      checkAdminAccess();
       await loadHistory();
     } else {
       closeMenu();
@@ -1719,7 +1904,36 @@ async function submitReference() {
   }
 }
 
-/* ───────── Admin payments ───────── */
+/* ───────── Admin payments (admin only) ───────── */
+function setAdminUI(on) {
+  isAdminUser = !!on;
+  const btn = $("openAdminPayments");
+  const panel = $("adminPaymentsPanel");
+  if (btn) btn.hidden = !isAdminUser;
+  if (!isAdminUser && panel) {
+    panel.hidden = true;
+    $("adminPaymentsList").innerHTML = "";
+    $("adminPaymentsStatus").textContent = "";
+  }
+}
+
+/* Shows the Admin button only if the server accepts this account on an admin endpoint.
+   Non-admin accounts get an error from the server, so the button stays hidden. */
+async function checkAdminAccess() {
+  setAdminUI(false);
+  const user = auth?.currentUser;
+  if (!user) return;
+  const uid = user.uid;
+  const email = (user.email || "").toLowerCase();
+  if (ADMIN_EMAILS.length && !ADMIN_EMAILS.map(e => e.toLowerCase()).includes(email)) return;
+  try {
+    await api("/api/admin/pending-payments", {});
+    if (currentUid === uid) setAdminUI(true);
+  } catch {
+    if (currentUid === uid) setAdminUI(false);
+  }
+}
+
 async function loadAdminPayments() {
   const panel = $("adminPaymentsPanel");
   const status = $("adminPaymentsStatus");
@@ -1729,6 +1943,7 @@ async function loadAdminPayments() {
     toast("Please sign in first.", true);
     return;
   }
+  if (!isAdminUser) return;
 
   panel.hidden = false;
   status.classList.remove("error");
@@ -1761,6 +1976,7 @@ async function loadAdminPayments() {
 
     list.querySelectorAll("[data-approve-payment]").forEach(button => {
       button.onclick = async () => {
+        if (!isAdminUser) return;
         const requestId = Number(button.dataset.approvePayment);
 
         if (!confirm(
@@ -1791,6 +2007,7 @@ async function loadAdminPayments() {
 const openAdminPaymentsButton = $("openAdminPayments");
 if (openAdminPaymentsButton) {
   openAdminPaymentsButton.addEventListener("click", () => {
+    if (!isAdminUser) return;
     $("adminPaymentsPanel").hidden = false;
     loadAdminPayments();
   });
@@ -1811,9 +2028,6 @@ $("upgradeBtn").onclick = openPlans;
 paintPrices();
 
 /* ───────── Quiz ───────── */
-let timer = null;
-let finished = false;
-
 const optionText = o => (typeof o === "string" ? o : o?.text ?? o?.label ?? JSON.stringify(o));
 const formatTime = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
 
@@ -1881,8 +2095,8 @@ async function fetchQuestions(text, count, difficulty) {
 }
 
 $("generateQuiz").onclick = async () => {
-  const text = $("studyText").value.trim();
-  if (!text) return setStatus("quizStatus", "Upload a PDF or photo, or paste study material first.", true);
+  const text = studyContent.trim();
+  if (!text) return setStatus("quizStatus", "Upload a PDF, a photo or a text file first.", true);
 
   const ownerUid = currentUid;
   setBusy($("generateQuiz"), true, "Generating…");
@@ -2108,101 +2322,4 @@ function renderQuiz(questions) {
       if (isGraded) { graded++; if (isCorrect) score++; }
 
       const rec = {
-        question: q.question || q.prompt || `Question ${i + 1}`,
-        chosen: String(chosen),
-        correct: key ? key.text : "Not provided",
-        isCorrect,
-        explanation: String(q.explanation || q.reason || q.rationale || ""),
-        graded: isGraded
-      };
-      records.push(rec);
-      review.push({ key, selectedIdx: selected ? +selected.value : null });
-    });
-
-    host.querySelectorAll("input, textarea").forEach(x => (x.disabled = true));
-    host.querySelectorAll(".quiz-timer").forEach(t => t.classList.remove("warning"));
-    actions.hidden = true;
-    toolbar.hidden = true;
-
-    cards.forEach((card, i) => {
-      card.hidden = false;
-      card.classList.add("reviewed");
-      const { key, selectedIdx } = review[i];
-      const labels = [...card.querySelectorAll(".quiz-option")];
-      if (key && key.index !== null) {
-        labels.forEach((lab, j) => {
-          const tag = document.createElement("span");
-          tag.className = "opt-tag";
-          if (j === key.index) {
-            lab.classList.add("correct");
-            tag.textContent = "✓ Correct";
-            lab.append(tag);
-          } else if (j === selectedIdx) {
-            lab.classList.add("picked-wrong");
-            tag.textContent = "Your answer";
-            lab.append(tag);
-          } else {
-            lab.classList.add("wrong");
-          }
-        });
-      }
-      card.append(buildExplainTable(records[i]));
-    });
-
-    typeset(host);
-
-    result.hidden = false;
-    result.className = "score-card";
-
-    if (!graded) {
-      result.innerHTML = "<h3>Quiz completed</h3><p class='score-detail'>No recognised answer key was returned, so a reliable score cannot be calculated.</p>";
-      setStatus("quizStatus", "Quiz submitted, but no answer key was available.", true);
-      return;
-    }
-
-    const percent = Math.round(score / graded * 100);
-    const message = percent >= 80 ? "Excellent work! 🎉" : percent >= 60 ? "Good effort! Keep practising." : "Keep going — practice makes progress.";
-
-    result.innerHTML =
-      `<div class="score-hero">
-        <div class="score-ring" style="--angle:${percent * 3.6}deg">
-          <div class="score-ring-content">
-            <div class="score-number">${score}/${graded}</div>
-            <div class="score-percent">${percent}%</div>
-          </div>
-        </div>
-        <div>
-          <p class="score-message">${message}</p>
-          <div class="score-detail">${timesUp ? "Time ran out. " : ""}You scored ${score} out of ${graded}. Scroll down to see the correct answers and explanations.</div>
-        </div>
-      </div>`;
-    result.scrollIntoView({ behavior: "smooth", block: "start" });
-
-    setStatus("quizStatus", timesUp ? "Time is up. Your quiz has been submitted." : `Quiz submitted. Your score is ${score} / ${graded}.`);
-
-    if (auth?.currentUser) {
-      await saveResult({
-        score, total: graded, percent, answers: records,
-        title: `${$("quizDifficulty").value} quiz · ${count} questions`,
-        date: new Date().toISOString()
-      });
-    } else {
-      const note = document.createElement("p");
-      note.className = "score-detail";
-      note.style.marginTop = "12px";
-      note.textContent = "Sign in with Google to save this result and access it on other devices.";
-      result.append(note);
-    }
-  }
-
-  nextBtn.onclick = goNext;
-  submit.onclick = () => finish(false);
-
-  if (hasTotal || hasPerQ) {
-    tick();
-    timer = setInterval(tick, 1000);
-  }
-}
-</script>
-</body>
-  </html>
+        question: q.question || q

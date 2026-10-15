@@ -130,6 +130,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .send{height:37px;width:39px;font-size:19px;flex:0 0 auto}
 .primary{padding:11px 16px;font-size:12px}
 .secondary{padding:10px 14px;border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:11px;font-size:12px}
+.secondary.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--panel2))}
 .footer-note{text-align:center;max-width:790px;margin:9px auto 0;line-height:1.5}
 
 /* Work views */
@@ -453,8 +454,8 @@ button:disabled{opacity:.55;cursor:not-allowed}
         <div class="seg" id="billingToggle"><button class="active" data-billing="monthly">Monthly</button><button data-billing="annual">Annual</button></div>
         <div class="plan-grid">
           <div class="plan"><h3>Free</h3><div class="price">₦0</div><ul><li>8 AI requests per day</li><li>Chat, Writing Lab, Quiz</li></ul></div>
-          <div class="plan featured"><h3>Premium</h3><div class="price" data-price="premium"></div><ul><li>100 requests per day</li><li>Premium Excel Assistant</li></ul><button class="primary" data-choose="premium">Choose Premium</button></div>
-          <div class="plan"><h3>Pro</h3><div class="price" data-price="pro"></div><ul><li>Everything in Premium</li></ul><button class="primary" data-choose="pro">Choose Pro</button></div>
+          <div class="plan featured"><h3>Premium</h3><div class="price" data-price="premium"></div><ul><li>100 requests per day</li><li>Excel File Builder: photo or table to .xlsx</li></ul><button class="primary" data-choose="premium">Choose Premium</button></div>
+          <div class="plan"><h3>Pro</h3><div class="price" data-price="pro"></div><ul><li>300 requests per day</li><li>Everything in Premium</li></ul><button class="primary" data-choose="pro">Choose Pro</button></div>
         </div>
         <div class="work-card" id="payPanel" hidden></div>
 
@@ -509,7 +510,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
     </div>
     <div class="premium-promo menu-item" style="--i:2">
       <h3>✦ Premium &amp; Pro</h3>
-      <p>Longer study material, more requests and the Excel Assistant.</p>
+      <p>Longer study material, more requests and the Excel File Builder.</p>
       <button class="btn" id="premiumBtn">View plans</button>
     </div>
     <div class="menu-item" style="--i:3"><h4>Recent chats</h4><div id="recentChats"></div></div>
@@ -542,6 +543,7 @@ const MAX_ATTACHMENTS = 5;
 const MAX_SAVED_CHATS = 30;      // conversations kept per account on this device
 const HISTORY_CONTEXT_CHARS = 6000; // how much earlier conversation is sent as context
 const HISTORY_MSG_CHARS = 1500;     // max chars kept per earlier message in that context
+const EXCEL_IMG_SIDE = 1600;     // photos for the Excel builder are shrunk to this size
 
 const firebaseConfig = {
   apiKey: "AIzaSyAbHz_yfiQrPNuODTrKujQ9kNcR4sbpNfQ",
@@ -564,13 +566,14 @@ excelModeBtn.addEventListener("click", () => {
   excelModeBtn.textContent = excelMode
     ? "✦ Exit Excel Assistant"
     : "✦ Premium Excel Assistant";
+  excelModeBtn.classList.toggle("on", excelMode);
 
   excelModeStatus.textContent = excelMode
-    ? "Excel mode selected"
+    ? "Excel mode: send a table or photo and get an .xlsx file"
     : "Premium feature";
 
   $("prompt").placeholder = excelMode
-    ? "Ask your Excel question..."
+    ? "Paste a table or attach a photo, then say what you need..."
     : "Ask Malie anything...";
 });
 
@@ -819,6 +822,54 @@ async function copyText(text) {
 function safeStorage(action, key, value) {
   try { return action === "get" ? localStorage.getItem(key) : localStorage.setItem(key, value); }
   catch { return null; }
+}
+
+/* ───────── Excel helpers ───────── */
+// Shrinks a phone photo into a small JPEG data URL for the Excel builder.
+async function photoToDataUrl(file, max = EXCEL_IMG_SIDE, quality = 0.8) {
+  let bmp;
+  try {
+    bmp = await createImageBitmap(file);
+  } catch {
+    throw new Error("Could not open this image. Try a JPG or PNG.");
+  }
+  const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * s);
+  c.height = Math.round(bmp.height * s);
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", quality);
+}
+
+function downloadXlsx(base64, filename) {
+  const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+  const blob = new Blob([bytes], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+// Turns the first rows returned by the server into a Markdown table for the chat bubble.
+function previewToMarkdown(rows) {
+  if (!Array.isArray(rows) || !rows.length) return "";
+  const grid = rows.map(r => (Array.isArray(r) ? r : [r]));
+  const width = Math.max(1, ...grid.map(r => r.length));
+  const clean = v => String(v ?? "").replace(/\|/g, "/").replace(/\s*\n\s*/g, " ").trim();
+  const line = r => "| " + Array.from({ length: width }, (_, i) => clean(r[i])).join(" | ") + " |";
+  return [
+    line(grid[0]),
+    "| " + Array(width).fill("---").join(" | ") + " |",
+    ...grid.slice(1).map(line)
+  ].join("\n");
 }
 
 /* ───────── Theme ───────── */
@@ -1304,15 +1355,25 @@ function renderAttachments() {
 async function addAttachment(file) {
   if (attachments.length >= MAX_ATTACHMENTS) return toast(`You can attach up to ${MAX_ATTACHMENTS} files.`, true);
   const isImg = file.type.startsWith("image/");
-  const a = { name: file.name || (isImg ? "photo" : "file"), kind: isImg ? "image" : "file", thumb: isImg ? URL.createObjectURL(file) : null, status: "reading", text: "", note: "Reading…" };
+  const a = { name: file.name || (isImg ? "photo" : "file"), kind: isImg ? "image" : "file", thumb: isImg ? URL.createObjectURL(file) : null, status: "reading", text: "", note: "Reading…", dataUrl: null };
   attachments.push(a);
   renderAttachments();
   try {
-    const r = await extractAny(file, m => { a.note = m; renderAttachments(); });
-    a.text = r.text || "";
-    a.status = "ready";
-    a.note = r.kind === "image" && !a.text ? "No readable text found" :
-             r.ocrPages ? `Ready · ${r.ocrPages} scanned page(s) read` : "Ready";
+    if (excelMode && isImg) {
+      // Excel mode: send the actual photo to the AI instead of reading it with OCR
+      if (file.size > MAX_FILE_BYTES) throw new Error("File is too large (max 40 MB).");
+      a.note = "Preparing photo…";
+      renderAttachments();
+      a.dataUrl = await photoToDataUrl(file);
+      a.status = "ready";
+      a.note = "Photo ready for Excel";
+    } else {
+      const r = await extractAny(file, m => { a.note = m; renderAttachments(); });
+      a.text = r.text || "";
+      a.status = "ready";
+      a.note = r.kind === "image" && !a.text ? "No readable text found" :
+               r.ocrPages ? `Ready · ${r.ocrPages} scanned page(s) read` : "Ready";
+    }
   } catch (err) {
     a.status = "error";
     a.note = err.message;
@@ -1408,6 +1469,104 @@ function openConversation(id) {
   promptBox.focus();
 }
 
+/* ───────── Excel File Builder (Premium / Pro) ───────── */
+async function sendExcel(shown, ready) {
+  const imgAtt = ready.find(a => a.dataUrl);
+
+  let message = shown || "";
+  ready.filter(a => !a.dataUrl && a.text).forEach(a => {
+    message += `\n\n--- Attached file: ${a.name} ---\n${a.text.slice(0, CHAT_FILE_CHARS)}`;
+  });
+  message = message.trim();
+
+  if (!message && !imgAtt) return toast("Add a table, a photo, or instructions first.", true);
+
+  const ownerUid = currentUid;
+  const isNew = !getActiveConversation();
+  const conv = getActiveConversation() || newConversation(shown || (ready[0] && ready[0].name) || "Excel file");
+
+  const userMsg = {
+    role: "user",
+    text: shown,
+    files: ready.map(a => ({ name: a.name, kind: a.kind }))
+  };
+  conv.messages.push(userMsg);
+  conv.ts = Date.now();
+  persistConversations();
+
+  chatBusy = true;
+  promptBox.disabled = true;
+  welcome.style.display = "none";
+
+  fillUserBubble(addMessage("user").bubble, shown, ready);
+  promptBox.value = "";
+  resizeInput();
+  attachments = [];
+  renderAttachments();
+
+  const { body, bubble } = addMessage("assistant");
+  bubble.innerHTML = typingDots();
+  side("Building your spreadsheet…");
+
+  try {
+    const data = await api("/api/excel", {
+      message,
+      image: imgAtt ? imgAtt.dataUrl : null
+    });
+
+    if (currentUid !== ownerUid) return;
+    if (!data.fileBase64) throw new Error("No spreadsheet was returned. Please try again.");
+
+    downloadXlsx(data.fileBase64, data.filename);
+
+    const left = data.usage && Number.isFinite(data.usage.remaining)
+      ? ` You have ${data.usage.remaining} request(s) left today.`
+      : "";
+    const table = previewToMarkdown(data.preview);
+    const text =
+      `Your spreadsheet **${data.filename}** is ready and downloading now.${left}\n\n` +
+      (table ? `Here is a preview of the first rows. Please check it against your original before you use it:\n\n${table}` : "");
+
+    bubble.innerHTML = markdown(text);
+    typeset(bubble);
+
+    const actions = document.createElement("div");
+    actions.className = "message-actions";
+    const dl = document.createElement("button");
+    dl.type = "button";
+    dl.className = "mini-btn";
+    dl.textContent = "Download again";
+    dl.onclick = () => downloadXlsx(data.fileBase64, data.filename);
+    actions.append(dl);
+    body.append(actions);
+    addCopyButton(body, text);
+
+    conv.messages.push({ role: "assistant", text });
+    conv.ts = Date.now();
+    persistConversations();
+    side("Spreadsheet ready", "online");
+  } catch (e) {
+    if (currentUid !== ownerUid) return;
+
+    bubble.classList.add("error");
+    bubble.textContent = e.message;
+    side("Connection needs attention", "error");
+
+    const idx = conv.messages.indexOf(userMsg);
+    if (idx >= 0) conv.messages.splice(idx, 1);
+    if (!conv.messages.length) {
+      conversations = conversations.filter(c => c.id !== conv.id);
+      if (isNew) activeId = null;
+    }
+    persistConversations();
+  } finally {
+    chatBusy = false;
+    promptBox.disabled = false;
+    updateSendState();
+    if (currentUid === ownerUid) promptBox.focus();
+  }
+}
+
 async function sendChat(typed) {
   if (chatBusy) return;
   stopVoice();
@@ -1418,6 +1577,9 @@ async function sendChat(typed) {
   const ready = attachments.filter(a => a.status === "ready");
   const shown = (typed || "").trim();
   if (!shown && !ready.length) return;
+
+  // Excel mode builds a real .xlsx file instead of sending a normal chat message
+  if (excelMode) return sendExcel(shown, ready);
 
   let message = shown || "Please go through the attached file(s) and summarize the key points.";
   ready.forEach(a => {
@@ -1461,10 +1623,7 @@ async function sendChat(typed) {
   side("Connecting to AI…");
 
   try {
-    const data = await api("/api/chat", {
-      message: payload,
-      ...(excelMode ? { mode: "excel" } : {})
-    });
+    const data = await api("/api/chat", { message: payload });
 
     if (currentUid !== ownerUid) return;
 
@@ -1483,9 +1642,7 @@ async function sendChat(typed) {
     if (currentUid !== ownerUid) return;
 
     bubble.classList.add("error");
-    bubble.textContent = excelMode
-      ? e.message
-      : "Error: " + e.message;
+    bubble.textContent = "Error: " + e.message;
     side("Connection needs attention", "error");
 
     const idx = conv.messages.indexOf(userMsg);
@@ -2377,4 +2534,4 @@ function renderQuiz(questions) {
 }
 </script>
 </body>
-</html 
+</html>

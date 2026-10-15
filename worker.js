@@ -402,6 +402,155 @@ export default {
       });
     }
 
+    
+    // Create a payment request for Premium or Pro.
+    if (request.method === "POST" && path === "/api/payment/request") {
+      try {
+        const userId = await authenticateFirebase(request, env);
+        const body = await request.json();
+
+        const plan = String(body.plan || "").toLowerCase();
+        const billingPeriod = String(
+          body.billingPeriod || "monthly"
+        ).toLowerCase();
+
+        const prices = {
+          premium: { monthly: 2500, annual: 25000 },
+          pro: { monthly: 7500, annual: 85000 }
+        };
+
+        
+          transferReference.length > 120
+        ) {
+          return respond({
+            error: "Please provide a valid request ID and transfer reference."
+          }, 400);
+        }
+
+        if (!env.DB) {
+          return respond({
+            error: "Payment service is temporarily unavailable."
+          }, 503);
+        }
+
+        const result = await env.DB.prepare(`
+          UPDATE payment_requests
+          SET payment_reference = ?
+          WHERE id = ?
+            AND user_id = ?
+            AND status = 'pending'
+        `).bind(
+          transferReference,
+          requestId,
+          userId
+        ).run();
+
+        if (!result.success) {
+          throw new Error("Reference could not be saved.");
+        }
+
+        if (result.meta?.changes !== 1) {
+          return respond({
+            error: "Payment request not found, already processed, or reference already used."
+          }, 409);
+        }
+
+        return respond({
+          ok: true,
+          message:
+            "Transfer reference submitted. Your payment must be verified before your subscription is activated."
+        });
+      } catch (error) {
+        console.error("Payment reference error:", error.message);
+
+        if (
+          String(error.message || "").includes("UNIQUE constraint failed")
+        ) {
+          return respond({
+            error: "That transfer reference has already been submitted."
+          }, 409);
+        }
+
+        return respond({
+          error: "Could not submit your transfer reference."
+        }, 500);
+      }
+    }
+
+   // Save a transfer reference without activating a subscription.
+    if (
+      request.method === "POST" &&
+      path === "/api/payment/submit-reference"
+    ) {
+      try {
+        const userId = await authenticateFirebase(request, env);
+        const body = await request.json();
+
+        const requestId = Number(body.requestId);
+        const transferReference = String(
+          body.transferReference || ""
+        ).trim();
+
+        if (
+          !Number.isSafeInteger(requestId) ||
+          requestId < 1 ||
+          transferReference.length < 4 ||
+          transferReference.length > 120
+        ) {
+          return respond({
+            error: "Please provide a valid request ID and transfer reference."
+          }, 400);
+        }
+
+        if (!env.DB) {
+          return respond({
+            error: "Payment service is temporarily unavailable."
+          }, 503);
+        }
+
+        const result = await env.DB.prepare(`
+          UPDATE payment_requests
+          SET payment_reference = ?
+          WHERE id = ?
+            AND user_id = ?
+            AND status = 'pending'
+        `).bind(
+          transferReference,
+          requestId,
+          userId
+        ).run();
+
+        if (!result.success) {
+          throw new Error("Reference could not be saved.");
+        }
+
+        if (result.meta?.changes !== 1) {
+          return respond({
+            error: "Payment request not found, already processed, or reference already used."
+          }, 409);
+        }
+
+        return respond({
+          ok: true,
+          message:
+            "Transfer reference submitted. Your payment must be verified before your subscription is activated."
+        });
+      } catch (error) {
+        console.error("Payment reference error:", error.message);
+
+        if (
+          String(error.message || "").includes("UNIQUE constraint failed")
+        ) {
+          return respond({
+            error: "That transfer reference has already been submitted."
+          }, 409);
+        }
+
+        return respond({
+          error: "Could not submit your transfer reference."
+        }, 500);
+      }
+    }
     if (
       request.method === "POST" &&
       ["/api/chat", "/api/write", "/api/quiz"].includes(path)

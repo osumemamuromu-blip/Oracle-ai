@@ -1809,6 +1809,19 @@ async function loadAdminPayments() {
     status.classList.add("error");
   }
 }
+  const openAdminPaymentsButton = $("openAdminPayments");
+
+if (openAdminPaymentsButton) {
+  openAdminPaymentsButton.addEventListener("click", () => {
+    $("adminPaymentsPanel").hidden = false;
+    loadAdminPayments();
+  });
+}
+
+const adminLoadButton = $("loadAdminPayments");
+if (adminLoadButton) {
+  adminLoadButton.addEventListener("click", loadAdminPayments);
+}
 const openAdminPaymentsButton = $("openAdminPayments");
 
 if (openAdminPaymentsButton) {

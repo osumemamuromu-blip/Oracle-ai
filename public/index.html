@@ -460,6 +460,16 @@ button:disabled{opacity:.55;cursor:not-allowed}
           <div class="plan"><h3>Pro</h3><div class="price" data-price="pro"></div><ul><li>Everything in Premium</li></ul><button class="primary" data-choose="pro">Choose Pro</button></div>
         </div>
         <div class="work-card" id="payPanel" hidden></div>
+        
+<button class="primary" id="openAdminPayments" type="button">Admin Payments</button>
+
+<div class="work-card" id="adminPaymentsPanel" hidden>
+  <h2>Admin Payments</h2>
+  <p class="sub">Review transfer references and verify payments in your bank account before approving.</p>
+  <button class="primary" id="loadAdminPayments">Load pending payments</button>
+  <div id="adminPaymentsStatus" class="status"></div>
+  <div id="adminPaymentsList"></div>
+</div>
       </section>
     </div>
 

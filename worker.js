@@ -24,6 +24,13 @@ const taskInstructions = {
     "Expand the supplied text with relevant explanations, examples, and details. Do not invent facts or citations. Make the added explanations clear and useful."
 };
 
+// Daily request limits per plan. Change the numbers here only.
+const DAILY_LIMITS = {
+  free: 8,
+  premium: 100,
+  pro: 300
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -329,7 +336,9 @@ function getUsageDate() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-async function reserveDailyUsage(env, userId) {
+// Returns "free", "premium" or "pro".
+// A paid plan counts only if it is active and has not expired.
+async function getActivePlan(env, userId) {
   if (!env.DB) {
     const error = new Error(
       "Usage tracking is not connected. Please try again later."
@@ -341,17 +350,34 @@ async function reserveDailyUsage(env, userId) {
   const subscription = await env.DB.prepare(
     `SELECT plan, status, current_period_end
      FROM subscriptions
-     WHERE user_id = ?`
+     WHERE user_id = ?
+     LIMIT 1`
   ).bind(userId).first();
 
-  const isPremium =
-    subscription?.plan === "premium" &&
-    subscription?.status === "active" &&
-    subscription?.current_period_end &&
-    Date.parse(subscription.current_period_end) > Date.now();
+  if (!subscription) return "free";
 
-  const plan = isPremium ? "premium" : "free";
-  const limit = isPremium ? 100 : 8;
+  const plan = String(subscription.plan || "").toLowerCase();
+  const status = String(subscription.status || "").toLowerCase();
+  const expiry = subscription.current_period_end
+    ? Date.parse(subscription.current_period_end)
+    : null;
+
+  const active =
+    status === "active" &&
+    expiry !== null &&
+    Number.isFinite(expiry) &&
+    expiry > Date.now();
+
+  if (active && (plan === "premium" || plan === "pro")) {
+    return plan;
+  }
+
+  return "free";
+}
+
+async function reserveDailyUsage(env, userId, knownPlan = null) {
+  const plan = knownPlan || (await getActivePlan(env, userId));
+  const limit = DAILY_LIMITS[plan] ?? DAILY_LIMITS.free;
   const usageDate = getUsageDate();
 
   const result = await env.DB.prepare(
@@ -367,7 +393,9 @@ async function reserveDailyUsage(env, userId) {
     const error = new Error(
       `You've reached your ${limit} daily requests on the ${plan} plan. ${
         plan === "free"
-          ? "Upgrade to Premium for 100 daily requests."
+          ? "Upgrade to Premium or Pro for more daily requests."
+          : plan === "premium"
+          ? "Upgrade to Pro for more daily requests, or try again after your limit resets tomorrow."
           : "Your daily limit will reset tomorrow."
       }`
     );
@@ -405,9 +433,85 @@ export default {
           "/api/health",
           "/api/chat",
           "/api/write",
-          "/api/quiz"
+          "/api/quiz",
+          "/api/subscription/status",
+          "/api/payment/request",
+          "/api/payment/submit-reference"
         ]
       });
+    }
+
+    // Report the signed-in user's plan and latest payment request.
+    if (
+      request.method === "POST" &&
+      path === "/api/subscription/status"
+    ) {
+      try {
+        const userId = await authenticateFirebase(request, env);
+
+        if (!env.DB) {
+          return respond({
+            error: "Subscription service is temporarily unavailable."
+          }, 503);
+        }
+
+        const subscription = await env.DB.prepare(
+          `SELECT plan, status, current_period_end
+           FROM subscriptions
+           WHERE user_id = ?
+           LIMIT 1`
+        ).bind(userId).first();
+
+        const expiry = subscription?.current_period_end
+          ? Date.parse(subscription.current_period_end)
+          : null;
+
+        const active =
+          String(subscription?.status || "").toLowerCase() === "active" &&
+          expiry !== null &&
+          Number.isFinite(expiry) &&
+          expiry > Date.now();
+
+        const latest = await env.DB.prepare(
+          `SELECT id, plan, amount, billing_period, status,
+                  payment_reference
+           FROM payment_requests
+           WHERE user_id = ?
+           ORDER BY id DESC
+           LIMIT 1`
+        ).bind(userId).first();
+
+        return respond({
+          ok: true,
+          subscription: {
+            active,
+            plan: active
+              ? String(subscription.plan || "").toLowerCase()
+              : "free",
+            expiresAt: active ? subscription.current_period_end : null
+          },
+          latestRequest: latest
+            ? {
+                requestId: latest.id,
+                plan: latest.plan,
+                billingPeriod: latest.billing_period,
+                amount: latest.amount,
+                status: latest.status,
+                hasReference: Boolean(latest.payment_reference)
+              }
+            : null
+        });
+      } catch (error) {
+        console.error("Subscription status error:", error.message);
+
+        if (error.status === 401 || error.status === 503) {
+          return respond({ error: error.message }, error.status);
+        }
+
+        return respond({
+          error: "Could not load your plan."
+        }, 500);
+      }
     }
 
     // Create a payment request for Premium or Pro.
@@ -712,39 +816,19 @@ export default {
 
           const requestedMode = String(body.mode || "").trim().toLowerCase();
 
+          // Look up the plan once; reuse it for the Excel check and usage limit.
+          const plan = await getActivePlan(env, userId);
+
           if (requestedMode === "excel") {
-            if (!env.DB) {
+            // Excel Assistant is available to Premium and Pro subscribers.
+            if (plan !== "premium" && plan !== "pro") {
               return respond({
-                error: "Premium verification is temporarily unavailable."
-              }, 503);
-            }
-
-            const subscription = await env.DB.prepare(
-              `SELECT plan, status, current_period_end
-               FROM subscriptions
-               WHERE user_id = ?
-               LIMIT 1`
-            ).bind(userId).first();
-
-            const expiry = subscription?.current_period_end
-              ? Date.parse(subscription.current_period_end)
-              : null;
-
-            const isPremium =
-              String(subscription?.plan || "").toLowerCase() === "premium" &&
-              String(subscription?.status || "").toLowerCase() === "active" &&
-              expiry !== null &&
-              Number.isFinite(expiry) &&
-              expiry > Date.now();
-
-            if (!isPremium) {
-              return respond({
-                error: "Please subscribe to Premium to use this feature."
+                error: "Please subscribe to Premium or Pro to use this feature."
               }, 403);
             }
           }
 
-          const usage = await reserveDailyUsage(env, userId);
+          const usage = await reserveDailyUsage(env, userId, plan);
 
           const identityQuestion =
             /\b(?:who\s+(?:created|made|built|developed|owns|founded)\s+(?:you|malie(?:\s+ai)?|this\s+(?:ai|assistant|product))|who\s+(?:is\s+)?(?:the\s+)?(?:creator|founder|owner)\s+of\s+(?:malie(?:\s+ai)?|you|this\s+(?:ai|assistant|product))|who\s+(?:is\s+)?your\s+(?:creator|founder|owner)|who\s+is\s+behind\s+(?:malie(?:\s+ai)?|you)|(?:are\s+you|is\s+malie(?:\s+ai)?)\s+(?:created|made|built|developed)\s+by)\b/i;

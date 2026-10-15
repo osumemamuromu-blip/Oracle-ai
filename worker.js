@@ -430,7 +430,42 @@ export default {
               error: "Your message is too long. Please shorten it."
             }, 400);
           }
-     const usage = await reserveDailyUsage(env, userId);
+     
+const requestedMode = String(body.mode || "").trim().toLowerCase();
+
+if (requestedMode === "excel") {
+  if (!env.DB) {
+    return respond({
+      error: "Premium verification is temporarily unavailable."
+    }, 503);
+  }
+
+  const subscription = await env.DB.prepare(
+    `SELECT plan, status, current_period_end
+     FROM subscriptions
+     WHERE user_id = ?
+     LIMIT 1`
+  ).bind(userId).first();
+
+  const expiry = subscription?.current_period_end
+    ? Date.parse(subscription.current_period_end)
+    : null;
+
+  const isPremium =
+    String(subscription?.plan || "").toLowerCase() === "premium" &&
+    String(subscription?.status || "").toLowerCase() === "active" &&
+    expiry !== null &&
+    Number.isFinite(expiry) &&
+    expiry > Date.now();
+
+  if (!isPremium) {
+    return respond({
+      error: "Please subscribe to Premium to use this feature."
+    }, 403);
+  }
+}
+
+          const usage = await reserveDailyUsage(env, userId);
         
 const identityQuestion =
   /\b(?:who\s+(?:created|made|built|developed|owns|founded)\s+(?:you|malie(?:\s+ai)?|this\s+(?:ai|assistant|product))|who\s+(?:is\s+)?(?:the\s+)?(?:creator|founder|owner)\s+of\s+(?:malie(?:\s+ai)?|you|this\s+(?:ai|assistant|product))|who\s+(?:is\s+)?your\s+(?:creator|founder|owner)|who\s+is\s+behind\s+(?:malie(?:\s+ai)?|you)|(?:are\s+you|is\s+malie(?:\s+ai)?)\s+(?:created|made|built|developed)\s+by)\b/i;
@@ -490,40 +525,8 @@ if (identityQuestion.test(message)) {
           }
 
           const instruction =
-            taskInstructions[mode] || taskInstructions.correct;
+            taskInstructions[mode] || taskInstructions.correct
 
-          
-const requestedMode = String(body.mode || "").trim().toLowerCase();
-
-if (requestedMode === "excel") {
-  if (!env.DB) {
-    return respond({
-      error: "Premium verification is temporarily unavailable."
-    }, 503);
-  }
-
-  const subscription = await env.DB.prepare(
-    `SELECT plan, status, current_period_end
-     FROM subscriptions
-     WHERE user_id = ?
-     LIMIT 1`
-  ).bind(userId).first();
-
-  const expiry = subscription?.current_period_end
-    ? Date.parse(subscription.current_period_end)
-    : null;
-
-  const isPremium =
-    String(subscription?.plan || "").toLowerCase() === "premium" &&
-    String(subscription?.status || "").toLowerCase() === "active" &&
-    (expiry === null || (Number.isFinite(expiry) && expiry > Date.now()));
-
-  if (!isPremium) {
-    return respond({
-      error: "Excel Assistant is a Premium feature. Upgrade to Premium to access it."
-    }, 403);
-  }
-}
           const usage = await reserveDailyUsage(env, userId);
           const result = await callAI(
             env,

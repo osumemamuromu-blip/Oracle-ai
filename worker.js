@@ -1,28 +1,13 @@
-const taskInstructions = {
-  correct:
-    "Correct grammar, spelling, punctuation, and sentence errors. Preserve the writer's meaning, facts, and voice. Return the corrected text first, then briefly explain the important corrections made.",
+import * as XLSX from "xlsx";
 
-  improve:
-    "Improve clarity, grammar, flow, and readability while preserving the writer's meaning, facts, and voice. Return the improved text first, then explain the most important improvements.",
+/* ------------------------------------------------------------------ */
+/* Settings                                                            */
+/* ------------------------------------------------------------------ */
 
-  generate:
-    "Write original, clear, useful content based on the user's instructions. Follow the requested format and tone. Explain difficult ideas simply when appropriate.",
-
-  explain:
-    "Teach the material step by step using simple language. Explain what it means, why it works, and how to apply it. Give a relevant example where helpful. Do not merely repeat the material.",
-
-  summarize:
-    "Summarize the supplied material accurately. Preserve its main ideas and important details. Do not invent information. Explain unfamiliar terms briefly when useful.",
-
-  tone:
-    "Rewrite the supplied text in the requested tone while preserving its meaning and important details. Briefly explain significant tone changes.",
-
-  rewrite:
-    "Rewrite the supplied text to improve clarity and natural flow while preserving its meaning and facts. Briefly explain important changes.",
-
-  expand:
-    "Expand the supplied text with relevant explanations, examples, and details. Do not invent facts or citations. Make the added explanations clear and useful."
-};
+const TEXT_MODEL = "@cf/google/gemma-4-26b-a4b-it";
+// Used only when the user sends a photo. Check the Cloudflare model page:
+// Llama 3.2 Vision needs a one-time license acceptance.
+const VISION_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
 
 // Daily request limits per plan. Change the numbers here only.
 const DAILY_LIMITS = {
@@ -31,11 +16,39 @@ const DAILY_LIMITS = {
   pro: 300
 };
 
+const PRICES = {
+  premium: { monthly: 2500, annual: 25000 },
+  pro: { monthly: 7500, annual: 85000 }
+};
+
+const taskInstructions = {
+  correct:
+    "Correct grammar, spelling, punctuation, and sentence errors. Preserve the writer's meaning, facts, and voice. Return the corrected text first, then briefly explain the important corrections made.",
+  improve:
+    "Improve clarity, grammar, flow, and readability while preserving the writer's meaning, facts, and voice. Return the improved text first, then explain the most important improvements.",
+  generate:
+    "Write original, clear, useful content based on the user's instructions. Follow the requested format and tone. Explain difficult ideas simply when appropriate.",
+  explain:
+    "Teach the material step by step using simple language. Explain what it means, why it works, and how to apply it. Give a relevant example where helpful. Do not merely repeat the material.",
+  summarize:
+    "Summarize the supplied material accurately. Preserve its main ideas and important details. Do not invent information. Explain unfamiliar terms briefly when useful.",
+  tone:
+    "Rewrite the supplied text in the requested tone while preserving its meaning and important details. Briefly explain significant tone changes.",
+  rewrite:
+    "Rewrite the supplied text to improve clarity and natural flow while preserving its meaning and facts. Briefly explain important changes.",
+  expand:
+    "Expand the supplied text with relevant explanations, examples, and details. Do not invent facts or citations. Make the added explanations clear and useful."
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization"
 };
+
+/* ------------------------------------------------------------------ */
+/* Basic helpers                                                       */
+/* ------------------------------------------------------------------ */
 
 function respond(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -59,46 +72,62 @@ function extractText(data) {
   return typeof text === "string" ? text.trim() : "";
 }
 
-function parseQuiz(text) {
-  const cleaned = text.trim()
+function stripCodeFences(text) {
+  return text
+    .trim()
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/, "");
+}
 
-  let parsed;
+function parseJsonObject(text, failMessage) {
+  const cleaned = stripCodeFences(text);
 
   try {
-    parsed = JSON.parse(cleaned);
+    return JSON.parse(cleaned);
   } catch {
     const start = cleaned.indexOf("{");
     const end = cleaned.lastIndexOf("}");
 
     if (start < 0 || end <= start) {
-      throw new Error("The AI did not return valid quiz JSON. Please try again.");
+      throw new Error(failMessage);
     }
 
-    parsed = JSON.parse(cleaned.slice(start, end + 1));
+    try {
+      return JSON.parse(cleaned.slice(start, end + 1));
+    } catch {
+      throw new Error(failMessage);
+    }
   }
+}
 
-  const questions = Array.isArray(parsed)
-    ? parsed
-    : parsed.questions;
+function getErrorStatus(error) {
+  if ([400, 401, 403, 429, 503].includes(error.status)) {
+    return error.status;
+  }
+  return 500;
+}
+
+/* ------------------------------------------------------------------ */
+/* Quiz parsing                                                        */
+/* ------------------------------------------------------------------ */
+
+function parseQuiz(text) {
+  const parsed = parseJsonObject(
+    text,
+    "The AI did not return valid quiz JSON. Please try again."
+  );
+
+  const questions = Array.isArray(parsed) ? parsed : parsed.questions;
 
   if (!Array.isArray(questions) || !questions.length) {
     throw new Error("No quiz questions were returned. Please try again.");
   }
 
   const validated = questions.map((item, index) => {
-    const question = String(
-      item.question || item.prompt || ""
-    ).trim();
-
+    const question = String(item.question || item.prompt || "").trim();
     const options = item.options || item.choices;
 
-    if (
-      !question ||
-      !Array.isArray(options) ||
-      options.length < 2
-    ) {
+    if (!question || !Array.isArray(options) || options.length < 2) {
       throw new Error(
         `Quiz question ${index + 1} is incomplete. Please generate the quiz again.`
       );
@@ -148,16 +177,89 @@ function parseQuiz(text) {
       question,
       options: cleanOptions,
       answerIndex: answer,
-      explanation: String(
-        item.explanation || item.reason || ""
-      ).trim()
+      explanation: String(item.explanation || item.reason || "").trim()
     };
   });
 
   return { questions: validated };
 }
 
-async function callAI(env, prompt, jsonMode = false) {
+/* ------------------------------------------------------------------ */
+/* Excel building                                                      */
+/* ------------------------------------------------------------------ */
+
+// Blocks formulas that can reach outside the workbook.
+const UNSAFE_FORMULA = /WEBSERVICE|HYPERLINK|\bCALL\b|EXEC|DDE|\||\bREGISTER\b/i;
+
+function buildWorkbook(spec) {
+  const sheets = Array.isArray(spec?.sheets) ? spec.sheets.slice(0, 10) : [];
+
+  if (!sheets.length) {
+    throw new Error("No spreadsheet data was returned. Please try again.");
+  }
+
+  const wb = XLSX.utils.book_new();
+  const usedNames = new Set();
+
+  sheets.forEach((sheet, i) => {
+    let name =
+      String(sheet?.name || `Sheet${i + 1}`)
+        .replace(/[\\/?*[\]:]/g, "")
+        .slice(0, 31) || `Sheet${i + 1}`;
+
+    if (usedNames.has(name.toLowerCase())) {
+      name = `Sheet${i + 1}`;
+    }
+    usedNames.add(name.toLowerCase());
+
+    const rows = (Array.isArray(sheet?.rows) ? sheet.rows : [])
+      .slice(0, 2000)
+      .map(row =>
+        (Array.isArray(row) ? row : [row]).slice(0, 50).map(cell => {
+          if (cell === null || cell === undefined) return "";
+          if (typeof cell === "number") {
+            return Number.isFinite(cell) ? cell : "";
+          }
+          if (typeof cell === "boolean") return cell;
+
+          const value = String(cell);
+
+          if (value.startsWith("=")) {
+            if (UNSAFE_FORMULA.test(value) || value.length > 500) {
+              // Store as plain text instead of a live formula.
+              return { t: "s", v: value };
+            }
+            return { t: "n", f: value.slice(1) };
+          }
+
+          return value;
+        })
+      );
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+
+    // Auto column widths
+    const widths = [];
+    rows.forEach(row =>
+      row.forEach((cell, j) => {
+        const len =
+          cell && typeof cell === "object" ? 12 : String(cell).length;
+        widths[j] = Math.max(widths[j] || 8, Math.min(len + 2, 50));
+      })
+    );
+    ws["!cols"] = widths.map(wch => ({ wch }));
+
+    XLSX.utils.book_append_sheet(wb, ws, name);
+  });
+
+  return XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+}
+
+/* ------------------------------------------------------------------ */
+/* AI call                                                             */
+/* ------------------------------------------------------------------ */
+
+async function callAI(env, prompt, jsonMode = false, imageDataUrl = null) {
   if (!env.AI || typeof env.AI.run !== "function") {
     const error = new Error(
       "Cloudflare Workers AI is not connected. Check that your Worker has an AI binding named AI."
@@ -166,7 +268,8 @@ async function callAI(env, prompt, jsonMode = false) {
     throw error;
   }
 
-  const model = "@cf/google/gemma-4-26b-a4b-it";
+  const hasImage = Boolean(imageDataUrl);
+  const model = hasImage ? VISION_MODEL : TEXT_MODEL;
 
   const identityRules = [
     "You are Malie AI, the AI assistant created and developed by Campus Creative, founded by Osume Prosper.",
@@ -194,44 +297,50 @@ async function callAI(env, prompt, jsonMode = false) {
     : [...identityRules, ...tutorRules]
   ).join(" ");
 
+  const userContent = hasImage
+    ? [
+        { type: "text", text: prompt },
+        { type: "image_url", image_url: { url: imageDataUrl } }
+      ]
+    : prompt;
+
+  const payload = {
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userContent }
+    ],
+    max_tokens: jsonMode ? 4096 : 2048
+  };
+
+  // These options are only sent to the Gemma text model.
+  if (!hasImage) {
+    if (jsonMode) payload.response_format = { type: "json_object" };
+    payload.chat_template_kwargs = { enable_thinking: false };
+  }
+
   let result;
 
   try {
-    result = await env.AI.run(model, {
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_tokens: jsonMode ? 4096 : 2048,
-      ...(jsonMode
-        ? { response_format: { type: "json_object" } }
-        : {}),
-      chat_template_kwargs: {
-        enable_thinking: false
-      }
-    });
+    result = await env.AI.run(model, payload);
   } catch (cause) {
     console.error("Workers AI error:", String(cause));
 
     const message = String(cause?.message || cause);
+    const isLimit = /limit|quota|neuron|429/i.test(message);
+    const isBusy = /capacity|busy|overload|503/i.test(message);
+    const needsLicense = /agree|license/i.test(message) && hasImage;
 
     const error = new Error(
-      /limit|quota|neuron|429/i.test(message)
+      needsLicense
+        ? "The image model has not been enabled yet. The site owner must accept its license once."
+        : isLimit
         ? "The Cloudflare AI usage limit may have been reached. Please try again after the usage limit resets."
-        : /capacity|busy|overload|503/i.test(message)
+        : isBusy
         ? "Cloudflare AI is busy right now. Please wait a little and try again."
         : "Cloudflare AI could not complete the request. Please try again."
     );
 
-    error.status =
-      /limit|quota|neuron|429/i.test(message) ? 429 : 503;
-
+    error.status = isLimit ? 429 : 503;
     throw error;
   }
 
@@ -242,26 +351,19 @@ async function callAI(env, prompt, jsonMode = false) {
       "Unexpected Workers AI response:",
       JSON.stringify(result).slice(0, 1000)
     );
-
     throw new Error("The AI returned no text. Please try again.");
   }
 
   return text;
 }
 
-function getErrorStatus(error) {
-  if ([400, 401, 403, 429, 503].includes(error.status)) {
-    return error.status;
-  }
-
-  return 500;
-}
+/* ------------------------------------------------------------------ */
+/* Auth, plans, usage                                                  */
+/* ------------------------------------------------------------------ */
 
 async function authenticateFirebase(request, env) {
   if (!env.FIREBASE_WEB_API_KEY) {
-    const error = new Error(
-      "Firebase verification is not configured."
-    );
+    const error = new Error("Firebase verification is not configured.");
     error.status = 500;
     throw error;
   }
@@ -270,9 +372,7 @@ async function authenticateFirebase(request, env) {
   const match = authorization.match(/^Bearer\s+(.+)$/i);
 
   if (!match) {
-    const error = new Error(
-      "Please sign in with Google to use Malie AI."
-    );
+    const error = new Error("Please sign in with Google to use Malie AI.");
     error.status = 401;
     throw error;
   }
@@ -290,9 +390,7 @@ async function authenticateFirebase(request, env) {
       }
     );
   } catch {
-    const error = new Error(
-      "Could not verify your sign-in. Please try again."
-    );
+    const error = new Error("Could not verify your sign-in. Please try again.");
     error.status = 503;
     throw error;
   }
@@ -412,18 +510,33 @@ async function reserveDailyUsage(env, userId, knownPlan = null) {
   };
 }
 
+// Gives back one request when the AI fails, so users aren't charged for errors.
+async function refundDailyUsage(env, userId, usageDate) {
+  try {
+    await env.DB.prepare(
+      `UPDATE daily_usage
+       SET used = CASE WHEN used > 0 THEN used - 1 ELSE 0 END
+       WHERE user_id = ? AND usage_date = ?`
+    ).bind(userId, usageDate).run();
+  } catch (error) {
+    console.error("Usage refund failed:", String(error));
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Worker                                                              */
+/* ------------------------------------------------------------------ */
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: corsHeaders
-      });
+      return new Response(null, { status: 204, headers: corsHeaders });
     }
 
     const url = new URL(request.url);
     const path = url.pathname;
 
+    /* ---------------- Health ---------------- */
     if (request.method === "GET" && path === "/api/health") {
       return respond({
         ok: true,
@@ -434,6 +547,7 @@ export default {
           "/api/chat",
           "/api/write",
           "/api/quiz",
+          "/api/excel",
           "/api/subscription/status",
           "/api/payment/request",
           "/api/payment/submit-reference"
@@ -441,18 +555,16 @@ export default {
       });
     }
 
-    // Report the signed-in user's plan and latest payment request.
-    if (
-      request.method === "POST" &&
-      path === "/api/subscription/status"
-    ) {
+    /* ---------------- Subscription status ---------------- */
+    if (request.method === "POST" && path === "/api/subscription/status") {
       try {
         const userId = await authenticateFirebase(request, env);
 
         if (!env.DB) {
-          return respond({
-            error: "Subscription service is temporarily unavailable."
-          }, 503);
+          return respond(
+            { error: "Subscription service is temporarily unavailable." },
+            503
+          );
         }
 
         const subscription = await env.DB.prepare(
@@ -473,8 +585,7 @@ export default {
           expiry > Date.now();
 
         const latest = await env.DB.prepare(
-          `SELECT id, plan, amount, billing_period, status,
-                  payment_reference
+          `SELECT id, plan, amount, billing_period, status, payment_reference
            FROM payment_requests
            WHERE user_id = ?
            ORDER BY id DESC
@@ -508,13 +619,11 @@ export default {
           return respond({ error: error.message }, error.status);
         }
 
-        return respond({
-          error: "Could not load your plan."
-        }, 500);
+        return respond({ error: "Could not load your plan." }, 500);
       }
     }
 
-    // Create a payment request for Premium or Pro.
+    /* ---------------- Create payment request ---------------- */
     if (request.method === "POST" && path === "/api/payment/request") {
       try {
         const userId = await authenticateFirebase(request, env);
@@ -531,31 +640,25 @@ export default {
           body.billingPeriod || "monthly"
         ).toLowerCase();
 
-        const prices = {
-          premium: { monthly: 2500, annual: 25000 },
-          pro: { monthly: 7500, annual: 85000 }
-        };
-
-        const amount = prices[plan]?.[billingPeriod];
+        const amount = PRICES[plan]?.[billingPeriod];
 
         if (!amount) {
-          return respond({
-            error: "Invalid plan or billing period."
-          }, 400);
+          return respond({ error: "Invalid plan or billing period." }, 400);
         }
 
         if (!env.DB) {
-          return respond({
-            error: "Payment service is temporarily unavailable."
-          }, 503);
+          return respond(
+            { error: "Payment service is temporarily unavailable." },
+            503
+          );
         }
 
-        const created = await env.DB.prepare(`
-          INSERT INTO payment_requests
-            (user_id, plan, amount, billing_period, status)
-          VALUES (?, ?, ?, ?, 'pending')
-          RETURNING id
-        `).bind(userId, plan, amount, billingPeriod).first();
+        const created = await env.DB.prepare(
+          `INSERT INTO payment_requests
+             (user_id, plan, amount, billing_period, status)
+           VALUES (?, ?, ?, ?, 'pending')
+           RETURNING id`
+        ).bind(userId, plan, amount, billingPeriod).first();
 
         if (!created?.id) {
           throw new Error("Payment request could not be created.");
@@ -568,12 +671,11 @@ export default {
           billingPeriod,
           amount,
           currency: "NGN",
-         
-paymentDetails: {
-  bankName: "FirstBank",
-  accountName: env.FIRSTBANK_ACCOUNT_NAME || null,
-  accountNumber: env.FIRSTBANK_ACCOUNT_NUMBER || null
-},
+          paymentDetails: {
+            bankName: "FirstBank",
+            accountName: env.FIRSTBANK_ACCOUNT_NAME || null,
+            accountNumber: env.FIRSTBANK_ACCOUNT_NUMBER || null
+          },
           message:
             "Payment request created. Make the transfer, then submit your transfer reference."
         });
@@ -584,25 +686,27 @@ paymentDetails: {
           return respond({ error: error.message }, error.status);
         }
 
-        return respond({
-          error: "Could not create your payment request."
-        }, 500);
+        return respond(
+          { error: "Could not create your payment request." },
+          500
+        );
       }
     }
 
-    // Save a transfer reference without activating a subscription.
-    if (
-      request.method === "POST" &&
-      path === "/api/payment/submit-reference"
-    ) {
+    /* ---------------- Submit transfer reference ---------------- */
+    if (request.method === "POST" && path === "/api/payment/submit-reference") {
       try {
         const userId = await authenticateFirebase(request, env);
-        const body = await request.json();
+
+        let body;
+        try {
+          body = await request.json();
+        } catch {
+          return respond({ error: "Please send valid JSON." }, 400);
+        }
 
         const requestId = Number(body.requestId);
-        const transferReference = String(
-          body.transferReference || ""
-        ).trim();
+        const transferReference = String(body.transferReference || "").trim();
 
         if (
           !Number.isSafeInteger(requestId) ||
@@ -610,37 +714,39 @@ paymentDetails: {
           transferReference.length < 4 ||
           transferReference.length > 120
         ) {
-          return respond({
-            error: "Please provide a valid request ID and transfer reference."
-          }, 400);
+          return respond(
+            { error: "Please provide a valid request ID and transfer reference." },
+            400
+          );
         }
 
         if (!env.DB) {
-          return respond({
-            error: "Payment service is temporarily unavailable."
-          }, 503);
+          return respond(
+            { error: "Payment service is temporarily unavailable." },
+            503
+          );
         }
 
-        const result = await env.DB.prepare(`
-          UPDATE payment_requests
-          SET payment_reference = ?
-          WHERE id = ?
-            AND user_id = ?
-            AND status = 'pending'
-        `).bind(
-          transferReference,
-          requestId,
-          userId
-        ).run();
+        const result = await env.DB.prepare(
+          `UPDATE payment_requests
+           SET payment_reference = ?
+           WHERE id = ?
+             AND user_id = ?
+             AND status = 'pending'`
+        ).bind(transferReference, requestId, userId).run();
 
         if (!result.success) {
           throw new Error("Reference could not be saved.");
         }
 
         if (result.meta?.changes !== 1) {
-          return respond({
-            error: "Payment request not found, already processed, or reference already used."
-          }, 409);
+          return respond(
+            {
+              error:
+                "Payment request not found, already processed, or reference already used."
+            },
+            409
+          );
         }
 
         return respond({
@@ -655,34 +761,27 @@ paymentDetails: {
           return respond({ error: error.message }, error.status);
         }
 
-        if (
-          String(error.message || "").includes("UNIQUE constraint failed")
-        ) {
-          return respond({
-            error: "That transfer reference has already been submitted."
-          }, 409);
+        if (String(error.message || "").includes("UNIQUE constraint failed")) {
+          return respond(
+            { error: "That transfer reference has already been submitted." },
+            409
+          );
         }
 
-        return respond({
-          error: "Could not submit your transfer reference."
-        }, 500);
+        return respond(
+          { error: "Could not submit your transfer reference." },
+          500
+        );
       }
     }
 
-    
-    // Admin-only list of pending payment requests.
-    if (
-      request.method === "POST" &&
-      path === "/api/admin/pending-payments"
-    ) {
+    /* ---------------- Admin: pending payments ---------------- */
+    if (request.method === "POST" && path === "/api/admin/pending-payments") {
       try {
         const adminUid = env.MALIE_ADMIN_UID;
 
         if (!adminUid) {
-          return respond(
-            { error: "Admin access is not configured." },
-            500
-          );
+          return respond({ error: "Admin access is not configured." }, 500);
         }
 
         const authenticatedUid = await authenticateFirebase(request, env);
@@ -692,20 +791,17 @@ paymentDetails: {
         }
 
         if (!env.DB) {
-          return respond(
-            { error: "Payment service unavailable." },
-            503
-          );
+          return respond({ error: "Payment service unavailable." }, 503);
         }
 
-        const result = await env.DB.prepare(`
-          SELECT id, user_id, plan, amount, billing_period,
-                 payment_reference, status, created_at
-          FROM payment_requests
-          WHERE status = 'pending'
-          ORDER BY created_at ASC
-          LIMIT 100
-        `).all();
+        const result = await env.DB.prepare(
+          `SELECT id, user_id, plan, amount, billing_period,
+                  payment_reference, status, created_at
+           FROM payment_requests
+           WHERE status = 'pending'
+           ORDER BY created_at ASC
+           LIMIT 100`
+        ).all();
 
         return respond({
           ok: true,
@@ -725,45 +821,43 @@ paymentDetails: {
         console.error("Admin pending-payments error:", error.message);
 
         return respond(
-          {
-            error: error.message || "Could not load pending payments."
-          },
+          { error: error.message || "Could not load pending payments." },
           error.status || 500
         );
       }
-    } 
-    
-    // Admin-only payment approval.
-    if (
-      request.method === "POST" &&
-      path === "/api/admin/approve-payment"
-    ) {
+    }
+
+    /* ---------------- Admin: approve payment ---------------- */
+    if (request.method === "POST" && path === "/api/admin/approve-payment") {
       try {
-       const adminUid = env.MALIE_ADMIN_UID;
+        const adminUid = env.MALIE_ADMIN_UID;
 
-if (!adminUid) {
-  return respond(
-    { error: "Admin access is not configured." },
-    500
-  );
-}
+        if (!adminUid) {
+          return respond({ error: "Admin access is not configured." }, 500);
+        }
 
-let authenticatedUid;
+        let authenticatedUid;
 
-try {
-  authenticatedUid = await authenticateFirebase(request, env);
-} catch (error) {
-  return respond(
-    { error: error.message || "Unauthorized." },
-    error.status || 401
-  );
-}
+        try {
+          authenticatedUid = await authenticateFirebase(request, env);
+        } catch (error) {
+          return respond(
+            { error: error.message || "Unauthorized." },
+            error.status || 401
+          );
+        }
 
-if (authenticatedUid !== adminUid) {
-  return respond({ error: "Unauthorized." }, 403);
-} 
-        
-        const body = await request.json();
+        if (authenticatedUid !== adminUid) {
+          return respond({ error: "Unauthorized." }, 403);
+        }
+
+        let body;
+        try {
+          body = await request.json();
+        } catch {
+          return respond({ error: "Please send valid JSON." }, 400);
+        }
+
         const requestId = Number(body.requestId);
 
         if (!Number.isSafeInteger(requestId) || requestId < 1) {
@@ -774,41 +868,46 @@ if (authenticatedUid !== adminUid) {
           return respond({ error: "Payment service unavailable." }, 503);
         }
 
-        const payment = await env.DB.prepare(`
-          SELECT id, user_id, plan, amount, billing_period,
-                 payment_reference, status
-          FROM payment_requests
-          WHERE id = ?
-        `).bind(requestId).first();
+        const payment = await env.DB.prepare(
+          `SELECT id, user_id, plan, amount, billing_period,
+                  payment_reference, status
+           FROM payment_requests
+           WHERE id = ?`
+        ).bind(requestId).first();
 
         if (!payment) {
           return respond({ error: "Payment request not found." }, 404);
         }
 
         if (payment.status !== "pending") {
-          return respond({ error: "This payment request has already been processed." }, 409);
+          return respond(
+            { error: "This payment request has already been processed." },
+            409
+          );
         }
 
         if (!payment.payment_reference) {
-          return respond({ error: "The customer has not submitted a transfer reference." }, 400);
+          return respond(
+            { error: "The customer has not submitted a transfer reference." },
+            400
+          );
         }
 
-        const expectedAmounts = {
-          premium: { monthly: 2500, annual: 25000 },
-          pro: { monthly: 7500, annual: 85000 }
-        };
-
         if (
-          !expectedAmounts[payment.plan] ||
-          expectedAmounts[payment.plan][payment.billing_period] !== payment.amount
+          !PRICES[payment.plan] ||
+          PRICES[payment.plan][payment.billing_period] !== payment.amount
         ) {
-          return respond({ error: "Payment amount or plan details do not match." }, 400);
+          return respond(
+            { error: "Payment amount or plan details do not match." },
+            400
+          );
         }
 
         // Verify the actual bank transfer before calling this route.
         const now = new Date();
         const confirmedAt = now.toISOString();
         const endDate = new Date(now);
+
         if (payment.billing_period === "annual") {
           endDate.setUTCFullYear(endDate.getUTCFullYear() + 1);
         } else {
@@ -816,34 +915,37 @@ if (authenticatedUid !== adminUid) {
         }
 
         const results = await env.DB.batch([
-          env.DB.prepare(`
-            UPDATE payment_requests
-            SET status = 'confirmed', confirmed_at = ?
-            WHERE id = ?
-              AND status = 'pending'
-              AND payment_reference IS NOT NULL
-          `).bind(confirmedAt, requestId),
+          env.DB.prepare(
+            `UPDATE payment_requests
+             SET status = 'confirmed', confirmed_at = ?
+             WHERE id = ?
+               AND status = 'pending'
+               AND payment_reference IS NOT NULL`
+          ).bind(confirmedAt, requestId),
 
-          env.DB.prepare(`
-            INSERT INTO subscriptions
-              (user_id, plan, status, current_period_end,
-               payment_reference, updated_at)
-            SELECT user_id, plan, 'active', ?, payment_reference, ?
-            FROM payment_requests
-            WHERE id = ?
-              AND status = 'confirmed'
-              AND confirmed_at = ?
-            ON CONFLICT(user_id) DO UPDATE SET
-              plan = excluded.plan,
-              status = 'active',
-              current_period_end = excluded.current_period_end,
-              payment_reference = excluded.payment_reference,
-              updated_at = excluded.updated_at
-          `).bind(endDate.toISOString(), confirmedAt, requestId, confirmedAt)
+          env.DB.prepare(
+            `INSERT INTO subscriptions
+               (user_id, plan, status, current_period_end,
+                payment_reference, updated_at)
+             SELECT user_id, plan, 'active', ?, payment_reference, ?
+             FROM payment_requests
+             WHERE id = ?
+               AND status = 'confirmed'
+               AND confirmed_at = ?
+             ON CONFLICT(user_id) DO UPDATE SET
+               plan = excluded.plan,
+               status = 'active',
+               current_period_end = excluded.current_period_end,
+               payment_reference = excluded.payment_reference,
+               updated_at = excluded.updated_at`
+          ).bind(endDate.toISOString(), confirmedAt, requestId, confirmedAt)
         ]);
 
         if (!results[0]?.meta?.changes) {
-          return respond({ error: "Payment request could not be confirmed. Check its status." }, 409);
+          return respond(
+            { error: "Payment request could not be confirmed. Check its status." },
+            409
+          );
         }
 
         return respond({
@@ -860,9 +962,10 @@ if (authenticatedUid !== adminUid) {
       }
     }
 
+    /* ---------------- Chat / Write / Quiz / Excel ---------------- */
     if (
       request.method === "POST" &&
-      ["/api/chat", "/api/write", "/api/quiz"].includes(path)
+      ["/api/chat", "/api/write", "/api/quiz", "/api/excel"].includes(path)
     ) {
       let body;
 
@@ -875,19 +978,19 @@ if (authenticatedUid !== adminUid) {
       try {
         const userId = await authenticateFirebase(request, env);
 
+        /* ----- Chat ----- */
         if (path === "/api/chat") {
           const message = String(body.message || "").trim();
 
           if (!message) {
-            return respond({
-              error: "Please enter a message."
-            }, 400);
+            return respond({ error: "Please enter a message." }, 400);
           }
 
           if (message.length > 30000) {
-            return respond({
-              error: "Your message is too long. Please shorten it."
-            }, 400);
+            return respond(
+              { error: "Your message is too long. Please shorten it." },
+              400
+            );
           }
 
           const requestedMode = String(body.mode || "").trim().toLowerCase();
@@ -898,9 +1001,10 @@ if (authenticatedUid !== adminUid) {
           if (requestedMode === "excel") {
             // Excel Assistant is available to Premium and Pro subscribers.
             if (plan !== "premium" && plan !== "pro") {
-              return respond({
-                error: "Please subscribe to Premium or Pro to use this feature."
-              }, 403);
+              return respond(
+                { error: "Please subscribe to Premium or Pro to use this feature." },
+                403
+              );
             }
           }
 
@@ -917,51 +1021,59 @@ if (authenticatedUid !== adminUid) {
             });
           }
 
-          const reply = await callAI(
-            env,
-            [
-              "Respond to the user's message as Malie AI.",
-              "If the user is learning something, teach it in clear steps.",
-              "For calculations, show the working and explain how the result was obtained.",
-              "For school subjects, use simple explanations and examples appropriate to the question.",
-              "If the user asks for a direct answer, give it first and then explain it briefly.",
+          let reply;
 
-              ...(requestedMode === "excel" ? [
-                "You are now Malie AI's Premium Excel Assistant.",
-                "Help with Excel formulas, spreadsheet assignments, data analysis, and troubleshooting spreadsheet errors.",
-                "For formulas, give the exact formula, explain where to enter it, and explain how it works.",
-                "For calculations, show the steps and check the arithmetic where possible.",
-                "For spreadsheet errors, explain the likely cause and provide a specific fix.",
-                "When users paste tables, analyze only the data they provide. Never invent missing data.",
-                "If cell references or column meanings are unclear, ask a brief clarifying question.",
-                "Do not claim to open, edit, or generate an Excel file unless a file-processing feature actually performed that action.",
-                "Workbook uploads and downloadable Excel file editing are not available yet."
-              ] : []),
+          try {
+            reply = await callAI(
+              env,
+              [
+                "Respond to the user's message as Malie AI.",
+                "If the user is learning something, teach it in clear steps.",
+                "For calculations, show the working and explain how the result was obtained.",
+                "For school subjects, use simple explanations and examples appropriate to the question.",
+                "If the user asks for a direct answer, give it first and then explain it briefly.",
 
-              "",
-              "User message:",
-              message
-            ].join("\n")
-          );
+                ...(requestedMode === "excel"
+                  ? [
+                      "You are now Malie AI's Premium Excel Assistant.",
+                      "Help with Excel formulas, spreadsheet assignments, data analysis, and troubleshooting spreadsheet errors.",
+                      "For formulas, give the exact formula, explain where to enter it, and explain how it works.",
+                      "For calculations, show the steps and check the arithmetic where possible.",
+                      "For spreadsheet errors, explain the likely cause and provide a specific fix.",
+                      "When users paste tables, analyze only the data they provide. Never invent missing data.",
+                      "If cell references or column meanings are unclear, ask a brief clarifying question.",
+                      "If the user wants a downloadable .xlsx file, tell them to use the Excel File Builder, where they can paste a table or upload a photo and download the finished spreadsheet."
+                    ]
+                  : []),
+
+                "",
+                "User message:",
+                message
+              ].join("\n")
+            );
+          } catch (error) {
+            await refundDailyUsage(env, userId, usage.date);
+            throw error;
+          }
 
           return respond({ reply, usage });
         }
 
+        /* ----- Write ----- */
         if (path === "/api/write") {
           const mode = String(body.mode || "correct").trim();
           const inputText = String(body.text || "").trim();
           const options = body.options || {};
 
           if (!inputText) {
-            return respond({
-              error: "Please enter some text."
-            }, 400);
+            return respond({ error: "Please enter some text." }, 400);
           }
 
           if (inputText.length > 30000) {
-            return respond({
-              error: "Your text is too long. Please shorten it and try again."
-            }, 400);
+            return respond(
+              { error: "Your text is too long. Please shorten it and try again." },
+              400
+            );
           }
 
           const instruction =
@@ -969,23 +1081,31 @@ if (authenticatedUid !== adminUid) {
 
           const usage = await reserveDailyUsage(env, userId);
 
-          const result = await callAI(
-            env,
-            [
-              "Task: " + instruction,
-              "User options: " + JSON.stringify(options),
-              "Follow the selected task carefully.",
-              "Preserve names, dates, figures, and other supplied facts.",
-              "Do not add unsupported information.",
-              "",
-              "Text to process:",
-              inputText
-            ].join("\n")
-          );
+          let result;
+
+          try {
+            result = await callAI(
+              env,
+              [
+                "Task: " + instruction,
+                "User options: " + JSON.stringify(options),
+                "Follow the selected task carefully.",
+                "Preserve names, dates, figures, and other supplied facts.",
+                "Do not add unsupported information.",
+                "",
+                "Text to process:",
+                inputText
+              ].join("\n")
+            );
+          } catch (error) {
+            await refundDailyUsage(env, userId, usage.date);
+            throw error;
+          }
 
           return respond({ result, usage });
         }
 
+        /* ----- Quiz ----- */
         if (path === "/api/quiz") {
           const inputText = String(body.text || "").trim();
 
@@ -994,20 +1114,20 @@ if (authenticatedUid !== adminUid) {
             Math.min(20, Number.parseInt(body.count, 10) || 5)
           );
 
-          const difficulty = String(
-            body.difficulty || "medium"
-          ).trim();
+          const difficulty = String(body.difficulty || "medium").trim();
 
           if (!inputText) {
-            return respond({
-              error: "Please provide notes or text to generate a quiz."
-            }, 400);
+            return respond(
+              { error: "Please provide notes or text to generate a quiz." },
+              400
+            );
           }
 
           if (inputText.length > 30000) {
-            return respond({
-              error: "Your source text is too long. Please shorten it and try again."
-            }, 400);
+            return respond(
+              { error: "Your source text is too long. Please shorten it and try again." },
+              400
+            );
           }
 
           const prompt = [
@@ -1041,33 +1161,106 @@ if (authenticatedUid !== adminUid) {
 
           return respond(quiz);
         }
+
+        /* ----- Excel file builder (Premium / Pro) ----- */
+        if (path === "/api/excel") {
+          const plan = await getActivePlan(env, userId);
+
+          if (plan !== "premium" && plan !== "pro") {
+            return respond(
+              { error: "Please subscribe to Premium or Pro to use this feature." },
+              403
+            );
+          }
+
+          const message = String(body.message || "").trim();
+          const image = body.image ? String(body.image) : null;
+
+          if (!message && !image) {
+            return respond(
+              { error: "Send a table, a photo, or instructions." },
+              400
+            );
+          }
+
+          if (message.length > 30000) {
+            return respond({ error: "Your message is too long." }, 400);
+          }
+
+          if (
+            image &&
+            (image.length > 5_000_000 ||
+              !/^data:image\/(png|jpeg|webp);base64,/.test(image))
+          ) {
+            return respond(
+              { error: "Please upload a PNG, JPG or WebP image under about 3.5 MB." },
+              400
+            );
+          }
+
+          const usage = await reserveDailyUsage(env, userId, plan);
+
+          const prompt = [
+            "Convert the user's table/figures (text and/or image) into a spreadsheet.",
+            "Copy values exactly. Never invent data. If something is unreadable, leave the cell empty.",
+            "Put headers in row 1. Use real numbers (not strings) for numeric values.",
+            "Where the user asks for totals, averages or calculations, use Excel formulas as strings starting with '=' (for example \"=SUM(B2:B10)\").",
+            "Return ONLY valid JSON in this exact structure:",
+            '{"filename":"short_name","sheets":[{"name":"Sheet1","rows":[["Header A","Header B"],["x",1]]}]}',
+            "",
+            "User instructions/data:",
+            message || "(see image)"
+          ].join("\n");
+
+          let fileBase64;
+          let spec;
+
+          try {
+            const text = await callAI(env, prompt, true, image);
+            spec = parseJsonObject(
+              text,
+              "The AI did not return a valid spreadsheet. Please try again."
+            );
+            fileBase64 = buildWorkbook(spec);
+          } catch (error) {
+            await refundDailyUsage(env, userId, usage.date);
+            throw error;
+          }
+
+          const filename =
+            (String(spec.filename || "malie_sheet")
+              .replace(/[^\w-]/g, "_")
+              .slice(0, 40) || "malie_sheet") + ".xlsx";
+
+          return respond({
+            ok: true,
+            filename,
+            fileBase64,
+            preview: spec.sheets?.[0]?.rows?.slice(0, 10) || [],
+            usage
+          });
+        }
       } catch (error) {
         const status = getErrorStatus(error);
 
-        console.error("API error:", {
-          path,
-          status,
-          message: error.message
-        });
+        console.error("API error:", { path, status, message: error.message });
 
-        return respond({
-          error: error.message || "The request failed. Please try again."
-        }, status);
+        return respond(
+          { error: error.message || "The request failed. Please try again." },
+          status
+        );
       }
     }
 
+    /* ---------------- Fallbacks ---------------- */
     if (path.startsWith("/api/")) {
-      return respond({
-        error: "API endpoint not found."
-      }, 404);
+      return respond({ error: "API endpoint not found." }, 404);
     }
 
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);
     }
 
-    return new Response("Malie AI is running.", {
-      headers: corsHeaders
-    });
+    return new Response("Malie AI is running.", { headers: corsHeaders });
   }
 };

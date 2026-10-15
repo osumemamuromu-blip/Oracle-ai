@@ -450,6 +450,19 @@ if (identityQuestion.test(message)) {
               "For calculations, show the working and explain how the result was obtained.",
               "For school subjects, use simple explanations and examples appropriate to the question.",
               "If the user asks for a direct answer, give it first and then explain it briefly.",
+        
+              ...(requestedMode === "excel" ? [
+  "You are now Malie AI's Premium Excel Assistant.",
+  "Help with Excel formulas, spreadsheet assignments, data analysis, and troubleshooting spreadsheet errors.",
+  "For formulas, give the exact formula, explain where to enter it, and explain how it works.",
+  "For calculations, show the steps and check the arithmetic where possible.",
+  "For spreadsheet errors, explain the likely cause and provide a specific fix.",
+  "When users paste tables, analyze only the data they provide. Never invent missing data.",
+  "If cell references or column meanings are unclear, ask a brief clarifying question.",
+  "Do not claim to open, edit, or generate an Excel file unless a file-processing feature actually performed that action.",
+  "Workbook uploads and downloadable Excel file editing are not available yet."
+] : []),
+
               "",
               "User message:",
               message
@@ -479,6 +492,38 @@ if (identityQuestion.test(message)) {
           const instruction =
             taskInstructions[mode] || taskInstructions.correct;
 
+          
+const requestedMode = String(body.mode || "").trim().toLowerCase();
+
+if (requestedMode === "excel") {
+  if (!env.DB) {
+    return respond({
+      error: "Premium verification is temporarily unavailable."
+    }, 503);
+  }
+
+  const subscription = await env.DB.prepare(
+    `SELECT plan, status, current_period_end
+     FROM subscriptions
+     WHERE user_id = ?
+     LIMIT 1`
+  ).bind(userId).first();
+
+  const expiry = subscription?.current_period_end
+    ? Date.parse(subscription.current_period_end)
+    : null;
+
+  const isPremium =
+    String(subscription?.plan || "").toLowerCase() === "premium" &&
+    String(subscription?.status || "").toLowerCase() === "active" &&
+    (expiry === null || (Number.isFinite(expiry) && expiry > Date.now()));
+
+  if (!isPremium) {
+    return respond({
+      error: "Excel Assistant is a Premium feature. Upgrade to Premium to access it."
+    }, 403);
+  }
+}
           const usage = await reserveDailyUsage(env, userId);
           const result = await callAI(
             env,

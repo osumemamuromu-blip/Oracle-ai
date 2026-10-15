@@ -1283,7 +1283,10 @@ async function sendChat(typed) {
   side("Connecting to AI…");
 
   try {
-    const data = await api("/api/chat", { message: payload });
+    const data = await api("/api/chat", {
+  message: payload,
+  ...(excelMode ? { mode: "excel" } : {})
+});
 
     // The account changed while Malie was replying: discard the reply
     if (currentUid !== ownerUid) return;

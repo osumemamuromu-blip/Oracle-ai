@@ -1328,7 +1328,9 @@ async function sendChat(typed) {
     if (currentUid !== ownerUid) return;
 
     bubble.classList.add("error");
-    bubble.textContent = "Error: " + e.message;
+    bubble.textContent = excelMode
+  ? e.message
+  : "Error: " + e.message;
     side("Connection needs attention", "error");
 
     // Don't keep an unanswered message in the saved chat

@@ -1739,6 +1739,76 @@ async function submitReference() {
     setBusy(btn, false);
   }
 }
+  
+async function loadAdminPayments() {
+  const panel = $("adminPaymentsPanel");
+  const status = $("adminPaymentsStatus");
+  const list = $("adminPaymentsList");
+
+  if (!currentUid) {
+    toast("Please sign in first.", true);
+    return;
+  }
+
+  panel.hidden = false;
+  status.textContent = "Loading pending payments…";
+  list.innerHTML = "";
+
+  try {
+    const data = await api("/api/admin/pending-payments", {});
+    const payments = data.payments || [];
+
+    status.textContent = payments.length
+      ? `${payments.length} pending request(s). Verify each transfer in your bank before approving.`
+      : "There are no pending payment requests.";
+
+    list.innerHTML = payments.map(p => `
+      <div class="pay-box">
+        <h3>Request #${esc(p.requestId)}</h3>
+        <p>Plan: ${esc(PLAN_NAMES[p.plan] || p.plan)}</p>
+        <p>Billing: ${esc(p.billingPeriod)}</p>
+        <p>Amount: ${naira(p.amount)}</p>
+        <p>Transfer reference: ${
+          p.hasReference ? esc(p.transferReference) : "Not submitted"
+        }</p>
+        <p>Status: ${esc(p.status)}</p>
+        ${p.hasReference ? `
+          <button class="primary"
+            data-approve-payment="${Number(p.requestId)}">
+            Approve verified transfer
+          </button>
+        ` : ""}
+      </div>
+    `).join("");
+
+    list.querySelectorAll("[data-approve-payment]").forEach(button => {
+      button.onclick = async () => {
+        const requestId = Number(button.dataset.approvePayment);
+
+        if (!confirm(
+          `Have you confirmed that the exact amount for request #${requestId} arrived in your bank account?`
+        )) return;
+
+        button.disabled = true;
+        button.textContent = "Approving…";
+
+        try {
+          await api("/api/admin/approve-payment", { requestId });
+          toast("Payment approved and subscription activated.");
+          await loadAdminPayments();
+          await loadSubscription();
+        } catch (error) {
+          toast(error.message || "Approval failed.", true);
+          button.disabled = false;
+          button.textContent = "Approve verified transfer";
+        }
+      };
+    });
+  } catch (error) {
+    status.textContent = error.message || "Could not load pending payments.";
+    status.classList.add("error");
+  }
+}
 
 document.querySelectorAll("#billingToggle button").forEach(b => b.onclick = () => { billing = b.dataset.billing; paintPrices(); if (chosenPlan && !activeRequest) renderChoice(); });
 document.querySelectorAll("[data-choose]").forEach(b => b.onclick = () => {

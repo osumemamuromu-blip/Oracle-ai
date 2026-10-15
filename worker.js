@@ -568,11 +568,12 @@ export default {
           billingPeriod,
           amount,
           currency: "NGN",
-          paymentDetails: {
-            bankName: env.BANK_NAME || null,
-            accountName: env.BANK_ACCOUNT_NAME || null,
-            accountNumber: env.BANK_ACCOUNT_NUMBER || null
-          },
+         
+paymentDetails: {
+  bankName: "FirstBank",
+  accountName: env.FIRSTBANK_ACCOUNT_NAME || null,
+  accountNumber: env.FIRSTBANK_ACCOUNT_NUMBER || null
+},
           message:
             "Payment request created. Make the transfer, then submit your transfer reference."
         });

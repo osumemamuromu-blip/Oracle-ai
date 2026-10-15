@@ -675,19 +675,30 @@ paymentDetails: {
       path === "/api/admin/approve-payment"
     ) {
       try {
-        const adminSecret = env.MALIE_ADMIN_SECRET;
-        const suppliedSecret = request.headers.get(
-          "X-Malie-Admin-Secret"
-        );
+       const adminUid = env.MALIE_ADMIN_UID;
 
-        if (
-          !adminSecret ||
-          !suppliedSecret ||
-          suppliedSecret !== adminSecret
-        ) {
-          return respond({ error: "Unauthorized." }, 401);
-        }
+if (!adminUid) {
+  return respond(
+    { error: "Admin access is not configured." },
+    500
+  );
+}
 
+let authenticatedUid;
+
+try {
+  authenticatedUid = await authenticateFirebase(request, env);
+} catch (error) {
+  return respond(
+    { error: error.message || "Unauthorized." },
+    error.status || 401
+  );
+}
+
+if (authenticatedUid !== adminUid) {
+  return respond({ error: "Unauthorized." }, 403);
+} 
+        
         const body = await request.json();
         const requestId = Number(body.requestId);
 

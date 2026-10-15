@@ -22,6 +22,8 @@
   }
 ],
   "vars": {
-    "GEMINI_MODEL": "gemini-3.5-flash-lite"
+    "GEMINI_MODEL": "gemini-3.5-flash-lite",
+    "FIRSTBANK_ACCOUNT_NAME": "Osume Prosper",
+    "FIRSTBANK_ACCOUNT_NUMBER": "3205304016"
   }
 }

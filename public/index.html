@@ -2328,8 +2328,11 @@ function renderQuiz(questions) {
 
     if (!graded) {
       result.innerHTML = "<h3>Quiz completed</h3><p class='score-detail'>No recognised answer key was returned, so a reliable score cannot be calculated.</p>";
-      setStatus("quizStatus", "Quiz submitted, but no answer key was available."
-                const percent = Math.round(score / graded * 100);
+      setStatus("quizStatus", "Quiz submitted, but no answer key was available.", true);
+      return;
+    }
+
+    const percent = Math.round(score / graded * 100);
     const message = percent >= 80 ? "Excellent work! 🎉" : percent >= 60 ? "Good effort! Keep practising." : "Keep going — practice makes progress.";
 
     result.innerHTML =
@@ -2374,4 +2377,4 @@ function renderQuiz(questions) {
 }
 </script>
 </body>
-</html>
+</html 

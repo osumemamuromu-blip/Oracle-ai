@@ -550,6 +550,120 @@ export default {
           error: "Could not submit your transfer reference."
         }, 500);
       }
+      // Admin-only payment approval.
+    if (
+      request.method === "POST" &&
+      path === "/api/admin/approve-payment"
+    ) {
+      try {
+        const adminSecret = env.MALIE_ADMIN_SECRET;
+        const suppliedSecret = request.headers.get(
+          "X-Malie-Admin-Secret"
+        );
+
+        if (
+          !adminSecret ||
+          !suppliedSecret ||
+          suppliedSecret !== adminSecret
+        ) {
+          return respond({ error: "Unauthorized." }, 401);
+        }
+
+        const body = await request.json();
+        const requestId = Number(body.requestId);
+
+        if (!Number.isSafeInteger(requestId) || requestId < 1) {
+          return respond({ error: "Invalid payment request ID." }, 400);
+        }
+
+        if (!env.DB) {
+          return respond({ error: "Payment service unavailable." }, 503);
+        }
+
+        const payment = await env.DB.prepare(`
+          SELECT id, user_id, plan, amount, billing_period,
+                 payment_reference, status
+          FROM payment_requests
+          WHERE id = ?
+        `).bind(requestId).first();
+
+        if (!payment) {
+          return respond({ error: "Payment request not found." }, 404);
+        }
+
+        if (payment.status !== "pending") {
+          return respond({ error: "This payment request has already been processed." }, 409);
+        }
+
+        if (!payment.payment_reference) {
+          return respond({ error: "The customer has not submitted a transfer reference." }, 400);
+        }
+
+        const expectedAmounts = {
+          premium: { monthly: 2500, annual: 25000 },
+          pro: { monthly: 7500, annual: 85000 }
+        };
+
+        if (
+          !expectedAmounts[payment.plan] ||
+          expectedAmounts[payment.plan][payment.billing_period] !== payment.amount
+        ) {
+          return respond({ error: "Payment amount or plan details do not match." }, 400);
+        }
+
+        // Verify the actual bank transfer before calling this route.
+        const now = new Date();
+        const confirmedAt = now.toISOString();
+        const endDate = new Date(now);
+        if (payment.billing_period === "annual") {
+          endDate.setUTCFullYear(endDate.getUTCFullYear() + 1);
+        } else {
+          endDate.setUTCMonth(endDate.getUTCMonth() + 1);
+        }
+
+        const results = await env.DB.batch([
+          env.DB.prepare(`
+            UPDATE payment_requests
+            SET status = 'confirmed', confirmed_at = ?
+            WHERE id = ?
+              AND status = 'pending'
+              AND payment_reference IS NOT NULL
+          `).bind(confirmedAt, requestId),
+
+          env.DB.prepare(`
+            INSERT INTO subscriptions
+              (user_id, plan, status, current_period_end,
+               payment_reference, updated_at)
+            SELECT user_id, plan, 'active', ?, payment_reference, ?
+            FROM payment_requests
+            WHERE id = ?
+              AND status = 'confirmed'
+              AND confirmed_at = ?
+            ON CONFLICT(user_id) DO UPDATE SET
+              plan = excluded.plan,
+              status = 'active',
+              current_period_end = excluded.current_period_end,
+              payment_reference = excluded.payment_reference,
+              updated_at = excluded.updated_at
+          `).bind(endDate.toISOString(), confirmedAt, requestId, confirmedAt)
+        ]);
+
+        if (!results[0]?.meta?.changes) {
+          return respond({ error: "Payment request could not be confirmed. Check its status." }, 409);
+        }
+
+        return respond({
+          ok: true,
+          message: "Payment confirmed and subscription activated.",
+          requestId,
+          plan: payment.plan,
+          billingPeriod: payment.billing_period,
+          expiresAt: endDate.toISOString()
+        });
+      } catch (error) {
+        console.error("Admin payment approval error:", error.message);
+        return respond({ error: "Could not approve this payment." }, 500);
+      }
     }
     if (
       request.method === "POST" &&

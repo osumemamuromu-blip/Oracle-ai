@@ -1809,7 +1809,19 @@ async function loadAdminPayments() {
     status.classList.add("error");
   }
 }
+const openAdminPaymentsButton = $("openAdminPayments");
 
+if (openAdminPaymentsButton) {
+  openAdminPaymentsButton.addEventListener("click", () => {
+    $("adminPaymentsPanel").hidden = false;
+    loadAdminPayments();
+  });
+}
+
+const adminLoadButton = $("loadAdminPayments");
+if (adminLoadButton) {
+  adminLoadButton.addEventListener("click", loadAdminPayments);
+  }
 document.querySelectorAll("#billingToggle button").forEach(b => b.onclick = () => { billing = b.dataset.billing; paintPrices(); if (chosenPlan && !activeRequest) renderChoice(); });
 document.querySelectorAll("[data-choose]").forEach(b => b.onclick = () => {
   if (!currentUid) return toast("Please sign in with Google first.", true);

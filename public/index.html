@@ -245,6 +245,18 @@ button:disabled{opacity:.55;cursor:not-allowed}
 @keyframes appear{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pop{from{transform:scale(.75)}to{transform:scale(1)}}
 
+/* Plans & payments */
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:99px;padding:3px;margin-bottom:16px;background:var(--panel)}
+.seg button{border:0;background:transparent;color:var(--muted);padding:8px 16px;border-radius:99px;font-size:12px;font-weight:700}
+.seg button.active{background:var(--accent);color:var(--accent-ink)}
+.plan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:15px}
+.plan{border:1px solid var(--border);background:var(--panel);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:8px}
+.plan.featured{border-color:var(--accent)}
+.plan h3{margin:0;font-size:15px}
+.plan .price{font-size:22px;font-weight:850;letter-spacing:-.8px}
+.plan ul{margin:0;padding-left:18px;color:var(--muted);font-size:12px;line-height:1.8;flex:1}
+.pay-box{border:1px dashed var(--border);border-radius:12px;padding:14px;margin:12px 0;font-size:13px;line-height:1.9;background:var(--bg)}
+
 @media(max-width:760px){
   .app{grid-template-columns:1fr}
   .sidebar{position:fixed;inset:0 auto 0 0;width:min(285px,86vw);transform:translateX(-105%);transition:transform .22s;box-shadow:var(--shadow)}
@@ -270,6 +282,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
   .top-actions{gap:7px}
   .exp-table th{width:92px;padding:8px 9px}
   .exp-table td{padding:8px 9px}
+  .plan-grid{grid-template-columns:1fr}
 }
 @media(max-width:380px){
   .suggestions{grid-template-columns:1fr}
@@ -291,7 +304,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
         <button class="side-link active" data-view="explore"><span class="ico">⌂</span>Explore</button>
         <button class="side-link" data-view="writing"><span class="ico">✎</span>Writing Lab</button>
         <button class="side-link" data-view="quiz"><span class="ico">☷</span>Quiz Mode</button>
-        <button class="side-link" data-view="premium"><span class="ico">✦</span>Malie 2 Premium <span class="coming">SOON</span></button>
+        <button class="side-link" data-view="plans"><span class="ico">✦</span>Plans &amp; Upgrade</button>
       </nav>
     </div>
     <div class="sidebar-bottom"><div class="side-status"><span class="dot" id="sideDot"></span><span id="sideStatus">2026 Campus Creative </span></div></div>
@@ -307,6 +320,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
       </div>
       <div class="top-actions">
         <div class="model-pill"><span class="dot online"></span> Gemini-powered</div>
+        <button class="top-btn" id="upgradeBtn">✦ Upgrade</button>
         <button class="top-btn" id="themeToggle" aria-label="Toggle theme" title="Switch to light theme">☼</button>
         <button class="top-btn" id="authButton">Sign in</button>
       </div>
@@ -323,7 +337,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
             <button class="suggestion" data-prompt="Explain something I find difficult in simple terms, with examples."><span class="s-icon">✳</span><span><strong>Understand anything</strong><small>Clear explanations, step by step</small></span></button>
             <button class="suggestion" data-open-view="writing"><span class="s-icon">✎</span><span><strong>Make your writing better</strong><small>Rewrite, correct, and refine your words</small></span></button>
             <button class="suggestion" data-open-view="quiz"><span class="s-icon">☷</span><span><strong>Test yourself</strong><small>Upload a PDF or photo and take a quiz</small></span></button>
-            <button class="suggestion" data-open-view="premium"><span class="s-icon">✦</span><span><strong>Malie 2 Premium</strong><small>More powerful tools <span class="coming">COMING SOON</span></small></span></button>
+            <button class="suggestion" data-open-view="plans"><span class="s-icon">✦</span><span><strong>Upgrade your plan</strong><small>Premium and Pro for more power</small></span></button>
           </div>
         </div>
         <div class="chat" id="chat" aria-live="polite"></div>
@@ -428,10 +442,23 @@ button:disabled{opacity:.55;cursor:not-allowed}
         </div>
       </section>
 
-      <!-- Premium -->
+      <!-- Premium (legacy preview) -->
       <section class="view" id="view-premium">
         <div class="section-head"><h1>Malie 2 Premium<span style="color:var(--accent)">.</span></h1><p>A more powerful Malie experience is on the way.</p></div>
-        <div class="work-card premium-card"><div class="eyebrow">Coming soon</div><h2>More room for bigger ideas.</h2><p>Malie 2 Premium is planned for a future release. This section is a preview only; premium features and subscriptions are not active yet.</p></div>
+        <div class="work-card premium-card"><div class="eyebrow">Coming soon</div><h2>More room for bigger ideas.</h2><p>Malie 2 Premium is planned for a future release. This section is a preview only.</p></div>
+      </section>
+
+      <!-- Plans & Upgrade -->
+      <section class="view" id="view-plans">
+        <div class="section-head"><h1>Plans<span style="color:var(--accent)">.</span></h1><p>Pay by FirstBank transfer. Your plan is activated only after we verify your payment.</p></div>
+        <div class="work-card" id="subStatus"><p class="placeholder">Sign in to see your plan.</p></div>
+        <div class="seg" id="billingToggle"><button class="active" data-billing="monthly">Monthly</button><button data-billing="annual">Annual</button></div>
+        <div class="plan-grid">
+          <div class="plan"><h3>Free</h3><div class="price">₦0</div><ul><li>8 AI requests per day</li><li>Chat, Writing Lab, Quiz</li></ul></div>
+          <div class="plan featured"><h3>Premium</h3><div class="price" data-price="premium"></div><ul><li>100 requests per day</li><li>Premium Excel Assistant</li></ul><button class="primary" data-choose="premium">Choose Premium</button></div>
+          <div class="plan"><h3>Pro</h3><div class="price" data-price="pro"></div><ul><li>Everything in Premium</li></ul><button class="primary" data-choose="pro">Choose Pro</button></div>
+        </div>
+        <div class="work-card" id="payPanel" hidden></div>
       </section>
     </div>
 
@@ -473,9 +500,9 @@ button:disabled{opacity:.55;cursor:not-allowed}
       <div><strong id="menuName">Signed in</strong><span>Quiz history is linked to this account.</span></div>
     </div>
     <div class="premium-promo menu-item" style="--i:2">
-      <h3>✦ Malie 2 Premium</h3>
-      <p>Longer study material, more quizzes and priority speed.</p>
-      <button class="btn" id="premiumBtn">See what’s coming</button>
+      <h3>✦ Premium &amp; Pro</h3>
+      <p>Longer study material, more requests and the Excel Assistant.</p>
+      <button class="btn" id="premiumBtn">View plans</button>
     </div>
     <div class="menu-item" style="--i:3"><h4>Recent chats</h4><div id="recentChats"></div></div>
     <div class="menu-item" style="--i:4"><h4>Recent quizzes</h4><div id="recentQuizzes"></div></div>
@@ -900,7 +927,7 @@ async function extractAny(file, onStatus = () => {}) {
 }
 
 /* ───────── Navigation ───────── */
-const titles = { explore: "Explore", writing: "Writing Lab", quiz: "Quiz Mode", premium: "Malie 2 Premium" };
+const titles = { explore: "Explore", writing: "Writing Lab", quiz: "Quiz Mode", premium: "Malie 2 Premium", plans: "Plans" };
 const composerWrap = $("composerWrap");
 
 function closeSidebar() {
@@ -1078,7 +1105,7 @@ $("menuClose").onclick = closeMenu;
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") { if (menu.classList.contains("open")) closeMenu(); closeSidebar(); }
 });
-$("premiumBtn").onclick = () => { closeMenu(); switchView("premium"); };
+$("premiumBtn").onclick = () => { closeMenu(); openPlans(); };
 
 /* ───────── Chat (Explore) with attachments ───────── */
 const form = $("chatForm"), promptBox = $("prompt"), sendBtn = $("sendBtn");
@@ -1480,6 +1507,9 @@ function clearWorkspace() {
   // Menu lists
   $("recentChats").innerHTML = "";
   $("recentQuizzes").innerHTML = "";
+
+  // Plans
+  resetPlans();
 }
 
 async function loadHistory() {
@@ -1596,6 +1626,120 @@ $("clearQuizHistory").onclick = async () => {
     setStatus("quizStatus", "Could not clear history: " + e.message, true);
   }
 };
+
+/* ───────── Plans & payments ───────── */
+const PRICES = { premium: { monthly: 2500, annual: 25000 }, pro: { monthly: 7500, annual: 85000 } };
+const naira = n => "₦" + Number(n).toLocaleString("en-NG");
+const PLAN_NAMES = { premium: "Premium", pro: "Pro" };
+let billing = "monthly", chosenPlan = null, activeRequest = null;
+
+function paintPrices() {
+  document.querySelectorAll("[data-price]").forEach(el => {
+    el.textContent = naira(PRICES[el.dataset.price][billing]) + (billing === "annual" ? " / year" : " / month");
+  });
+  document.querySelectorAll("#billingToggle button").forEach(b => b.classList.toggle("active", b.dataset.billing === billing));
+}
+function resetPlans() {
+  chosenPlan = null; activeRequest = null;
+  const p = $("payPanel"); if (p) { p.hidden = true; p.innerHTML = ""; }
+  const s = $("subStatus"); if (s) s.innerHTML = '<p class="placeholder">Sign in to see your plan.</p>';
+}
+function openPlans() { switchView("plans"); loadSubscription(); }
+
+async function loadSubscription() {
+  const box = $("subStatus");
+  if (!currentUid) { resetPlans(); return; }
+  box.innerHTML = '<p class="placeholder">Checking your plan…</p>';
+  try {
+    const d = await api("/api/subscription/status", {});
+    const s = d.subscription, r = d.latestRequest;
+    let html;
+    if (s.active) {
+      html = `<h3>Current plan: ${esc(PLAN_NAMES[s.plan] || s.plan)} ✓</h3><p class="sub">Active until ${esc(new Date(s.expiresAt).toLocaleDateString())}.</p>`;
+    } else {
+      html = `<h3>Current plan: Free</h3>`;
+    }
+    if (r && r.status === "pending" && r.hasReference) {
+      html += `<p class="sub">Pending verification: ${esc(PLAN_NAMES[r.plan] || r.plan)} (${esc(r.billingPeriod)}), ${naira(r.amount)}. We will activate it once we confirm your transfer.</p>`;
+    }
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = '<p class="status error">' + esc(e.message) + "</p>";
+  }
+}
+
+function renderChoice() {
+  const panel = $("payPanel");
+  panel.hidden = false;
+  panel.innerHTML =
+    `<h3>${PLAN_NAMES[chosenPlan]} · ${billing === "annual" ? "Annual" : "Monthly"}</h3>
+     <p class="sub">Amount to pay: <strong>${naira(PRICES[chosenPlan][billing])}</strong></p>
+     <div class="button-row"><button class="primary" id="startPay">Start payment request</button></div>
+     <p class="status" id="payStatus"></p>`;
+  $("startPay").onclick = startPayment;
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+async function startPayment() {
+  if (!currentUid) return toast("Please sign in with Google first.", true);
+  const btn = $("startPay");
+  setBusy(btn, true, "Creating request…");
+  try {
+    activeRequest = await api("/api/payment/request", { plan: chosenPlan, billingPeriod: billing });
+    renderInstructions();
+  } catch (e) {
+    $("payStatus").textContent = e.message;
+    $("payStatus").classList.add("error");
+    setBusy(btn, false);
+  }
+}
+
+function renderInstructions() {
+  const r = activeRequest, d = r.paymentDetails || {};
+  $("payPanel").innerHTML =
+    `<h3>Pay by FirstBank transfer</h3>
+     <div class="pay-box">
+       Bank: <strong>${esc(d.bankName || "FirstBank")}</strong><br>
+       Account name: <strong>${esc(d.accountName || "Not available")}</strong><br>
+       Account number: <strong>${esc(d.accountNumber || "Not available")}</strong><br>
+       Amount: <strong>${naira(r.amount)}</strong><br>
+       Request ID: <strong>${esc(r.requestId)}</strong>
+     </div>
+     <p class="sub">Transfer exactly ${naira(r.amount)}, then enter the transfer reference or session ID from your bank receipt.</p>
+     <div class="field-group"><label class="field-label" for="refInput">Transfer reference</label>
+     <input class="work-input" id="refInput" maxlength="120" placeholder="e.g. session ID from your receipt"></div>
+     <div class="button-row"><button class="primary" id="submitRef">I have paid, submit reference</button></div>
+     <p class="status" id="payStatus"></p>`;
+  $("submitRef").onclick = submitReference;
+}
+
+async function submitReference() {
+  const ref = $("refInput").value.trim();
+  const st = $("payStatus");
+  if (ref.length < 4) { st.textContent = "Please enter a valid transfer reference."; st.classList.add("error"); return; }
+  const btn = $("submitRef");
+  setBusy(btn, true, "Submitting…");
+  try {
+    await api("/api/payment/submit-reference", { requestId: activeRequest.requestId, transferReference: ref });
+    $("payPanel").innerHTML =
+      `<h3>⏳ Pending verification</h3>
+       <p class="sub">Thanks! We received your reference. Your plan will be activated after we confirm the transfer in our bank account. This is not automatic, so please allow some time.</p>`;
+    activeRequest = null;
+    loadSubscription();
+  } catch (e) {
+    st.textContent = e.message; st.classList.add("error");
+    setBusy(btn, false);
+  }
+}
+
+document.querySelectorAll("#billingToggle button").forEach(b => b.onclick = () => { billing = b.dataset.billing; paintPrices(); if (chosenPlan && !activeRequest) renderChoice(); });
+document.querySelectorAll("[data-choose]").forEach(b => b.onclick = () => {
+  if (!currentUid) return toast("Please sign in with Google first.", true);
+  chosenPlan = b.dataset.choose; activeRequest = null; renderChoice();
+});
+document.querySelectorAll('[data-view="plans"],[data-open-view="plans"]').forEach(b => b.addEventListener("click", loadSubscription));
+$("upgradeBtn").onclick = openPlans;
+paintPrices();
 
 /* ───────── Quiz ───────── */
 let timer = null;

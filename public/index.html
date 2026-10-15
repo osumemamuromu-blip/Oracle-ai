@@ -493,6 +493,10 @@ import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, delet
 
 /* ───────── Config ───────── */
 const API = "https://oracle-ai.osumemamuromu.workers.dev";
+  let excelMode = false;
+  
+
+  
 const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
 const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 const TESS_URL = "https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.5/tesseract.min.js";
@@ -518,6 +522,24 @@ const firebaseConfig = {
 
 /* ───────── Helpers ───────── */
 const $ = id => document.getElementById(id);
+  const excelModeBtn = $("excelModeBtn");
+const excelModeStatus = $("excelModeStatus");
+
+excelModeBtn.addEventListener("click", () => {
+  excelMode = !excelMode;
+
+  excelModeBtn.textContent = excelMode
+    ? "✦ Exit Excel Assistant"
+    : "✦ Premium Excel Assistant";
+
+  excelModeStatus.textContent = excelMode
+    ? "Excel mode selected"
+    : "Premium feature";
+
+  $("prompt").placeholder = excelMode
+    ? "Ask your Excel question..."
+    : "Ask Malie anything...";
+});
 
 function esc(s) {
   return String(s ?? "")

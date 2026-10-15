@@ -109,6 +109,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .composer:focus-within{border-color:color-mix(in srgb,var(--accent) 60%,var(--border))}
 #prompt{display:block;width:100%;resize:none;min-height:29px;max-height:170px;border:0;outline:0;background:transparent;color:var(--text);padding:4px 0;font-size:13px;line-height:1.65}
 #prompt::placeholder{color:var(--muted)}
+.excel-mode-row{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
 .composer-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}
 .composer-left{display:flex;align-items:center;gap:10px;min-width:0}
 .attach-btn{flex:0 0 auto;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:16px;display:grid;place-items:center;padding:0}
@@ -445,8 +446,8 @@ button:disabled{opacity:.55;cursor:not-allowed}
       <!-- Premium (legacy preview) -->
       <section class="view" id="view-premium">
         <div class="section-head"><h1>Malie 2 Premium<span style="color:var(--accent)">.</span></h1><p>A more powerful Malie experience is on the way.</p></div>
-        <div class="work-card premium-card"><div class="eyebrow">Coming soon</div><h2>More room for bigger ideas.</h2><p>Malie 2 Premium is planned for a future release. This section is a preview only.</p></div> 
-<button class="primary" id="openAdminPayments" type="button">Admin Payments</button>
+        <div class="work-card premium-card"><div class="eyebrow">Coming soon</div><h2>More room for bigger ideas.</h2><p>Malie 2 Premium is planned for a future release. This section is a preview only.</p></div>
+        <button class="primary" id="openAdminPayments" type="button">Admin Payments</button>
         <div class="work-card" id="adminPaymentsPanel" hidden>
           <h2>Admin Payments</h2>
           <p class="sub">Review transfer references and verify payments in your bank account before approving.</p>
@@ -474,12 +475,10 @@ button:disabled{opacity:.55;cursor:not-allowed}
       <form class="composer" id="chatForm">
         <div class="attach-row" id="attachRow" hidden></div>
         <textarea id="prompt" rows="1" maxlength="12000" placeholder="Ask Malie anything..." aria-label="Message Malie"></textarea>
-<div class="excel-mode-row">
-  <button type="button" id="excelModeBtn" class="secondary">
-    ✦ Premium Excel Assistant
-  </button>
-  <span id="excelModeStatus" class="input-hint">Premium feature</span>
-</div>
+        <div class="excel-mode-row">
+          <button type="button" id="excelModeBtn" class="secondary">✦ Premium Excel Assistant</button>
+          <span id="excelModeStatus" class="input-hint">Premium feature</span>
+        </div>
 
         <div class="composer-bottom">
           <div class="composer-left">
@@ -528,10 +527,8 @@ import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, delet
 
 /* ───────── Config ───────── */
 const API = "https://oracle-ai.osumemamuromu.workers.dev";
-  let excelMode = false;
-  
+let excelMode = false;
 
-  
 const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
 const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 const TESS_URL = "https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.5/tesseract.min.js";
@@ -557,7 +554,7 @@ const firebaseConfig = {
 
 /* ───────── Helpers ───────── */
 const $ = id => document.getElementById(id);
-  const excelModeBtn = $("excelModeBtn");
+const excelModeBtn = $("excelModeBtn");
 const excelModeStatus = $("excelModeStatus");
 
 excelModeBtn.addEventListener("click", () => {
@@ -956,16 +953,12 @@ document.querySelectorAll("[data-open-view]").forEach(b => b.addEventListener("c
 $("menuToggle").onclick = () => { $("sidebar").classList.toggle("open"); $("overlay").classList.toggle("show"); };
 $("overlay").onclick = closeSidebar;
 
-/* ───────── Saved conversations (stored on this device, separately for each account) ─────────
-   Each conversation: { id, title, ts, messages: [ { role: "user"|"assistant", text, files? } ] }
-   The selected conversation stays active until "New chat" is pressed.
-   Storage key is "malie-conversations-v2-<uid>", so accounts never see each other's chats. */
+/* ───────── Saved conversations (stored on this device, separately for each account) ───────── */
 const CHATS_PREFIX = "malie-conversations-v2-";
-let currentUid = null;   // uid of the signed-in account (null = signed out)
+let currentUid = null;
 let conversations = [];
 let activeId = null;
 
-// Remove the old shared storage from earlier versions (it could not be tied to one account)
 try {
   localStorage.removeItem("malie-conversations-v1");
   localStorage.removeItem("malie-recent-chats");
@@ -984,10 +977,9 @@ function loadConversations() {
 }
 function persistConversations() {
   const key = chatsKey();
-  if (!key) return; // never save while signed out
+  if (!key) return;
   conversations.sort((a, b) => b.ts - a.ts);
   conversations = conversations.slice(0, MAX_SAVED_CHATS);
-  // If storage is full, drop the oldest chats until it fits
   while (true) {
     try {
       localStorage.setItem(key, JSON.stringify(conversations));
@@ -1018,7 +1010,6 @@ function deleteConversation(id) {
   if (activeId === id) resetChatView();
 }
 
-// Earlier messages of the active conversation, so the AI can follow the discussion
 function buildHistoryContext(conv) {
   if (!conv || !conv.messages.length) return "";
   const parts = [];
@@ -1243,7 +1234,6 @@ function addCopyButton(body, text) {
   body.append(actions);
 }
 
-// Show a saved conversation exactly as it was, with no AI call
 function renderConversation(conv) {
   chat.replaceChildren();
   welcome.style.display = "none";
@@ -1303,14 +1293,11 @@ async function sendChat(typed) {
     message += `\n\n--- Attached ${a.kind === "image" ? "picture (text read with OCR)" : "file"}: ${a.name} ---\n${body}`;
   });
 
-  // Remember which account this message belongs to, in case the user signs out mid-reply
   const ownerUid = currentUid;
 
-  // Use the chat that is already open, or start a new one
   const isNew = !getActiveConversation();
   const conv = getActiveConversation() || newConversation(shown || (ready[0] && ready[0].name) || "New chat");
 
-  // Give the AI the earlier part of THIS conversation as context
   const history = buildHistoryContext(conv);
   const payload = history
     ? `Here is our conversation so far, for context:\n\n${history}\n\n---\nContinue the conversation. Reply only to the new message below.\n\nNew message from the user:\n${message}`
@@ -1341,11 +1328,10 @@ async function sendChat(typed) {
 
   try {
     const data = await api("/api/chat", {
-  message: payload,
-  ...(excelMode ? { mode: "excel" } : {})
-});
+      message: payload,
+      ...(excelMode ? { mode: "excel" } : {})
+    });
 
-    // The account changed while Malie was replying: discard the reply
     if (currentUid !== ownerUid) return;
 
     const reply = data.reply ?? data.result ?? data.output;
@@ -1364,11 +1350,10 @@ async function sendChat(typed) {
 
     bubble.classList.add("error");
     bubble.textContent = excelMode
-  ? e.message
-  : "Error: " + e.message;
+      ? e.message
+      : "Error: " + e.message;
     side("Connection needs attention", "error");
 
-    // Don't keep an unanswered message in the saved chat
     const idx = conv.messages.indexOf(userMsg);
     if (idx >= 0) conv.messages.splice(idx, 1);
     if (!conv.messages.length) {
@@ -1488,16 +1473,13 @@ function showSignInButton() {
   setGreeting("");
 }
 
-// Wipe everything on screen that belongs to the previous account
 function clearWorkspace() {
-  // Chat
   conversations = [];
   chatBusy = false;
   promptBox.disabled = false;
   resetChatView();
   updateSendState();
 
-  // Quiz
   if (timer) { clearInterval(timer); timer = null; }
   finished = false;
   quizCache = [];
@@ -1507,16 +1489,13 @@ function clearWorkspace() {
   setStatus("quizStatus", "");
   $("quizHistory").innerHTML = '<p class="placeholder">Sign in to view your saved tests.</p>';
 
-  // Writing Lab
   $("writingInput").value = "";
   $("writingOutput").innerHTML = '<span class="placeholder">Your corrected text will appear here.</span>';
   setStatus("writingStatus", "");
 
-  // Menu lists
   $("recentChats").innerHTML = "";
   $("recentQuizzes").innerHTML = "";
 
-  // Plans
   resetPlans();
 }
 
@@ -1583,7 +1562,6 @@ try {
 
   onAuthStateChanged(auth, async user => {
     if (user) {
-      // A different account than before (or first sign-in): start clean, then load THIS account's chats
       if (user.uid !== currentUid) {
         clearWorkspace();
         currentUid = user.uid;
@@ -1594,7 +1572,6 @@ try {
       showAvatar(user);
       await loadHistory();
     } else {
-      // Signed out: remove all of the previous account's work from the screen
       closeMenu();
       currentUid = null;
       clearWorkspace();
@@ -1739,7 +1716,8 @@ async function submitReference() {
     setBusy(btn, false);
   }
 }
-  
+
+/* ───────── Admin payments ───────── */
 async function loadAdminPayments() {
   const panel = $("adminPaymentsPanel");
   const status = $("adminPaymentsStatus");
@@ -1751,6 +1729,7 @@ async function loadAdminPayments() {
   }
 
   panel.hidden = false;
+  status.classList.remove("error");
   status.textContent = "Loading pending payments…";
   list.innerHTML = "";
 
@@ -1768,13 +1747,10 @@ async function loadAdminPayments() {
         <p>Plan: ${esc(PLAN_NAMES[p.plan] || p.plan)}</p>
         <p>Billing: ${esc(p.billingPeriod)}</p>
         <p>Amount: ${naira(p.amount)}</p>
-        <p>Transfer reference: ${
-          p.hasReference ? esc(p.transferReference) : "Not submitted"
-        }</p>
+        <p>Transfer reference: ${p.hasReference ? esc(p.transferReference) : "Not submitted"}</p>
         <p>Status: ${esc(p.status)}</p>
         ${p.hasReference ? `
-          <button class="primary"
-            data-approve-payment="${Number(p.requestId)}">
+          <button class="primary" data-approve-payment="${Number(p.requestId)}">
             Approve verified transfer
           </button>
         ` : ""}
@@ -1809,21 +1785,8 @@ async function loadAdminPayments() {
     status.classList.add("error");
   }
 }
-  const openAdminPaymentsButton = $("openAdminPayments");
 
-if (openAdminPaymentsButton) {
-  openAdminPaymentsButton.addEventListener("click", () => {
-    $("adminPaymentsPanel").hidden = false;
-    loadAdminPayments();
-  });
-}
-
-const adminLoadButton = $("loadAdminPayments");
-if (adminLoadButton) {
-  adminLoadButton.addEventListener("click", loadAdminPayments);
-}
 const openAdminPaymentsButton = $("openAdminPayments");
-
 if (openAdminPaymentsButton) {
   openAdminPaymentsButton.addEventListener("click", () => {
     $("adminPaymentsPanel").hidden = false;
@@ -1834,7 +1797,8 @@ if (openAdminPaymentsButton) {
 const adminLoadButton = $("loadAdminPayments");
 if (adminLoadButton) {
   adminLoadButton.addEventListener("click", loadAdminPayments);
-  }
+}
+
 document.querySelectorAll("#billingToggle button").forEach(b => b.onclick = () => { billing = b.dataset.billing; paintPrices(); if (chosenPlan && !activeRequest) renderChoice(); });
 document.querySelectorAll("[data-choose]").forEach(b => b.onclick = () => {
   if (!currentUid) return toast("Please sign in with Google first.", true);
@@ -1926,7 +1890,7 @@ $("generateQuiz").onclick = async () => {
 
   try {
     const questions = await fetchQuestions(text, Number($("questionCount").value), $("quizDifficulty").value);
-    if (currentUid !== ownerUid) return; // account changed while generating
+    if (currentUid !== ownerUid) return;
     renderQuiz(questions);
     const timed = Number($("quizTotalTime").value) > 0 || Number($("quizQuestionTime").value) > 0;
     setStatus("quizStatus", timed ? "Quiz ready. Answer before the timer ends." : "Quiz ready. Take your time.");

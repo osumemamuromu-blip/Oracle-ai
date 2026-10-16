@@ -572,6 +572,14 @@ button:disabled{opacity:.55;cursor:not-allowed}
       <label class="field-label" for="advertCTA">Call to action</label>
       <input class="work-input" id="advertCTA" maxlength="40" value="Shop Now" placeholder="e.g. Order Today">
 
+      <label class="field-label" for="advertStyle">Video style</label>
+      <select class="work-input" id="advertStyle">
+        <option value="clean">Clean product ad</option>
+        <option value="fullscreen">Full-screen photo</option>
+        <option value="promo">Multi-scene promo (15s)</option>
+        <option value="story">Vertical story (TikTok / Reels / Status)</option>
+      </select>
+
       <div class="button-row" style="margin-top:14px">
         <button class="primary" id="advertGenerate" type="button">Generate Advert ↗</button>
       </div>
@@ -2878,7 +2886,8 @@ $("advertGenerate").onclick = async () => {
       imageData: advertImageData,
       headline,
       description,
-      callToAction
+      callToAction,
+      style: $("advertStyle").value
     });
 
     const projectId = started.projectId;

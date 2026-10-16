@@ -1261,6 +1261,287 @@ if (request.method === "POST" && path === "/api/admin/check") {
     return respond({ ok: false, isAdmin: false, error: error.message }, error.status || 401);
   }
 }
+    
+/* ---------------- Malie AI Advert Studio (Pro only) ---------------- */
+if (
+  request.method === "POST" &&
+  (path === "/api/advert/start" || path === "/api/advert/status")
+) {
+  try {
+    const userId = await authenticateFirebase(request, env);
+    const plan = await getActivePlan(env, userId);
+
+    if (plan !== "pro") {
+      return respond({
+        error: "Malie AI Advert Studio is available on the Pro plan only."
+      }, 403);
+    }
+
+    if (!env.JSON2VIDEO_API_KEY) {
+      return respond({ error: "Advert Studio is not configured yet." }, 500);
+    }
+
+    if (!env.DB) {
+      return respond({ error: "The database is not configured." }, 500);
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return respond({ error: "Please send valid JSON." }, 400);
+    }
+
+    const apiHeaders = {
+      "x-api-key": env.JSON2VIDEO_API_KEY
+    };
+
+    /* Check the status of an existing render */
+    if (path === "/api/advert/status") {
+      const projectId = String(body.projectId || "");
+
+      if (!/^[A-Za-z0-9]{16}$/.test(projectId)) {
+        return respond({ error: "Invalid video project ID." }, 400);
+      }
+
+      const owned = await env.DB.prepare(
+        "SELECT project_id, status, video_url FROM advert_projects WHERE project_id = ? AND user_id = ?"
+      ).bind(projectId, userId).first();
+
+      if (!owned) {
+        return respond({
+          error: "Video project not found for this account."
+        }, 404);
+      }
+
+      const statusResponse = await fetch(
+        "https://api.json2video.com/v2/movies?project=" +
+          encodeURIComponent(projectId) + "&format=simple",
+        { headers: apiHeaders }
+      );
+
+      const statusData = await statusResponse.json();
+
+      if (!statusResponse.ok || !statusData.movie) {
+        return respond({
+          error: "Could not retrieve the video status. Please try again."
+        }, 502);
+      }
+
+      const movie = statusData.movie;
+      const videoUrl =
+        movie.status === "done" && movie.url
+          ? movie.url
+          : owned.video_url;
+
+      await env.DB.prepare(
+        "UPDATE advert_projects SET status = ?, video_url = ? WHERE project_id = ? AND user_id = ?"
+      ).bind(
+        String(movie.status || "queued"),
+        videoUrl || null,
+        projectId,
+        userId
+      ).run();
+
+      return respond({
+        ok: true,
+        projectId,
+        status: movie.status,
+        videoUrl: videoUrl || null,
+        message:
+          movie.status === "done"
+            ? "Your advert video is ready."
+            : movie.status === "error" || movie.status === "timeout"
+              ? (movie.message || "The video render did not complete.")
+              : "Your advert video is still rendering."
+      });
+    }
+
+    /* Start a new render */
+    const today = getUsageDate();
+
+    const usage = await env.DB.prepare(
+      "SELECT COUNT(*) AS total FROM advert_projects WHERE user_id = ? AND usage_date = ?"
+    ).bind(userId, today).first();
+
+    if (Number(usage?.total || 0) >= 3) {
+      return respond({
+        error: "You have reached the limit of 3 advert video renders per day. Please try again tomorrow."
+      }, 429);
+    }
+
+    const imageData = String(body.imageData || "");
+    const match = imageData.match(
+      /^data:(image\/(?:jpeg|png));base64,([A-Za-z0-9+/=\r\n]+)$/
+    );
+
+    if (!match) {
+      return respond({
+        error: "Upload a valid JPG or PNG product image."
+      }, 400);
+    }
+
+    const contentType = match[1];
+    const base64 = match[2].replace(/\s/g, "");
+
+    if (base64.length > 5_600_000) {
+      return respond({
+        error: "Image is too large. Please use an image smaller than about 4 MB."
+      }, 413);
+    }
+
+    let binary;
+    try {
+      binary = atob(base64);
+    } catch {
+      return respond({ error: "The image data is invalid." }, 400);
+    }
+
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+
+    if (!bytes.length) {
+      return respond({ error: "The uploaded image is empty." }, 400);
+    }
+
+    const extension = contentType === "image/png" ? "png" : "jpg";
+
+    /* Request a temporary media-upload URL */
+    const uploadInitResponse = await fetch(
+      "https://api.json2video.com/v2/media/file",
+      {
+        method: "POST",
+        headers: {
+          ...apiHeaders,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: `malie-product-${Date.now()}.${extension}`,
+          contentType,
+          size: bytes.length,
+          folder: "temp"
+        })
+      }
+    );
+
+    const uploadInit = await uploadInitResponse.json();
+
+    if (
+      !uploadInitResponse.ok ||
+      !uploadInit.uploadUrl ||
+      !uploadInit.fileUrl
+    ) {
+      return respond({
+        error: "Could not prepare the product image for video creation."
+      }, 502);
+    }
+
+    /* Upload the actual image bytes */
+    const uploadResponse = await fetch(uploadInit.uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": contentType },
+      body: bytes
+    });
+
+    if (!uploadResponse.ok) {
+      return respond({
+        error: "The product image upload failed. Please try again."
+      }, 502);
+    }
+
+    const cleanText = (value, maxLength) =>
+      String(value || "")
+        .replace(/[<>]/g, "")
+        .trim()
+        .slice(0, maxLength);
+
+    const headline = cleanText(body.headline, 90) || "A Product Worth Discovering";
+    const description = cleanText(body.description, 140);
+    const callToAction = cleanText(body.callToAction, 40) || "Shop Now";
+
+    /* Build the promotional video */
+    const moviePayload = {
+      resolution: "full-hd",
+      "cache": false,
+      scenes: [
+        {
+          duration: 10,
+          elements: [
+            {
+              type: "image",
+              src: uploadInit.fileUrl,
+              duration: 10
+            },
+            {
+              type: "text",
+              text: headline,
+              style: "001",
+              duration: 10
+            },
+            ...(description ? [{
+              type: "text",
+              text: description,
+              style: "001",
+              duration: 10
+            }] : []),
+            {
+              type: "text",
+              text: callToAction,
+              style: "001",
+              duration: 10
+            }
+          ]
+        }
+      ]
+    };
+
+    const renderResponse = await fetch(
+      "https://api.json2video.com/v2/movies",
+      {
+        method: "POST",
+        headers: {
+          ...apiHeaders,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(moviePayload)
+      }
+    );
+
+    const renderData = await renderResponse.json();
+
+    if (!renderResponse.ok || !renderData.project) {
+      return respond({
+        error: "JSON2Video could not start the render. Please try again."
+      }, 502);
+    }
+
+    const projectId = String(renderData.project);
+
+    await env.DB.prepare(
+      "INSERT INTO advert_projects (project_id, user_id, usage_date, status) VALUES (?, ?, ?, ?)"
+    ).bind(
+      projectId,
+      userId,
+      today,
+      "queued"
+    ).run();
+
+    return respond({
+      ok: true,
+      projectId,
+      status: "queued",
+      message: "Your advert video has been submitted for rendering."
+    });
+
+  } catch (error) {
+    console.error("Advert Studio error:", error);
+    return respond({
+      error: "Advert Studio encountered an error. Please try again."
+    }, 500);
+  }
+}
 
 /* ---------------- Engineering Drawing Studio (Pro only) ---------------- */
 if (request.method === "POST" && path === "/api/drawing") {

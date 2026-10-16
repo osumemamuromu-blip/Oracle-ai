@@ -1477,89 +1477,94 @@ if (
         .trim()
         .slice(0, maxLength);
 
-    const headline = cleanText(body.headline, 90) || "A Product Worth Discovering";
-    const description = cleanText(body.description, 140);
-    const callToAction = cleanText(body.callToAction, 40) || "Shop Now";
+    /* Clean the text. If the page sent "Headline: ... Description: ..." as one
+       string, split it so each part goes in its own text box. */
+    let rawHeadline = cleanText(body.headline, 400);
+    let rawDescription = cleanText(body.description, 400);
 
-    /* Build the promotional video */
-    
-const moviePayload = {
-  resolution: "full-hd",
-  cache: false,
-  scenes: [
-    {
-      duration: 10,
-      elements: [
+    const split = rawHeadline.match(/^\s*(?:headline\s*[:\-]\s*)?(.*?)\s*description\s*[:\-]\s*(.*)$/i);
+    if (split) {
+      rawHeadline = split[1];
+      if (!rawDescription) rawDescription = split[2];
+    }
+
+    const stripLabel = (value, label) =>
+      value.replace(new RegExp("^\\s*" + label + "\\s*[:\\-]\\s*", "i"), "").trim();
+
+    const headline =
+      stripLabel(rawHeadline, "headline").slice(0, 70) ||
+      "A Product Worth Discovering";
+    const description = stripLabel(rawDescription, "description").slice(0, 120);
+    const callToAction =
+      stripLabel(cleanText(body.callToAction, 40), "call to action") || "Shop Now";
+
+    /* Build the promotional video (1920x1080, 10 seconds) */
+    const textBox = (text, y, width, size, extra = {}, z = 5) => ({
+      type: "text",
+      text,
+      position: "custom",
+      x: "center",
+      y,
+      width,
+      height: -1,
+      "z-index": z,
+      "fade-in": 0.6,
+      settings: {
+        "font-family": "Roboto",
+        "font-size": size,
+        "font-weight": "700",
+        color: "#ffffff",
+        "text-align": "center",
+        "horizontal-position": "center",
+        "vertical-position": "center",
+        ...extra
+      }
+    });
+
+    const moviePayload = {
+      resolution: "full-hd",
+      quality: "high",
+      cache: false,
+      scenes: [
         {
-          type: "image",
-          src: uploadInit.fileUrl,
-          resize: "cover",
           duration: 10,
-          "z-index": 0
-        },
-        {
-          type: "text",
-          text: headline,
-          position: "custom",
-          x: "8%",
-          y: "12%",
-          width: "84%",
-          height: "22%",
-          duration: 10,
-          "z-index": 2,
-          settings: {
-            "font-family": "Arial",
-            "font-size": "64px",
-            "font-weight": "700",
-            color: "#ffffff",
-            "text-align": "center",
-            "vertical-align": "middle",
-            "text-shadow": "2px 2px 8px #000000"
-          }
-        },
-        ...(description ? [{
-          type: "text",
-          text: description,
-          position: "custom",
-          x: "10%",
-          y: "58%",
-          width: "80%",
-          height: "18%",
-          duration: 10,
-          "z-index": 2,
-          settings: {
-            "font-family": "Arial",
-            "font-size": "32px",
-            color: "#ffffff",
-            "text-align": "center",
-            "vertical-align": "middle",
-            "text-shadow": "2px 2px 6px #000000"
-          }
-        }] : []),
-        {
-          type: "text",
-          text: callToAction,
-          position: "custom",
-          x: "25%",
-          y: "82%",
-          width: "50%",
-          height: "10%",
-          duration: 10,
-          "z-index": 3,
-          settings: {
-            "font-family": "Arial",
-            "font-size": "36px",
-            "font-weight": "700",
-            color: "#ffffff",
-            "background-color": "#111111",
-            "text-align": "center",
-            "vertical-align": "middle"
-          }
+          "background-color": "#0b0b0f",
+          elements: [
+            /* Layer 1: image fills the whole frame (cropped if needed) */
+            {
+              type: "image",
+              src: uploadInit.fileUrl,
+              resize: "cover",
+              zoom: 2,
+              "z-index": 0
+            },
+            /* Layer 2: full product image, nothing cropped, centred */
+            {
+              type: "image",
+              src: uploadInit.fileUrl,
+              resize: "fit",
+              position: "center-center",
+              "z-index": 1
+            },
+            /* Headline (top) */
+            textBox(headline, "6%", "86%", "68px", {
+              "background-color": "#000000b3"
+            }),
+            /* Description (below the middle) */
+            ...(description
+              ? [textBox(description, "72%", "78%", "36px", {
+                  "font-weight": "500",
+                  "background-color": "#000000b3"
+                })]
+              : []),
+            /* Call to action (bottom) */
+            textBox(callToAction, "86%", "34%", "42px", {
+              "background-color": "#e11d48"
+            }, 6)
+          ]
         }
       ]
-    }
-  ]
-};
+    };
 
 
     const renderResponse = await fetch(

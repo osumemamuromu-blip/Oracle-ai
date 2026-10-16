@@ -1482,40 +1482,85 @@ if (
     const callToAction = cleanText(body.callToAction, 40) || "Shop Now";
 
     /* Build the promotional video */
-    const moviePayload = {
-      resolution: "full-hd",
-      "cache": false,
-      scenes: [
+    
+const moviePayload = {
+  resolution: "full-hd",
+  cache: false,
+  scenes: [
+    {
+      duration: 10,
+      elements: [
         {
+          type: "image",
+          src: uploadInit.fileUrl,
+          resize: "cover",
           duration: 10,
-          elements: [
-            {
-              type: "image",
-              src: uploadInit.fileUrl,
-              duration: 10
-            },
-            {
-              type: "text",
-              text: headline,
-              style: "001",
-              duration: 10
-            },
-            ...(description ? [{
-              type: "text",
-              text: description,
-              style: "001",
-              duration: 10
-            }] : []),
-            {
-              type: "text",
-              text: callToAction,
-              style: "001",
-              duration: 10
-            }
-          ]
+          "z-index": 0
+        },
+        {
+          type: "text",
+          text: headline,
+          position: "custom",
+          x: "8%",
+          y: "12%",
+          width: "84%",
+          height: "22%",
+          duration: 10,
+          "z-index": 2,
+          settings: {
+            "font-family": "Arial",
+            "font-size": "64px",
+            "font-weight": "700",
+            color: "#ffffff",
+            "text-align": "center",
+            "vertical-align": "middle",
+            "text-shadow": "2px 2px 8px #000000"
+          }
+        },
+        ...(description ? [{
+          type: "text",
+          text: description,
+          position: "custom",
+          x: "10%",
+          y: "58%",
+          width: "80%",
+          height: "18%",
+          duration: 10,
+          "z-index": 2,
+          settings: {
+            "font-family": "Arial",
+            "font-size": "32px",
+            color: "#ffffff",
+            "text-align": "center",
+            "vertical-align": "middle",
+            "text-shadow": "2px 2px 6px #000000"
+          }
+        }] : []),
+        {
+          type: "text",
+          text: callToAction,
+          position: "custom",
+          x: "25%",
+          y: "82%",
+          width: "50%",
+          height: "10%",
+          duration: 10,
+          "z-index": 3,
+          settings: {
+            "font-family": "Arial",
+            "font-size": "36px",
+            "font-weight": "700",
+            color: "#ffffff",
+            "background-color": "#111111",
+            "text-align": "center",
+            "vertical-align": "middle"
+          }
         }
       ]
-    };
+    }
+  ]
+};
+
 
     const renderResponse = await fetch(
       "https://api.json2video.com/v2/movies",

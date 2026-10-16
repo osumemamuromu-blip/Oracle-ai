@@ -539,6 +539,54 @@ button:disabled{opacity:.55;cursor:not-allowed}
         <div class="work-card premium-card"><div class="eyebrow">Coming soon</div><h2>More room for bigger ideas.</h2><p>Malie 2 Premium is planned for a future release. This section is a preview only.</p></div>
       </section>
 
+<!-- Malie AI Advert Studio (Pro) -->
+<section class="view" id="view-advert">
+  <div class="section-head">
+    <h1>Advert Studio<span style="color:var(--accent)">.</span></h1>
+    <p>Turn a product image into a short promotional video for your business. Pro plan.</p>
+  </div>
+
+  <div class="work-card lock-card" id="advertLocked" hidden>
+    <h2 id="advertLockTitle">Pro feature</h2>
+    <p id="advertLockText">Malie AI Advert Studio is available on the Pro plan.</p>
+    <button class="primary" id="advertUpgrade" type="button">View plans</button>
+  </div>
+
+  <div id="advertTool" hidden>
+    <div class="work-card">
+      <h3>Create a product advert</h3>
+      <p class="sub">Upload a clear product photo, add your promotional message, and generate a 10-second video.</p>
+
+      <label class="field-label" for="advertImage">Product image (JPG or PNG)</label>
+      <input class="work-input" id="advertImage" type="file" accept="image/jpeg,image/png">
+      <div class="ref-preview" id="advertImagePreview" hidden>
+        <img id="advertImagePreviewImg" alt="Selected product image">
+      </div>
+
+      <label class="field-label" for="advertHeadline">Advert headline</label>
+      <input class="work-input" id="advertHeadline" maxlength="90" placeholder="e.g. Discover your new favourite">
+
+      <label class="field-label" for="advertDescription">Short description (optional)</label>
+      <textarea class="work-textarea short" id="advertDescription" maxlength="140" placeholder="What makes this product special?"></textarea>
+
+      <label class="field-label" for="advertCTA">Call to action</label>
+      <input class="work-input" id="advertCTA" maxlength="40" value="Shop Now" placeholder="e.g. Order Today">
+
+      <div class="button-row" style="margin-top:14px">
+        <button class="primary" id="advertGenerate" type="button">Generate Advert ↗</button>
+      </div>
+      <p class="status" id="advertStatus" aria-live="polite"></p>
+    </div>
+
+    <div class="work-card" id="advertResultCard" hidden>
+      <h3>Your advert video</h3>
+      <p class="sub" id="advertRenderStatus">Preparing your video…</p>
+      <video id="advertVideo" controls playsinline style="width:100%;max-height:480px;border-radius:12px" hidden></video>
+      <p><a id="advertVideoLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Open or download video</a></p>
+    </div>
+  </div>
+</section>
+
       <!-- Plans & Upgrade -->
       <section class="view" id="view-plans">
         <div class="section-head"><h1>Plans<span style="color:var(--accent)">.</span></h1><p>Pay by FirstBank transfer. Your plan is activated only after we verify your payment.</p></div>

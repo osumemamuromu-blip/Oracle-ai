@@ -1261,7 +1261,27 @@ if (request.method === "POST" && path === "/api/admin/check") {
     return respond({ ok: false, isAdmin: false, error: error.message }, error.status || 401);
   }
 }
-    
+   
+/* Advert Studio access check — does not start a render */
+if (request.method === "POST" && path === "/api/advert/access") {
+  try {
+    const userId = await authenticateFirebase(request, env);
+    const plan = await getActivePlan(env, userId);
+
+    if (plan !== "pro") {
+      return respond({
+        error: "Malie AI Advert Studio is available on the Pro plan only."
+      }, 403);
+    }
+
+    return respond({ ok: true, plan: "pro" });
+  } catch (e) {
+    return respond({
+      error: e.message || "Could not verify Advert Studio access."
+    }, e.status || 500);
+  }
+}
+ 
 /* ---------------- Malie AI Advert Studio (Pro only) ---------------- */
 if (
   request.method === "POST" &&

@@ -1251,7 +1251,77 @@ export default {
         );
       }
     }
+/* ---------------- Admin check (any signed-in user) ---------------- */
+if (request.method === "POST" && path === "/api/admin/check") {
+  try {
+    const uid = await authenticateFirebase(request, env);
+    const adminUid = env.MALIE_ADMIN_UID;
+    return respond({ ok: true, isAdmin: Boolean(adminUid) && uid === adminUid });
+  } catch (error) {
+    return respond({ ok: false, isAdmin: false, error: error.message }, error.status || 401);
+  }
+}
 
+/* ---------------- Engineering Drawing Studio (Pro only) ---------------- */
+if (request.method === "POST" && path === "/api/drawing") {
+  try {
+    const userId = await authenticateFirebase(request, env);
+    const plan = await getActivePlan(env, userId);
+
+    if (plan !== "pro") {
+      return respond(
+        { error: "The Engineering Drawing Studio is available on the Pro plan. Please upgrade to Pro to use it." },
+        403
+      );
+    }
+
+    let body;
+    try { body = await request.json(); }
+    catch { return respond({ error: "Please send valid JSON." }, 400); }
+
+    const raw = body.params || {};
+    const p = {
+      d: Number(raw.d),
+      D1: Number(raw.D1),
+      L1: Number(raw.L1),
+      D2: Number(raw.D2),
+      T: Number(raw.T)
+    };
+
+    for (const [key, value] of Object.entries(p)) {
+      if (!Number.isFinite(value) || value <= 0 || value > 1000) {
+        return respond({ error: `Dimension "${key}" must be a number greater than 0 and not more than 1000.` }, 400);
+      }
+    }
+    if (!(p.d < p.D1)) return respond({ error: "The bore diameter must be smaller than the body diameter." }, 400);
+    if (!(p.D1 < p.D2)) return respond({ error: "The flange diameter must be larger than the body diameter." }, 400);
+
+    const views = ["front", "top", "side", "iso", "section", "aux"];
+    const view = views.includes(body.view) ? body.view : "section";
+    const projection = body.projection === "first" ? "first" : "third";
+    const unit = raw.unit === "in" ? "in" : "mm";
+    const title = String(raw.title || "Stepped flanged bush").replace(/[<>&"']/g, "").slice(0, 60);
+
+    if (view === "aux") {
+      return respond({
+        ok: true,
+        supported: false,
+        message: "An auxiliary view is only needed for inclined surfaces. This part is a body of revolution with no inclined faces, so no auxiliary view is generated."
+      });
+    }
+
+    return respond({
+      ok: true,
+      supported: true,
+      view,
+      projection,
+      params: { ...p, unit, title },
+      totalLength: p.L1 + p.T
+    });
+  } catch (error) {
+    return respond({ error: error.message || "Could not generate the drawing." }, getErrorStatus(error));
+  }
+}
     /* ---------------- Fallbacks ---------------- */
     if (path.startsWith("/api/")) {
       return respond({ error: "API endpoint not found." }, 404);

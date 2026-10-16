@@ -1250,7 +1250,8 @@ function switchView(name) {
   composerWrap.classList.toggle("hidden", name !== "explore");
   closeSidebar();
   window.scrollTo({ top: 0, behavior: "smooth" });
-  if (name === "drawing") drawingEnter();
+ if (name === "drawing") drawingEnter();
+if (name === "advert") advertEnter();
 }
 document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
 document.querySelectorAll("[data-open-view]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.openView)));

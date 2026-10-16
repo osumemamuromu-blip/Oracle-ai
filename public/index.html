@@ -2816,41 +2816,80 @@ $("drawRefFile").onchange = e => {
   $("drawRefPreview").hidden = false;
 };
 
+
 /* Advert Studio product image upload */
 let advertImageData = null;
 
-$("advertImage").onchange = e => {
-  const file = e.target.files?.[0];
-  advertImageData = null;
+const advertFileInput = $("advertImage");
+const advertPreview = $("advertImagePreview");
+const advertPreviewImg = $("advertImagePreviewImg");
 
-  if (!file) {
-    $("advertImagePreview").hidden = true;
+advertFileInput.addEventListener("change", async () => {
+  const file = advertFileInput.files?.[0];
+
+  advertImageData = null;
+  advertPreview.hidden = true;
+  advertPreviewImg.removeAttribute("src");
+  setStatus("advertStatus", "");
+
+  if (!file) return;
+
+  if (!/^image\/(png|jpeg)$/i.test(file.type) ||
+      file.size > 4 * 1024 * 1024) {
+    advertFileInput.value = "";
+    setStatus(
+      "advertStatus",
+      "Choose a JPG or PNG image under 4 MB.",
+      true
+    );
     return;
   }
 
-  if (!/^image\/(png|jpe?g)$/i.test(file.type) ||
-      file.size > 4 * 1024 * 1024) {
-    e.target.value = "";
-    $("advertImagePreview").hidden = true;
-    return toast("Choose a JPG or PNG image under 4 MB.", true);
-  }
+  setStatus("advertStatus", "Loading image preview…");
 
-  const reader = new FileReader();
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
 
-  reader.onload = () => {
-    advertImageData = reader.result;
-    $("advertImagePreviewImg").src = reader.result;
-    $("advertImagePreview").hidden = false;
-    setStatus("advertStatus", "Product image ready.");
-  };
+      reader.onload = () => {
+        if (typeof reader.result !== "string") {
+          reject(new Error("The image could not be read."));
+          return;
+        }
+        resolve(reader.result);
+      };
 
-  reader.onerror = () => {
+      reader.onerror = () => {
+        reject(new Error("The image could not be read."));
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+    await new Promise((resolve, reject) => {
+      advertPreviewImg.onload = resolve;
+      advertPreviewImg.onerror = () => {
+        reject(new Error("The image preview could not be displayed."));
+      };
+      advertPreviewImg.src = dataUrl;
+    });
+
+    advertImageData = dataUrl;
+    advertPreview.hidden = false;
+
+    setStatus("advertStatus", "Image preview ready. Check it before generating.");
+  } catch (error) {
     advertImageData = null;
-    setStatus("advertStatus", "Could not read the image. Please try again.", true);
-  };
+    advertPreview.hidden = true;
+    advertFileInput.value = "";
 
-  reader.readAsDataURL(file);
-};
+    setStatus(
+      "advertStatus",
+      error.message || "Could not load the image. Please try again.",
+      true
+    );
+  }
+});
 
 let advertBusy = false;
 

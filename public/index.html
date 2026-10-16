@@ -2844,6 +2844,88 @@ $("advertImage").onchange = e => {
   reader.readAsDataURL(file);
 };
 
+let advertBusy = false;
+
+$("advertGenerate").onclick = async () => {
+  if (advertBusy) return;
+
+  if (!currentUid) {
+    return toast("Please sign in first.", true);
+  }
+
+  if (!advertImageData) {
+    return toast("Please upload a product image first.", true);
+  }
+
+  const headline = $("advertHeadline").value.trim();
+  const description = $("advertDescription").value.trim();
+  const callToAction = $("advertCTA").value.trim() || "Shop Now";
+
+  if (!headline) {
+    return toast("Please enter an advert headline.", true);
+  }
+
+  advertBusy = true;
+  setBusy($("advertGenerate"), true, "Submitting…");
+  $("advertResultCard").hidden = false;
+  $("advertVideo").hidden = true;
+  $("advertVideoLink").hidden = true;
+  $("advertRenderStatus").textContent = "Uploading your image and starting the render…";
+  setStatus("advertStatus", "");
+
+  try {
+    const started = await api("/api/advert/start", {
+      imageData: advertImageData,
+      headline,
+      description,
+      callToAction
+    });
+
+    const projectId = started.projectId;
+    if (!projectId) throw new Error("The server did not return a video project ID.");
+
+    $("advertRenderStatus").textContent =
+      "Your video is rendering. This may take a few minutes.";
+
+    let finished = false;
+
+    for (let attempt = 0; attempt < 36; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      const result = await api("/api/advert/status", { projectId });
+
+      if (result.status === "done" && result.videoUrl) {
+        $("advertVideo").src = result.videoUrl;
+        $("advertVideo").hidden = false;
+        $("advertVideoLink").href = result.videoUrl;
+        $("advertVideoLink").hidden = false;
+        $("advertRenderStatus").textContent = "Your advert video is ready!";
+        finished = true;
+        break;
+      }
+
+      if (["error", "timeout"].includes(result.status)) {
+        throw new Error(result.message || "The video render failed.");
+      }
+
+      $("advertRenderStatus").textContent =
+        `Video rendering… check ${attempt + 1} of 36`;
+    }
+
+    if (!finished) {
+      $("advertRenderStatus").textContent =
+        "Rendering is taking longer than expected. Your project may still be processing. Please try again shortly.";
+    }
+  } catch (e) {
+    $("advertRenderStatus").textContent =
+      e.message || "Could not generate the advert.";
+    setStatus("advertStatus", e.message || "Generation failed.", true);
+  } finally {
+    advertBusy = false;
+    setBusy($("advertGenerate"), false);
+  }
+};
+
 $("drawAskBtn").onclick = async () => {
   const q = $("drawAsk").value.trim();
   if (!q) return toast("Type a question first.", true);

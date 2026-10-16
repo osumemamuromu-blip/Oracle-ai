@@ -155,6 +155,10 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .upload-zone strong{font-size:13px;display:block;margin-bottom:7px}
 .upload-zone p{font-size:11px;color:var(--muted);margin:0 0 13px}
 .upload-zone input{max-width:100%;font-size:11px;color:var(--muted)}
+.paste-box{margin-top:6px}
+.paste-box summary{cursor:pointer;color:var(--accent);font-size:12px;margin-bottom:10px}
+.file-info{font-size:12px;color:var(--good);margin:12px 0 4px;min-height:0;overflow-wrap:anywhere}
+.file-info:empty{display:none}
 
 /* Quiz */
 #quizOutput:empty{display:none}
@@ -203,6 +207,21 @@ button:disabled{opacity:.55;cursor:not-allowed}
 /* Premium */
 .premium-card h2{font-size:24px;letter-spacing:-.8px;margin:0 0 12px}
 .premium-card p{color:var(--muted);font-size:13px;line-height:1.8;max-width:560px}
+
+/* Engineering Drawing Studio */
+.draw-sheet{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#0b0c0d;min-height:120px;display:grid;place-items:center}
+.draw-sheet svg{display:block;width:100%;height:auto}
+.draw-sheet .draw-msg{padding:26px 18px;color:var(--muted);font-size:13px;line-height:1.7;text-align:center;max-width:520px}
+.draw-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}
+.draw-tab{border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:12px;padding:12px 6px;font-size:12px;font-weight:650;text-align:center}
+.draw-tab:hover{border-color:var(--accent)}
+.draw-tab.active{background:color-mix(in srgb,var(--accent) 16%,var(--panel2));border-color:var(--accent);color:var(--text)}
+.draw-note{font-size:11px;color:var(--muted);line-height:1.7;margin:10px 0 0}
+.ref-preview{display:flex;align-items:center;gap:12px;margin-top:12px}
+.ref-preview img{width:64px;height:64px;border-radius:10px;object-fit:cover;border:1px solid var(--border)}
+.lock-card{text-align:center;padding:30px 20px}
+.lock-card h2{margin:0 0 10px;font-size:22px;letter-spacing:-.6px}
+.lock-card p{color:var(--muted);font-size:13px;line-height:1.8;max-width:460px;margin:0 auto 18px}
 
 /* Account menu (liquid full-screen) */
 .blob,.menu{position:fixed;inset:0;--ox:calc(100% - 36px);--oy:34px;clip-path:circle(0px at var(--ox) var(--oy));visibility:hidden}
@@ -304,6 +323,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
         <button class="side-link active" data-view="explore"><span class="ico">⌂</span>Explore</button>
         <button class="side-link" data-view="writing"><span class="ico">✎</span>Writing Lab</button>
         <button class="side-link" data-view="quiz"><span class="ico">☷</span>Quiz Mode</button>
+        <button class="side-link" data-view="drawing"><span class="ico">◰</span>Engineering Drawing<span class="coming">Pro</span></button>
         <button class="side-link" data-view="plans"><span class="ico">✦</span>Plans &amp; Upgrade</button>
       </nav>
     </div>
@@ -385,9 +405,13 @@ button:disabled{opacity:.55;cursor:not-allowed}
       <section class="view" id="view-quiz">
         <div class="section-head"><h1>Quiz Mode<span style="color:var(--accent)">.</span></h1><p>Turn your study material into a quiz. Works with typed PDFs, scanned PDFs and photos of your notes.</p></div>
         <div class="work-card">
-          <div class="upload-zone"><strong>Choose a PDF or a photo</strong><p>Typed or scanned PDFs (even snapped documents saved as PDF), or pictures of your notes. Scanned pages are read with OCR in your browser.</p><input id="studyFile" type="file" accept=".pdf,application/pdf,image/*,.txt,.md"></div>
-          <div class="field-group" style="margin-top:17px"><label class="field-label" for="studyText">Study material</label><textarea class="work-textarea" id="studyText" placeholder="The text from your file appears here. You can also paste notes directly..."></textarea></div>
-          <div class="field-row">
+          <div class="upload-zone"><strong>Choose a PDF or a photo</strong><p>Typed or scanned PDFs (even snapped documents saved as PDF), or pictures of your notes. Scanned pages are read with OCR in your browser.</p><input id="studyFile" type="file"></div>
+          <p class="file-info" id="fileInfo"></p>
+          <details class="paste-box" style="margin-top:14px">
+            <summary>Or paste notes instead</summary>
+            <textarea class="work-textarea" id="studyText" placeholder="Paste your notes here..."></textarea>
+          </details>
+          <div class="field-row" style="margin-top:17px">
             <div><label class="field-label" for="questionCount">Number of questions</label>
               <select class="work-select" id="questionCount">
                 <option value="5">5 questions</option>
@@ -441,6 +465,73 @@ button:disabled{opacity:.55;cursor:not-allowed}
         </div>
       </section>
 
+      <!-- Engineering Drawing Studio (Pro) -->
+      <section class="view" id="view-drawing">
+        <div class="section-head"><h1>Engineering Drawing<span style="color:var(--accent)">.</span></h1><p>Generate dimensioned orthographic, sectional and isometric views of a stepped flanged bush. Pro plan.</p></div>
+
+        <div class="work-card lock-card" id="drawLocked" hidden>
+          <h2 id="drawLockTitle">Pro feature</h2>
+          <p id="drawLockText">The Engineering Drawing Studio is available on the Pro plan.</p>
+          <button class="primary" id="drawUpgrade">View plans</button>
+        </div>
+
+        <div id="drawTool" hidden>
+          <div class="work-card">
+            <h3>Part dimensions</h3>
+            <p class="sub">Enter the dimensions you know. Malie never invents missing dimensions.</p>
+            <div class="field-row">
+              <div><label class="field-label" for="dpTitle">Drawing title</label><input class="work-input" id="dpTitle" maxlength="60" value="Stepped flanged bush"></div>
+              <div><label class="field-label" for="dpUnit">Units</label>
+                <select class="work-select" id="dpUnit"><option value="mm">Millimetres (mm)</option><option value="in">Inches (in)</option></select></div>
+            </div>
+            <div class="field-row">
+              <div><label class="field-label" for="dpD">Bore diameter Ø</label><input class="work-input" id="dpD" type="number" inputmode="decimal" min="0" step="any" value="10"></div>
+              <div><label class="field-label" for="dpD1">Body diameter Ø</label><input class="work-input" id="dpD1" type="number" inputmode="decimal" min="0" step="any" value="30"></div>
+            </div>
+            <div class="field-row">
+              <div><label class="field-label" for="dpL1">Body length</label><input class="work-input" id="dpL1" type="number" inputmode="decimal" min="0" step="any" value="40"></div>
+              <div><label class="field-label" for="dpD2">Flange diameter Ø</label><input class="work-input" id="dpD2" type="number" inputmode="decimal" min="0" step="any" value="50"></div>
+            </div>
+            <div class="field-row">
+              <div><label class="field-label" for="dpT">Flange thickness</label><input class="work-input" id="dpT" type="number" inputmode="decimal" min="0" step="any" value="20"></div>
+              <div><label class="field-label">Projection method</label>
+                <div class="seg" id="projToggle" style="margin-bottom:0"><button type="button" data-proj="first">First-angle</button><button type="button" class="active" data-proj="third">Third-angle</button></div></div>
+            </div>
+            <div class="upload-zone" style="margin-bottom:14px"><strong>Reference drawing (optional)</strong><p>Upload a photo or screenshot to keep beside your drawing. It is shown for comparison only; read the dimensions from it and type them above.</p><input id="drawRefFile" type="file" accept="image/png,image/jpeg,image/webp"></div>
+            <div class="ref-preview" id="drawRefPreview" hidden><img id="drawRefImg" alt="Reference drawing"><span class="sub" id="drawRefName" style="margin:0"></span></div>
+            <div class="button-row" style="margin-top:14px"><button class="primary" id="drawGenerate">Generate drawing ↗</button></div>
+            <p class="status" id="drawStatus"></p>
+          </div>
+
+          <div class="work-card">
+            <div class="draw-sheet" id="drawOut"><div class="draw-msg">Enter dimensions and press “Generate drawing”.</div></div>
+            <p class="status" id="drawViewStatus"></p>
+            <div class="side-label" style="padding:0;margin-top:6px">Select drawing view</div>
+            <div class="draw-tabs" id="drawTabs">
+              <button type="button" class="draw-tab" data-dview="front">Front view</button>
+              <button type="button" class="draw-tab" data-dview="top">Top view</button>
+              <button type="button" class="draw-tab" data-dview="side">Side view</button>
+              <button type="button" class="draw-tab" data-dview="iso">Isometric</button>
+              <button type="button" class="draw-tab active" data-dview="section">Sectional</button>
+              <button type="button" class="draw-tab" data-dview="aux">Auxiliary</button>
+            </div>
+            <div class="button-row">
+              <button class="secondary" id="drawPng">Download PNG</button>
+              <button class="secondary" id="drawPdf">Export PDF</button>
+            </div>
+            <p class="draw-note">Educational reference only. This is not a verified, manufacturing-ready drawing and carries no engineering certification. Views are generated from the dimensions you enter, drawn to a fitted scale (not 1:1).</p>
+          </div>
+
+          <div class="work-card">
+            <h3>Ask Malie about this drawing</h3>
+            <p class="sub">Explain projection, line types, sections, or check your understanding. This uses one of your daily requests.</p>
+            <textarea class="work-textarea short" id="drawAsk" placeholder="e.g. Why is the flange hatched in the section view?"></textarea>
+            <div class="button-row" style="margin-top:12px"><button class="primary" id="drawAskBtn">Ask Malie ↗</button></div>
+            <div class="result-box" id="drawAnswer"><span class="placeholder">Malie’s explanation will appear here.</span></div>
+          </div>
+        </div>
+      </section>
+
       <!-- Premium (legacy preview) -->
       <section class="view" id="view-premium">
         <div class="section-head"><h1>Malie 2 Premium<span style="color:var(--accent)">.</span></h1><p>A more powerful Malie experience is on the way.</p></div>
@@ -455,7 +546,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
         <div class="plan-grid">
           <div class="plan"><h3>Free</h3><div class="price">₦0</div><ul><li>8 AI requests per day</li><li>Chat, Writing Lab, Quiz</li></ul></div>
           <div class="plan featured"><h3>Premium</h3><div class="price" data-price="premium"></div><ul><li>100 requests per day</li><li>Excel File Builder: photo or table to .xlsx</li></ul><button class="primary" data-choose="premium">Choose Premium</button></div>
-          <div class="plan"><h3>Pro</h3><div class="price" data-price="pro"></div><ul><li>300 requests per day</li><li>Everything in Premium</li></ul><button class="primary" data-choose="pro">Choose Pro</button></div>
+          <div class="plan"><h3>Pro</h3><div class="price" data-price="pro"></div><ul><li>300 requests per day</li><li>Everything in Premium</li><li>Engineering Drawing Studio</li></ul><button class="primary" data-choose="pro">Choose Pro</button></div>
         </div>
         <div class="work-card" id="payPanel" hidden></div>
 
@@ -510,7 +601,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
     </div>
     <div class="premium-promo menu-item" style="--i:2">
       <h3>✦ Premium &amp; Pro</h3>
-      <p>Longer study material, more requests and the Excel File Builder.</p>
+      <p>Longer study material, more requests, the Excel File Builder and the Engineering Drawing Studio.</p>
       <button class="btn" id="premiumBtn">View plans</button>
     </div>
     <div class="menu-item" style="--i:3"><h4>Recent chats</h4><div id="recentChats"></div></div>
@@ -533,6 +624,7 @@ let excelMode = false;
 
 const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
 const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const PDFJS_CMAPS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/";
 const TESS_URL = "https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.5/tesseract.min.js";
 const MAX_PDF_CHARS = 60000;     // max text kept from a file
 const QUIZ_PROMPT_CHARS = 40000; // max text sent when generating a quiz
@@ -808,9 +900,11 @@ async function api(path, body) {
   }
 
   if (!res.ok || data.error) {
-    throw new Error(
+    const err = new Error(
       data.error || data.message || `Request failed (${res.status}).`
     );
+    err.status = res.status;
+    throw err;
   }
 
   return data;
@@ -924,23 +1018,66 @@ async function getOcrWorker() {
   return Tesseract.createWorker("eng");
 }
 
+// Some phone scanners put junk bytes before the "%PDF-" header. Strip them so the file still opens.
+function cleanPdfBytes(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const limit = Math.min(bytes.length - 5, 2048);
+  for (let i = 0; i <= limit; i++) {
+    if (bytes[i] === 0x25 && bytes[i + 1] === 0x50 && bytes[i + 2] === 0x44 && bytes[i + 3] === 0x46 && bytes[i + 4] === 0x2d) {
+      return i === 0 ? bytes : bytes.slice(i);
+    }
+  }
+  return bytes;
+}
+
 async function openPdf(buffer) {
-  const task = pdfjsLib.getDocument({
-    data: new Uint8Array(buffer.slice(0)),
-    isEvalSupported: false
-  });
-  task.onPassword = (update, reason) => {
-    const pw = prompt(reason === 2
-      ? "Wrong password. Try again:"
-      : "This PDF is password-protected. Enter the password:");
-    if (pw === null) { task.destroy(); } else { update(pw); }
+  const bytes = cleanPdfBytes(buffer);
+
+  const attempt = () => {
+    const task = pdfjsLib.getDocument({
+      data: bytes.slice(0),
+      isEvalSupported: false,
+      disableFontFace: true,
+      useSystemFonts: true,
+      cMapUrl: PDFJS_CMAPS,
+      cMapPacked: true
+    });
+    task.onPassword = (update, reason) => {
+      const pw = prompt(reason === 2
+        ? "Wrong password. Try again:"
+        : "This PDF is password-protected. Enter the password:");
+      if (pw === null) { task.destroy(); } else { update(pw); }
+    };
+    return task.promise;
   };
+
   try {
-    return await task.promise;
+    return await attempt();
   } catch (err) {
     if (err && err.name === "PasswordException") throw new Error("This PDF is password-protected and could not be unlocked.");
-    throw new Error("Could not open this PDF. The file may be damaged. Try saving or re-exporting it and upload again.");
+    // Second try: point the reader straight at the hosted worker (helps on stricter phones)
+    try {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+      return await attempt();
+    } catch (err2) {
+      if (err2 && err2.name === "PasswordException") throw new Error("This PDF is password-protected and could not be unlocked.");
+      throw new Error("Could not open this PDF. The file may be damaged. Try saving or re-exporting it and upload again.");
+    }
   }
+}
+
+async function renderPageToCanvas(page, targetSide) {
+  const base = page.getViewport({ scale: 1 });
+  const scale = Math.max(1, Math.min(2.5, targetSide / Math.max(base.width, base.height)));
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(viewport.width);
+  canvas.height = Math.round(viewport.height);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  return canvas;
 }
 
 async function extractPdfText(file, onStatus) {
@@ -961,27 +1098,25 @@ async function extractPdfText(file, onStatus) {
 
       // Scanned / snapped pages have little or no real text, so read them with OCR
       if (pageText.length < 40 && ocrPages < OCR_MAX_PAGES) {
+        let canvas = null;
         try {
           onStatus(`Scanning page ${n} of ${pdf.numPages} (OCR, this takes a moment)…`);
           worker = worker || await getOcrWorker();
-          const base = page.getViewport({ scale: 1 });
-          const scale = Math.max(1, Math.min(2.5, 2400 / Math.max(base.width, base.height)));
-          const viewport = page.getViewport({ scale });
-          const canvas = document.createElement("canvas");
-          canvas.width = Math.round(viewport.width);
-          canvas.height = Math.round(viewport.height);
-          const ctx = canvas.getContext("2d");
-          ctx.fillStyle = "#fff";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          await page.render({ canvasContext: ctx, viewport }).promise;
+          try {
+            canvas = await renderPageToCanvas(page, 2400);
+          } catch {
+            // Phones with little memory: retry at a smaller size
+            canvas = await renderPageToCanvas(page, 1400);
+          }
           const { data } = await worker.recognize(canvas);
           const ocrText = (data.text || "").trim();
           if (ocrText.length > pageText.length) pageText = ocrText;
           ocrPages++;
-          canvas.width = canvas.height = 0;
         } catch (e) {
           ocrError = e;
           skipped++;
+        } finally {
+          if (canvas) canvas.width = canvas.height = 0;
         }
       }
       try { page.cleanup(); } catch {}
@@ -989,6 +1124,7 @@ async function extractPdfText(file, onStatus) {
     }
   } finally {
     if (worker) { try { await worker.terminate(); } catch {} }
+    try { await pdf.destroy(); } catch {}
   }
 
   text = text.slice(0, MAX_PDF_CHARS).trim();
@@ -1025,8 +1161,12 @@ const TEXT_EXT = /\.(txt|md|csv|tsv|json|log|xml|html?|css|js|py|java|c|cpp)$/i;
 async function looksLikePdf(file) {
   if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) return true;
   try {
-    const head = new Uint8Array(await file.slice(0, 5).arrayBuffer());
-    return String.fromCharCode(...head) === "%PDF-";
+    // Look for the PDF header near the start (some scanners add bytes before it)
+    const head = new Uint8Array(await file.slice(0, 1032).arrayBuffer());
+    for (let i = 0; i < head.length - 4; i++) {
+      if (head[i] === 0x25 && head[i + 1] === 0x50 && head[i + 2] === 0x44 && head[i + 3] === 0x46 && head[i + 4] === 0x2d) return true;
+    }
+    return false;
   } catch { return false; }
 }
 async function extractAny(file, onStatus = () => {}) {
@@ -1045,7 +1185,7 @@ async function extractAny(file, onStatus = () => {}) {
 }
 
 /* ───────── Navigation ───────── */
-const titles = { explore: "Explore", writing: "Writing Lab", quiz: "Quiz Mode", premium: "Malie 2 Premium", plans: "Plans" };
+const titles = { explore: "Explore", writing: "Writing Lab", quiz: "Quiz Mode", drawing: "Engineering Drawing", premium: "Malie 2 Premium", plans: "Plans" };
 const composerWrap = $("composerWrap");
 
 function closeSidebar() {
@@ -1061,6 +1201,7 @@ function switchView(name) {
   composerWrap.classList.toggle("hidden", name !== "explore");
   closeSidebar();
   window.scrollTo({ top: 0, behavior: "smooth" });
+  if (name === "drawing") drawingEnter();
 }
 document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
 document.querySelectorAll("[data-open-view]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.openView)));
@@ -1712,6 +1853,7 @@ $("check").onclick = async () => {
 $("studyFile").onchange = async e => {
   const file = e.target.files?.[0];
   if (!file) return;
+  $("fileInfo").textContent = "";
   setStatus("quizStatus", "Opening file…");
   try {
     const r = await extractAny(file, m => setStatus("quizStatus", m));
@@ -1720,12 +1862,15 @@ $("studyFile").onchange = async e => {
         ? "No readable text was found in that photo. Try a clearer, well-lit picture."
         : "No readable text was found in that file, even after scanning it. Try a clearer copy.");
     }
+    // The text is kept in the (collapsed) notes box so it does not take up space on screen
     $("studyText").value = r.text;
     const extra = r.ocrPages ? ` ${r.ocrPages} scanned page(s) were read with OCR.` : "";
     const pages = r.pages ? ` ${r.pages} page(s).` : "";
     const skipped = r.skipped ? ` ${r.skipped} page(s) could not be read.` : "";
-    setStatus("quizStatus", `Loaded "${file.name}".${pages}${extra}${skipped} Check the text, then generate your quiz.`);
+    $("fileInfo").textContent = `✓ "${file.name}" is ready · ${r.text.length.toLocaleString()} characters read.${pages}${extra}${skipped}`;
+    setStatus("quizStatus", "File loaded. Choose your options and generate your quiz.");
   } catch (err) {
+    $("fileInfo").textContent = "";
     setStatus("quizStatus", err.message, true);
   }
 };
@@ -1780,6 +1925,7 @@ function clearWorkspace() {
   $("quizOutput").innerHTML = "";
   $("studyText").value = "";
   $("studyFile").value = "";
+  $("fileInfo").textContent = "";
   setStatus("quizStatus", "");
   $("quizHistory").innerHTML = '<p class="placeholder">Sign in to view your saved tests.</p>';
 
@@ -1792,6 +1938,7 @@ function clearWorkspace() {
 
   setAdminVisible(false);
   resetPlans();
+  resetDrawing();
 }
 
 async function loadHistory() {
@@ -1865,6 +2012,8 @@ try {
         switchView("explore");
       }
       showAvatar(user);
+      // Always start hidden, then ask the server who this account is
+      setAdminVisible(false);
       detectAdmin(user.uid);
       await loadHistory();
     } else {
@@ -2017,7 +2166,7 @@ async function submitReference() {
 let isAdmin = false;
 
 function setAdminVisible(on) {
-  isAdmin = !!on;
+  isAdmin = on === true;
   const btn = $("openAdminPayments"), panel = $("adminPaymentsPanel");
   if (btn) btn.hidden = !isAdmin;
   if (panel && !isAdmin) {
@@ -2028,11 +2177,13 @@ function setAdminVisible(on) {
 }
 
 // Asks the server whether this signed-in account is the admin.
-// Non-admin accounts get refused by the server, so the button stays hidden for them.
+// The button is shown ONLY when the server replies isAdmin === true.
+// Any error, refusal or missing answer keeps it hidden.
 async function detectAdmin(uid) {
+  setAdminVisible(false);
   try {
-    await api("/api/admin/pending-payments", {});
-    if (currentUid === uid) setAdminVisible(true);
+    const data = await api("/api/admin/check", {});
+    if (currentUid === uid) setAdminVisible(data && data.isAdmin === true);
   } catch {
     if (currentUid === uid) setAdminVisible(false);
   }
@@ -2129,6 +2280,453 @@ document.querySelectorAll("[data-choose]").forEach(b => b.onclick = () => {
 document.querySelectorAll('[data-view="plans"],[data-open-view="plans"]').forEach(b => b.addEventListener("click", loadSubscription));
 $("upgradeBtn").onclick = openPlans;
 paintPrices();
+
+/* ───────── Engineering Drawing Studio (Pro) ───────── */
+const DRAW_W = 900, DRAW_H = 560;
+const DRAW_THEMES = {
+  // On-screen sheet: true-black paper with Malie's green linework
+  screen: { paper: "#0b0c0d", line: "#d6f36a", dim: "#b9d85a", text: "#f5f5f2" },
+  // Print/export sheet: white paper with the same green, darkened so it stays readable
+  print:  { paper: "#ffffff", line: "#3f7d12", dim: "#4f8a1a", text: "#14210a" }
+};
+let drawView = "section";
+let drawProj = "third";
+let drawParams = null;
+let drawAccess = null;      // null = unknown, true/false after the server answers
+let drawBusy = false;
+let drawRefUrl = null;
+
+const fx = n => String(Math.round(n * 100) / 100);
+
+function drawStyle(t) {
+  return `<style>
+.o{stroke:${t.line};stroke-width:2.2;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.hd{stroke:${t.line};stroke-width:1.4;stroke-dasharray:8 5;fill:none}
+.ct{stroke:${t.line};stroke-width:1;stroke-dasharray:22 4 3 4;fill:none;opacity:.85}
+.dm{stroke:${t.dim};stroke-width:1.1;fill:none}
+.ar{fill:${t.dim};stroke:none}
+.tx{fill:${t.text};font:italic 15px Georgia,serif}
+.lb{fill:${t.text};font:700 13px Arial,sans-serif;letter-spacing:1px}
+.nt{fill:${t.text};font:11px Arial,sans-serif;opacity:.8}
+</style>`;
+}
+
+function dArrow(x, y, dir) {
+  const a = 10, b = 3;
+  const pts = {
+    l: [[x, y], [x + a, y - b], [x + a, y + b]],
+    r: [[x, y], [x - a, y - b], [x - a, y + b]],
+    u: [[x, y], [x - b, y + a], [x + b, y + a]],
+    d: [[x, y], [x - b, y - a], [x + b, y - a]]
+  }[dir];
+  return `<polygon class="ar" points="${pts.map(p => p.map(fx).join(",")).join(" ")}"/>`;
+}
+// Horizontal dimension between x1 and x2, drawn at height y. e1/e2 = where each extension line starts.
+function dimH(x1, x2, y, label, e1, e2) {
+  const sg = y > e1 ? 1 : -1;
+  return `<line class="dm" x1="${fx(x1)}" y1="${fx(e1 + sg * 4)}" x2="${fx(x1)}" y2="${fx(y + sg * 6)}"/>` +
+    `<line class="dm" x1="${fx(x2)}" y1="${fx(e2 + sg * 4)}" x2="${fx(x2)}" y2="${fx(y + sg * 6)}"/>` +
+    `<line class="dm" x1="${fx(x1)}" y1="${fx(y)}" x2="${fx(x2)}" y2="${fx(y)}"/>` +
+    dArrow(x1, y, "l") + dArrow(x2, y, "r") +
+    `<text class="tx" x="${fx((x1 + x2) / 2)}" y="${fx(y - 5)}" text-anchor="middle">${esc(label)}</text>`;
+}
+// Vertical dimension between y1 and y2 (y1 above y2), drawn at x. e1/e2 = x where each extension line starts.
+function dimV(y1, y2, x, label, e1, e2) {
+  const sg = x > e1 ? 1 : -1;
+  return `<line class="dm" x1="${fx(e1 + sg * 4)}" y1="${fx(y1)}" x2="${fx(x + sg * 6)}" y2="${fx(y1)}"/>` +
+    `<line class="dm" x1="${fx(e2 + sg * 4)}" y1="${fx(y2)}" x2="${fx(x + sg * 6)}" y2="${fx(y2)}"/>` +
+    `<line class="dm" x1="${fx(x)}" y1="${fx(y1)}" x2="${fx(x)}" y2="${fx(y2)}"/>` +
+    dArrow(x, y1, "u") + dArrow(x, y2, "d") +
+    `<text class="tx" transform="translate(${fx(x - 6)},${fx((y1 + y2) / 2)}) rotate(-90)" text-anchor="middle">${esc(label)}</text>`;
+}
+function dText(x, y, txt, cls = "lb", anchor = "middle") {
+  return `<text class="${cls}" x="${fx(x)}" y="${fx(y)}" text-anchor="${anchor}">${esc(txt)}</text>`;
+}
+
+// Side profile of the part with its axis horizontal. mode: "section" | "front"
+function drawProfile(p, ox, oy, s, mode) {
+  const r1 = p.D1 / 2 * s, r2 = p.D2 / 2 * s, rd = p.d / 2 * s;
+  const xs = ox + p.L1 * s, xe = ox + (p.L1 + p.T) * s;
+  let o = "";
+  if (mode === "section") {
+    o += `<path class="o" fill="url(#hz)" d="M${fx(ox)} ${fx(oy - r1)}H${fx(xs)}V${fx(oy - r2)}H${fx(xe)}V${fx(oy - rd)}H${fx(ox)}Z"/>`;
+    o += `<path class="o" fill="url(#hz)" d="M${fx(ox)} ${fx(oy + r1)}H${fx(xs)}V${fx(oy + r2)}H${fx(xe)}V${fx(oy + rd)}H${fx(ox)}Z"/>`;
+  } else {
+    o += `<path class="o" d="M${fx(ox)} ${fx(oy - r1)}H${fx(xs)}V${fx(oy - r2)}H${fx(xe)}V${fx(oy + r2)}H${fx(xs)}V${fx(oy + r1)}H${fx(ox)}Z"/>`;
+    o += `<line class="hd" x1="${fx(ox)}" y1="${fx(oy - rd)}" x2="${fx(xe)}" y2="${fx(oy - rd)}"/>`;
+    o += `<line class="hd" x1="${fx(ox)}" y1="${fx(oy + rd)}" x2="${fx(xe)}" y2="${fx(oy + rd)}"/>`;
+  }
+  o += `<line class="ct" x1="${fx(ox - 14)}" y1="${fx(oy)}" x2="${fx(xe + 14)}" y2="${fx(oy)}"/>`;
+  return o;
+}
+
+// Circular end view. fromFlange=true looks at the flange face (the body circle is hidden behind it).
+function drawEndView(p, cx, cy, s, fromFlange) {
+  const r1 = p.D1 / 2 * s, r2 = p.D2 / 2 * s, rd = p.d / 2 * s;
+  let o = `<circle class="o" cx="${fx(cx)}" cy="${fx(cy)}" r="${fx(r2)}"/>`;
+  o += fromFlange
+    ? `<circle class="hd" cx="${fx(cx)}" cy="${fx(cy)}" r="${fx(r1)}"/>`
+    : `<circle class="o" cx="${fx(cx)}" cy="${fx(cy)}" r="${fx(r1)}"/>`;
+  o += `<circle class="o" cx="${fx(cx)}" cy="${fx(cy)}" r="${fx(rd)}"/>`;
+  o += `<line class="ct" x1="${fx(cx - r2 - 12)}" y1="${fx(cy)}" x2="${fx(cx + r2 + 12)}" y2="${fx(cy)}"/>`;
+  o += `<line class="ct" x1="${fx(cx)}" y1="${fx(cy - r2 - 12)}" x2="${fx(cx)}" y2="${fx(cy + r2 + 12)}"/>`;
+  return o;
+}
+
+// Isometric ellipse helpers (cylinder axis runs along the isometric x-direction)
+function isoPoint(P0, k, x) { return [P0[0] + 0.866025 * x * k, P0[1] + 0.5 * x * k]; }
+function isoEllipse(c, R, s, cls, fill) {
+  const a = R * s, b = a * 0.57735;
+  return `<ellipse class="${cls}" ${fill ? `fill="${fill}" ` : ""}cx="${fx(c[0])}" cy="${fx(c[1])}" rx="${fx(a)}" ry="${fx(b)}" transform="rotate(120 ${fx(c[0])} ${fx(c[1])})"/>`;
+}
+function isoCylinder(P0, k, s, x0, x1, R, t, withNearBore, boreR) {
+  const c0 = isoPoint(P0, k, x0), c1 = isoPoint(P0, k, x1);
+  const a = R * s, b = a * 0.57735;
+  const n = [-0.5, 0.866025];
+  const p0a = [c0[0] + n[0] * a, c0[1] + n[1] * a], p0b = [c0[0] - n[0] * a, c0[1] - n[1] * a];
+  const p1a = [c1[0] + n[0] * a, c1[1] + n[1] * a], p1b = [c1[0] - n[0] * a, c1[1] - n[1] * a];
+  let o = "";
+  // paper-coloured fill hides whatever lies behind this cylinder
+  o += `<polygon fill="${t.paper}" stroke="none" points="${[p0a, p1a, p1b, p0b].map(q => q.map(fx).join(",")).join(" ")}"/>`;
+  o += isoEllipse(c0, R, s, "", t.paper).replace('class=""', 'stroke="none"');
+  o += isoEllipse(c1, R, s, "", t.paper).replace('class=""', 'stroke="none"');
+  // far-end rim: only the half facing away from the viewer is visible
+  o += `<path class="o" d="M${fx(p0a[0])} ${fx(p0a[1])}A${fx(a)} ${fx(b)} 120 0 1 ${fx(p0b[0])} ${fx(p0b[1])}"/>`;
+  // silhouette lines
+  o += `<line class="o" x1="${fx(p0a[0])}" y1="${fx(p0a[1])}" x2="${fx(p1a[0])}" y2="${fx(p1a[1])}"/>`;
+  o += `<line class="o" x1="${fx(p0b[0])}" y1="${fx(p0b[1])}" x2="${fx(p1b[0])}" y2="${fx(p1b[1])}"/>`;
+  // near end face
+  if (withNearBore) {
+    o += isoEllipse(c1, R, s, "o");
+    o += isoEllipse(c1, boreR, s, "o");
+  }
+  return o;
+}
+
+function buildDrawing(view, p, proj, themeName) {
+  const t = DRAW_THEMES[themeName];
+  const L = p.L1 + p.T;
+  const third = proj === "third";
+  let body = "";
+  let caption = "";
+  let approx = false;
+
+  if (view === "front" || view === "section") {
+    const s = Math.min(680 / (L + p.D2), 400 / p.D2, 8);
+    const r1 = p.D1 / 2 * s, r2 = p.D2 / 2 * s, rd = p.d / 2 * s;
+    const ox = 95, oy = r2 + 78;
+    const xs = ox + p.L1 * s, xe = ox + L * s;
+    const ecx = xe + 90 + r2;
+
+    body += drawProfile(p, ox, oy, s, view === "section" ? "section" : "front");
+    body += dimH(xs, xe, oy - r2 - 30, fx(p.T), oy - r2, oy - r2);
+    body += dimH(ox, xs, oy + r2 + 30, fx(p.L1), oy + r1, oy + r1);
+    body += dimH(ox, xe, oy + r2 + 56, fx(L), oy + r1, oy + r2);
+    body += dimV(oy - rd, oy + rd, ox - 34, "Ø" + fx(p.d), ox, ox);
+    body += dimV(oy - r1, oy + r1, ox - 68, "Ø" + fx(p.D1), ox, ox);
+    body += dimV(oy - r2, oy + r2, xe + 30, "Ø" + fx(p.D2), xe, xe);
+
+    body += drawEndView(p, ecx, oy, s, third);
+    body += dimH(ecx - r2, ecx + r2, oy + r2 + 30, "Ø" + fx(p.D2), oy + r2, oy + r2);
+
+    if (view === "section") {
+      body += `<line class="o" x1="${fx(ecx - r2 - 30)}" y1="${fx(oy)}" x2="${fx(ecx - r2 - 12)}" y2="${fx(oy)}"/>`;
+      body += `<line class="o" x1="${fx(ecx + r2 + 12)}" y1="${fx(oy)}" x2="${fx(ecx + r2 + 30)}" y2="${fx(oy)}"/>`;
+      body += dText(ecx - r2 - 38, oy + 5, "A", "lb", "end") + dText(ecx + r2 + 38, oy + 5, "A", "lb", "start");
+    }
+    body += dText(ox + L * s / 2, oy + r2 + 96, view === "section" ? "SECTION A–A (FULL SECTION)" : "FRONT VIEW (HIDDEN LINES DASHED)");
+    body += dText(ecx, oy + r2 + 96, third ? "RIGHT VIEW (FROM FLANGE)" : "LEFT VIEW (FROM FREE END)");
+    caption = view === "section"
+      ? "Sectional view with hatching on the cut material, plus the end view."
+      : "Front view with hidden bore lines dashed, plus the end view.";
+  }
+
+  else if (view === "top") {
+    const s = Math.min(700 / L, 340 / (2 * p.D2), 8);
+    const r2 = p.D2 / 2 * s;
+    const ox = 110, xe = ox + L * s;
+    const yU = 70 + r2, yD = yU + 2 * r2 + 80;
+    const frontY = third ? yD : yU;
+    const topY = third ? yU : yD;
+
+    body += drawProfile(p, ox, topY, s, "front");
+    body += drawProfile(p, ox, frontY, s, "front");
+    body += dimH(ox, xe, yU - r2 - 30, fx(L), yU - r2, yU - r2);
+    body += dimV(yU - r2, yU + r2, xe + 30, "Ø" + fx(p.D2), xe, xe);
+    body += dText(ox + L * s / 2, topY + r2 + 22, "TOP VIEW");
+    body += dText(ox + L * s / 2, frontY + r2 + 22, "FRONT VIEW");
+    body += dText(DRAW_W - 40, 60, third ? "TOP ABOVE FRONT" : "TOP BELOW FRONT", "nt", "end");
+    caption = "This part is a body of revolution, so its top and front outlines are identical.";
+  }
+
+  else if (view === "side") {
+    const s = Math.min(380 / p.D2, 780 / (2 * p.D2 + 40), 8);
+    const r2 = p.D2 / 2 * s;
+    const total = 2 * p.D2 * s + 120;
+    const x0 = (DRAW_W - total) / 2;
+    const c1x = x0 + r2, c2x = x0 + 2 * r2 + 120 - r2 + r2 - r2 + r2; // placeholder simplified below
+    const leftCx = x0 + r2;
+    const rightCx = x0 + 2 * r2 + 120 + r2;
+    const cy = 70 + r2;
+    body += drawEndView(p, leftCx, cy, s, false);
+    body += drawEndView(p, rightCx, cy, s, true);
+    body += dimH(leftCx - r2, leftCx + r2, cy + r2 + 30, "Ø" + fx(p.D2), cy + r2, cy + r2);
+    body += dimH(rightCx - r2, rightCx + r2, cy + r2 + 30, "Ø" + fx(p.D2), cy + r2, cy + r2);
+    body += dText(leftCx, cy + r2 + 70, "LEFT VIEW (FROM FREE END)");
+    body += dText(rightCx, cy + r2 + 70, "RIGHT VIEW (FROM FLANGE)");
+    caption = "Both side views shown: from the free end (all circles visible) and from the flange (body circle hidden).";
+    void c1x; void c2x;
+  }
+
+  else if (view === "iso") {
+    approx = true;
+    const s = Math.min(700 / (L * 0.707 + p.D2), 400 / (L * 0.41 + p.D2), 8);
+    const k = 0.8165 * s;
+    const P0 = [450 - (L * 0.707 * s) / 2 - 20, 270 - (L * 0.408 * s) / 2];
+    body += isoCylinder(P0, k, s, 0, p.L1, p.D1 / 2, t, false, 0);
+    body += isoCylinder(P0, k, s, p.L1, L, p.D2 / 2, t, true, p.d / 2);
+    body += dText(450, DRAW_H - 70, "ISOMETRIC VIEW (PICTORIAL, NOT DIMENSIONED)");
+    caption = "Isometric pictorial of the same part. It shows shape only and is not dimensioned.";
+  }
+
+  const third_ = third ? "THIRD" : "FIRST";
+  const title = `${p.title} | Units: ${p.unit} | ${third_}-ANGLE PROJECTION | Fitted scale, not 1:1`;
+  const foot =
+    `<rect x="14" y="14" width="${DRAW_W - 28}" height="${DRAW_H - 28}" fill="none" stroke="${t.line}" stroke-width="1.4"/>` +
+    `<line x1="14" y1="${DRAW_H - 46}" x2="${DRAW_W - 14}" y2="${DRAW_H - 46}" stroke="${t.line}" stroke-width="1"/>` +
+    `<text class="nt" x="26" y="${DRAW_H - 28}">${esc(title)}</text>` +
+    `<text class="nt" x="${DRAW_W - 26}" y="${DRAW_H - 28}" text-anchor="end">Educational reference – not manufacturing-verified</text>`;
+
+  const defs = `<defs><pattern id="hz" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="9" stroke="${t.line}" stroke-width="1.3"/></pattern></defs>`;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${DRAW_W} ${DRAW_H}" width="${DRAW_W}" height="${DRAW_H}">` +
+    drawStyle(t) + defs +
+    `<rect width="${DRAW_W}" height="${DRAW_H}" fill="${t.paper}"/>` + body + foot + `</svg>`;
+
+  return { svg, caption, approx };
+}
+
+function readDrawParams() {
+  const n = id => Number($(id).value);
+  const p = {
+    d: n("dpD"), D1: n("dpD1"), L1: n("dpL1"), D2: n("dpD2"), T: n("dpT"),
+    unit: $("dpUnit").value === "in" ? "in" : "mm",
+    title: ($("dpTitle").value || "Stepped flanged bush").replace(/[<>&"']/g, "").trim().slice(0, 60) || "Stepped flanged bush"
+  };
+  for (const [key, label] of [["d", "Bore diameter"], ["D1", "Body diameter"], ["L1", "Body length"], ["D2", "Flange diameter"], ["T", "Flange thickness"]]) {
+    if (!Number.isFinite(p[key]) || p[key] <= 0) throw new Error(`${label} must be a number greater than 0.`);
+    if (p[key] > 1000) throw new Error(`${label} is too large (maximum 1000).`);
+  }
+  if (!(p.d < p.D1)) throw new Error("The bore diameter must be smaller than the body diameter.");
+  if (!(p.D1 < p.D2)) throw new Error("The flange diameter must be larger than the body diameter.");
+  return p;
+}
+
+function setDrawLocked(title, text, showUpgrade = true) {
+  $("drawTool").hidden = true;
+  $("drawLocked").hidden = false;
+  $("drawLockTitle").textContent = title;
+  $("drawLockText").textContent = text;
+  $("drawUpgrade").hidden = !showUpgrade;
+}
+
+function resetDrawing() {
+  drawAccess = null;
+  drawParams = null;
+  drawBusy = false;
+  const tool = $("drawTool"), locked = $("drawLocked");
+  if (tool) tool.hidden = true;
+  if (locked) locked.hidden = true;
+  if ($("drawOut")) $("drawOut").innerHTML = '<div class="draw-msg">Enter dimensions and press “Generate drawing”.</div>';
+  if ($("drawAnswer")) $("drawAnswer").innerHTML = '<span class="placeholder">Malie’s explanation will appear here.</span>';
+  setStatus("drawStatus", "");
+  setStatus("drawViewStatus", "");
+}
+
+// Called whenever the Engineering Drawing view opens. The server decides access.
+async function drawingEnter() {
+  if (!currentUid) {
+    setDrawLocked("Sign in to continue", "Please sign in with Google to use the Engineering Drawing Studio.", false);
+    return;
+  }
+  if (drawAccess === true) { $("drawLocked").hidden = true; $("drawTool").hidden = false; return; }
+
+  $("drawTool").hidden = true;
+  $("drawLocked").hidden = false;
+  $("drawLockTitle").textContent = "Checking your plan…";
+  $("drawLockText").textContent = "One moment.";
+  $("drawUpgrade").hidden = true;
+
+  try {
+    const p = readDrawParams();
+    await api("/api/drawing", { params: p, view: drawView, projection: drawProj });
+    drawAccess = true;
+    $("drawLocked").hidden = true;
+    $("drawTool").hidden = false;
+    if (!drawParams) await generateDrawing(drawView);
+  } catch (e) {
+    drawAccess = false;
+    if (e.status === 403) {
+      setDrawLocked("Pro feature", "The Engineering Drawing Studio is available on the Pro plan. Upgrade to Pro to generate technical drawings.");
+    } else {
+      setDrawLocked("Could not open the studio", e.message || "Please try again.", false);
+    }
+  }
+}
+
+async function generateDrawing(view) {
+  if (drawBusy) return;
+  if (!currentUid) return toast("Please sign in with Google first.", true);
+
+  let p;
+  try { p = readDrawParams(); }
+  catch (e) { return setStatus("drawStatus", e.message, true); }
+
+  drawView = view;
+  document.querySelectorAll("#drawTabs .draw-tab").forEach(b => b.classList.toggle("active", b.dataset.dview === view));
+
+  drawBusy = true;
+  setBusy($("drawGenerate"), true, "Generating…");
+  $("drawOut").innerHTML = '<div class="draw-msg">Generating view…</div>';
+  setStatus("drawViewStatus", "Generating…");
+  setStatus("drawStatus", "");
+
+  try {
+    // The server checks the Pro plan and validates the dimensions before anything is drawn
+    const data = await api("/api/drawing", { params: p, view, projection: drawProj });
+    drawAccess = true;
+
+    if (data.supported === false) {
+      drawParams = null;
+      $("drawOut").innerHTML = `<div class="draw-msg">${esc(data.message || "This view is not available for this part.")}</div>`;
+      setStatus("drawViewStatus", "This view is not applicable to this part.");
+      return;
+    }
+
+    drawParams = { ...(data.params || p) };
+    const r = buildDrawing(view, drawParams, drawProj, "screen");
+    $("drawOut").innerHTML = r.svg;
+    setStatus("drawViewStatus", r.caption + (r.approx ? " (Approximate pictorial.)" : ""));
+  } catch (e) {
+    if (e.status === 403) {
+      drawAccess = false;
+      setDrawLocked("Pro feature", "The Engineering Drawing Studio is available on the Pro plan. Upgrade to Pro to generate technical drawings.");
+    } else {
+      $("drawOut").innerHTML = `<div class="draw-msg" style="color:var(--danger)">${esc(e.message)}</div>`;
+      setStatus("drawViewStatus", "Error: " + e.message, true);
+    }
+  } finally {
+    drawBusy = false;
+    setBusy($("drawGenerate"), false);
+  }
+}
+
+function svgToPngBlob(svgStr) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" }));
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = DRAW_W * 2;
+      c.height = DRAW_H * 2;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => (b ? resolve(b) : reject(new Error("Could not create the PNG."))), "image/png");
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Could not render the drawing as an image.")); };
+    img.src = url;
+  });
+}
+
+function currentPrintSvg() {
+  if (!drawParams) return null;
+  return buildDrawing(drawView, drawParams, drawProj, "print").svg;
+}
+
+document.querySelectorAll("#drawTabs .draw-tab").forEach(b => b.addEventListener("click", () => generateDrawing(b.dataset.dview)));
+document.querySelectorAll("#projToggle button").forEach(b => b.addEventListener("click", () => {
+  drawProj = b.dataset.proj;
+  document.querySelectorAll("#projToggle button").forEach(x => x.classList.toggle("active", x === b));
+  if (drawParams) generateDrawing(drawView);
+}));
+$("drawGenerate").onclick = () => generateDrawing(drawView);
+$("drawUpgrade").onclick = openPlans;
+
+$("drawPng").onclick = async () => {
+  const svg = currentPrintSvg();
+  if (!svg) return toast("Generate a drawing first.", true);
+  try {
+    const blob = await svgToPngBlob(svg);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `malie-drawing-${drawView}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    toast("PNG downloaded.");
+  } catch (e) {
+    toast(e.message, true);
+  }
+};
+
+$("drawPdf").onclick = () => {
+  const svg = currentPrintSvg();
+  if (!svg) return toast("Generate a drawing first.", true);
+  const w = window.open("", "_blank");
+  if (!w) return toast("Please allow pop-ups to export the PDF.", true);
+  w.document.write(
+    '<!doctype html><html><head><meta charset="utf-8"><title>Malie drawing</title>' +
+    '<style>@page{size:landscape;margin:8mm}html,body{margin:0;background:#fff}svg{width:100%;height:auto;display:block}</style></head><body>' +
+    svg + '</body></html>'
+  );
+  w.document.close();
+  w.focus();
+  setTimeout(() => { try { w.print(); } catch {} }, 450);
+  toast("In the print window, choose “Save as PDF”.");
+};
+
+$("drawRefFile").onchange = e => {
+  const file = e.target.files?.[0];
+  if (drawRefUrl) { URL.revokeObjectURL(drawRefUrl); drawRefUrl = null; }
+  if (!file) { $("drawRefPreview").hidden = true; return; }
+  if (!/^image\/(png|jpe?g|webp)$/i.test(file.type) || file.size > 15 * 1024 * 1024) {
+    e.target.value = "";
+    $("drawRefPreview").hidden = true;
+    return toast("Please choose a PNG, JPG or WebP image under 15 MB.", true);
+  }
+  drawRefUrl = URL.createObjectURL(file);
+  $("drawRefImg").src = drawRefUrl;
+  $("drawRefName").textContent = file.name + " — reference only. Type the dimensions you can read from it.";
+  $("drawRefPreview").hidden = false;
+};
+
+$("drawAskBtn").onclick = async () => {
+  const q = $("drawAsk").value.trim();
+  if (!q) return toast("Type a question first.", true);
+  let p;
+  try { p = readDrawParams(); } catch (e) { return toast(e.message, true); }
+
+  const prompt =
+    "You are helping an engineering drawing student. This is an educational reference only, not a verified manufacturing drawing, and you must not claim it is certified or manufacturing-ready.\n" +
+    `The student generated a ${drawView} view (${drawProj}-angle projection) of a stepped flanged bush: bore diameter ${p.d} ${p.unit}, body diameter ${p.D1} ${p.unit}, body length ${p.L1} ${p.unit}, flange diameter ${p.D2} ${p.unit}, flange thickness ${p.T} ${p.unit}, total length ${p.L1 + p.T} ${p.unit}.\n` +
+    "Answer clearly and step by step. If you need information that was not given, say so instead of inventing it.\n\nStudent question:\n" + q;
+
+  setBusy($("drawAskBtn"), true, "Thinking…");
+  try {
+    const data = await api("/api/chat", { message: prompt });
+    const reply = data.reply ?? data.result ?? data.output;
+    if (!reply) throw new Error("No response returned.");
+    show("drawAnswer", typeof reply === "string" ? reply : JSON.stringify(reply));
+  } catch (e) {
+    $("drawAnswer").innerHTML = '<span class="status error">' + esc(e.message) + "</span>";
+  } finally {
+    setBusy($("drawAskBtn"), false);
+  }
+};
 
 /* ───────── Quiz ───────── */
 let timer = null;

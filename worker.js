@@ -1498,15 +1498,21 @@ if (
     const callToAction =
       stripLabel(cleanText(body.callToAction, 40), "call to action") || "Shop Now";
 
-    /* Build the promotional video (1920x1080, 10 seconds) */
-    const textBox = (text, y, width, size, extra = {}, z = 5) => ({
+    /* ---------- Build the promotional video ----------
+       body.style can be: "clean" (default), "fullscreen", "promo", "story" */
+    const videoStyle = ["clean", "fullscreen", "promo", "story"].includes(body.style)
+      ? body.style
+      : "clean";
+
+    // Text box with a FIXED height, so vertical-position works inside it.
+    const textBox = (text, y, width, height, size, extra = {}, z = 5) => ({
       type: "text",
       text,
       position: "custom",
       x: "center",
       y,
       width,
-      height: -1,
+      height,
       "z-index": z,
       "fade-in": 0.6,
       settings: {
@@ -1521,51 +1527,141 @@ if (
       }
     });
 
-    const moviePayload = {
-      resolution: "full-hd",
-      quality: "high",
-      cache: false,
-      scenes: [
-        {
+    const DARK = "#000000b3";
+    const ACCENT = "#e11d48";
+    const img = uploadInit.fileUrl;
+
+    let moviePayload;
+
+    if (videoStyle === "clean") {
+      /* 1920x1080: plain dark background, product centred and uncropped */
+      moviePayload = {
+        resolution: "full-hd",
+        quality: "high",
+        cache: false,
+        scenes: [{
           duration: 10,
-          "background-color": "#0b0b0f",
+          "background-color": "#0f172a",
           elements: [
-            /* Layer 1: image fills the whole frame (cropped if needed) */
+            textBox(headline, "4%", "88%", "16%", "70px"),
             {
               type: "image",
-              src: uploadInit.fileUrl,
-              resize: "cover",
-              zoom: 2,
-              "z-index": 0
-            },
-            /* Layer 2: full product image, nothing cropped, centred */
-            {
-              type: "image",
-              src: uploadInit.fileUrl,
-              resize: "fit",
-              position: "center-center",
+              src: img,
+              position: "custom",
+              x: "center",
+              y: "21%",
+              height: "50%",
+              width: -1,
+              "fade-in": 0.8,
               "z-index": 1
             },
-            /* Headline (top) */
-            textBox(headline, "6%", "86%", "68px", {
-              "background-color": "#000000b3"
-            }),
-            /* Description (below the middle) */
             ...(description
-              ? [textBox(description, "72%", "78%", "36px", {
-                  "font-weight": "500",
-                  "background-color": "#000000b3"
-                })]
+              ? [textBox(description, "73%", "78%", "9%", "34px", { "font-weight": "400" })]
               : []),
-            /* Call to action (bottom) */
-            textBox(callToAction, "86%", "34%", "42px", {
-              "background-color": "#e11d48"
+            textBox(callToAction, "85%", "30%", "9%", "40px", {
+              "background-color": ACCENT
             }, 6)
           ]
-        }
-      ]
-    };
-
+        }]
+      };
+    } else if (videoStyle === "fullscreen") {
+      /* 1920x1080: photo fills the whole frame, text at the bottom */
+      moviePayload = {
+        resolution: "full-hd",
+        quality: "high",
+        cache: false,
+        scenes: [{
+          duration: 10,
+          "background-color": "#000000",
+          elements: [
+            { type: "image", src: img, resize: "cover", zoom: 2, "z-index": 0 },
+            textBox(headline, "58%", "90%", "16%", "66px", { "background-color": DARK }),
+            ...(description
+              ? [textBox(description, "75%", "90%", "9%", "32px", {
+                  "font-weight": "400",
+                  "background-color": DARK
+                })]
+              : []),
+            textBox(callToAction, "87%", "30%", "9%", "38px", {
+              "background-color": ACCENT
+            }, 6)
+          ]
+        }]
+      };
+    } else if (videoStyle === "promo") {
+      /* 1920x1080, 3 scenes x 5 s = 15 s */
+      moviePayload = {
+        resolution: "full-hd",
+        quality: "high",
+        cache: false,
+        scenes: [
+          {
+            duration: 5,
+            "background-color": "#0f172a",
+            elements: [
+              {
+                type: "image", src: img,
+                position: "custom", x: "center", y: "8%", height: "84%", width: -1,
+                "fade-in": 0.8, "z-index": 1
+              }
+            ]
+          },
+          {
+            duration: 5,
+            "background-color": "#000000",
+            transition: { style: "fade", duration: 0.6 },
+            elements: [
+              { type: "image", src: img, resize: "cover", zoom: 3, "z-index": 0 },
+              textBox(headline, "36%", "90%", "28%", "76px", { "background-color": DARK })
+            ]
+          },
+          {
+            duration: 5,
+            "background-color": ACCENT,
+            transition: { style: "fade", duration: 0.6 },
+            elements: [
+              {
+                type: "image", src: img,
+                position: "custom", x: "center", y: "6%", height: "48%", width: -1,
+                "z-index": 1
+              },
+              ...(description
+                ? [textBox(description, "58%", "80%", "14%", "38px", { "font-weight": "500" })]
+                : []),
+              textBox(callToAction, "76%", "40%", "14%", "52px", {
+                "background-color": "#111111"
+              }, 6)
+            ]
+          }
+        ]
+      };
+    } else {
+      /* story: 1080x1920 vertical for TikTok / Reels / WhatsApp Status */
+      moviePayload = {
+        resolution: "custom",
+        width: 1080,
+        height: 1920,
+        quality: "high",
+        cache: false,
+        scenes: [{
+          duration: 10,
+          "background-color": "#000000",
+          elements: [
+            { type: "image", src: img, resize: "cover", zoom: 2, "z-index": 0 },
+            textBox(headline, "58%", "92%", "13%", "60px", { "background-color": DARK }),
+            ...(description
+              ? [textBox(description, "72%", "92%", "9%", "34px", {
+                  "font-weight": "400",
+                  "background-color": DARK
+                })]
+              : []),
+            textBox(callToAction, "84%", "62%", "7%", "44px", {
+              "background-color": ACCENT
+            }, 6)
+          ]
+        }]
+      };
+    }
 
     const renderResponse = await fetch(
       "https://api.json2video.com/v2/movies",

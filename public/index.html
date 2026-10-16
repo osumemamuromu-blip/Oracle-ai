@@ -2624,6 +2624,60 @@ async function drawingEnter() {
   }
 }
 
+let advertAccess = false;
+
+function setAdvertLocked(title, message, showUpgrade = true) {
+  $("advertLocked").hidden = false;
+  $("advertTool").hidden = true;
+  $("advertLockTitle").textContent = title;
+  $("advertLockText").textContent = message;
+  $("advertUpgrade").hidden = !showUpgrade;
+}
+
+async function advertEnter() {
+  if (!currentUid) {
+    setAdvertLocked(
+      "Sign in to continue",
+      "Please sign in to use Malie AI Advert Studio.",
+      false
+    );
+    return;
+  }
+
+  if (advertAccess) {
+    $("advertLocked").hidden = true;
+    $("advertTool").hidden = false;
+    return;
+  }
+
+  setAdvertLocked("Checking your plan…", "One moment.", false);
+
+  try {
+    // This checks access without starting a video render.
+    await api("/api/advert/access", {});
+    advertAccess = true;
+    $("advertLocked").hidden = true;
+    $("advertTool").hidden = false;
+  } catch (e) {
+    advertAccess = false;
+
+    if (e.status === 403) {
+      setAdvertLocked(
+        "Pro feature",
+        "Advert Studio is available on the Pro plan. Upgrade to Pro to create promotional videos."
+      );
+    } else {
+      setAdvertLocked(
+        "Could not open Advert Studio",
+        e.message || "Please try again.",
+        false
+      );
+    }
+  }
+}
+
+$("advertUpgrade").onclick = openPlans;
+
 async function generateDrawing(view) {
   if (drawBusy) return;
   if (!currentUid) return toast("Please sign in with Google first.", true);

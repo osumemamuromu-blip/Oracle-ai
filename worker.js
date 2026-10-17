@@ -1354,6 +1354,8 @@ if (
 
       const statusData = await statusResponse.json().catch(() => ({}));
       const result = statusData.result || {};
+      console.log("ETERNAL STATUS HTTP:", statusResponse.status);
+console.log("ETERNAL STATUS BODY:", JSON.stringify(statusData));
 
       if (!statusResponse.ok || (!statusData.result && statusData.status !== true)) {
         return respond({

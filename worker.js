@@ -259,7 +259,7 @@ function buildWorkbook(spec) {
 /* AI call                                                             */
 /* ------------------------------------------------------------------ */
 
-async function callAI(env, prompt, jsonMode = false, imageDataUrl = null, visionModel = null) {
+async function callAI(env, prompt, jsonMode = false, imageDataUrl = null) {
   if (!env.AI || typeof env.AI.run !== "function") {
     const error = new Error(
       "Cloudflare Workers AI is not connected. Check that your Worker has an AI binding named AI."
@@ -269,7 +269,7 @@ async function callAI(env, prompt, jsonMode = false, imageDataUrl = null, vision
   }
 
   const hasImage = Boolean(imageDataUrl);
-  const model = hasImage ? (visionModel || VISION_MODEL) : TEXT_MODEL;
+  const model = hasImage ? VISION_MODEL : TEXT_MODEL;
 
   const identityRules = [
     "You are Malie AI, the AI assistant created and developed by Campus Creative, founded by Osume Prosper.",
@@ -312,8 +312,8 @@ async function callAI(env, prompt, jsonMode = false, imageDataUrl = null, vision
     max_tokens: jsonMode ? 4096 : 2048
   };
 
-  // These options are only sent to the Gemma model (text or image).
-  if (model === TEXT_MODEL) {
+  // These options are only sent to the Gemma text model.
+  if (!hasImage) {
     if (jsonMode) payload.response_format = { type: "json_object" };
     payload.chat_template_kwargs = { enable_thinking: false };
   }
@@ -328,7 +328,7 @@ async function callAI(env, prompt, jsonMode = false, imageDataUrl = null, vision
     const message = String(cause?.message || cause);
     const isLimit = /limit|quota|neuron|429/i.test(message);
     const isBusy = /capacity|busy|overload|503/i.test(message);
-    const needsLicense = /agree|license/i.test(message) && hasImage && model === VISION_MODEL;
+    const needsLicense = /agree|license/i.test(message) && hasImage;
 
     const error = new Error(
       needsLicense
@@ -747,9 +747,9 @@ async function runVideoModel(env, { prompt, duration, aspectRatio }) {
 //              y = height (up), z = depth (toward the viewer in the front view).
 
 const DRAWING_PROMPT = [
-  "You are a technical drafting assistant.",
-  "The image shows ONE view (a drawing, sketch, screenshot, PDF page or photo) of a single object or part: a machine part, a tool, a product or any everyday object. It may be a front, top, side, sectional or 3D view.",
-  "Work out the object's 3D shape and describe it using simple solids. Curved or organic shapes should be approximated with the nearest boxes and cylinders.",
+  "You are a mechanical drafting assistant.",
+  "The image shows ONE view (a drawing, sketch, screenshot or photo) of a single machine part. It may be a front, top, side, sectional or 3D view.",
+  "Work out the part's 3D shape and describe it using simple solids.",
   "Coordinates: x = width (left to right in the front view), y = height (up), z = depth (toward the viewer in the front view).",
   "Use the unit shown on the drawing (mm if none is shown). If dimensions are printed, use them exactly. If they are not printed, estimate sensible proportions from the picture and set \"estimated\" to true.",
   "Solid types:",
@@ -757,9 +757,8 @@ const DRAWING_PROMPT = [
   '{"type":"cyl","op":"add","axis":"x","cx":centreX,"cy":centreY,"cz":centreZ,"r":radius,"len":lengthAlongAxis}',
   'The "axis" of a cylinder is "x", "y" or "z". Holes, bores and slots use "op":"cut" and must come after all "add" solids.',
   "Place the part so its lowest-left-back corner is at x=0, y=0, z=0. Use at most 12 solids. Radius is half of any diameter (a diameter symbol means diameter).",
-  "Look carefully at the picture before answering. First say what the object is and which view is shown, then give its overall proportions (width : height : depth), then list the solids so that together they match the picture's outline and proportions as closely as possible.",
   "Return ONLY valid JSON in this exact structure:",
-  '{"object":"what the object is","view_shown":"front|top|side|3D|section","title":"short part name","unit":"mm","estimated":false,"parts":[{"type":"box","op":"add","x":0,"y":0,"z":0,"w":40,"h":20,"d":30}]}'
+  '{"title":"short part name","unit":"mm","estimated":false,"parts":[{"type":"box","op":"add","x":0,"y":0,"z":0,"w":40,"h":20,"d":30}]}'
 ].join("\n");
 
 const DRAW = {
@@ -847,9 +846,7 @@ function sanitizeModel(raw) {
   }
 
   return {
-    title: cleanXml(String(raw?.title || raw?.object || "Machine part")).slice(0, 60),
-    object: cleanXml(String(raw?.object || "")).slice(0, 120),
-    viewShown: cleanXml(String(raw?.view_shown || "")).slice(0, 30),
+    title: cleanXml(String(raw?.title || "Machine part")).slice(0, 60),
     unit: String(raw?.unit || "").toLowerCase() === "in" ? "in" : "mm",
     estimated: Boolean(raw?.estimated),
     parts: [...adds, ...cuts]
@@ -1045,7 +1042,6 @@ function frameSvg(model, projection, label, body) {
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${DRAW.W} ${DRAW.H}" width="100%" role="img" style="background:${DRAW.bg};border-radius:12px;display:block">` +
     `<defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="${DRAW.line}" stroke-width="1"/></pattern></defs>` +
-    `<rect width="${DRAW.W}" height="${DRAW.H}" fill="${DRAW.bg}"/>` +
     `<rect x="14" y="14" width="${DRAW.W - 28}" height="${DRAW.H - 28}" fill="none" stroke="${DRAW.line}" stroke-width="1.2"/>` +
     body +
     svgText(DRAW.W / 2, 548, label, 'text-anchor="middle" font-weight="bold"') +
@@ -2056,42 +2052,6 @@ export default {
       }
     }
 
-    /* ---------------- Admin: one-time image model license ---------------- */
-    if (request.method === "POST" && path === "/api/admin/accept-vision-license") {
-      try {
-        const adminUid = env.MALIE_ADMIN_UID;
-
-        if (!adminUid) {
-          return respond({ error: "Admin access is not configured." }, 500);
-        }
-
-        const uid = await authenticateFirebase(request, env);
-
-        if (uid !== adminUid) {
-          return respond({ error: "Unauthorized." }, 403);
-        }
-
-        if (!env.AI || typeof env.AI.run !== "function") {
-          return respond({ error: "Cloudflare Workers AI is not connected." }, 500);
-        }
-
-        // Cloudflare asks for the word "agree" the first time this model is used.
-        const result = await env.AI.run(VISION_MODEL, { prompt: "agree" });
-
-        return respond({
-          ok: true,
-          message: "License accepted. The image model is now enabled.",
-          reply: extractText(result).slice(0, 200)
-        });
-      } catch (error) {
-        console.error("Vision license error:", String(error?.message || error));
-        return respond(
-          { error: "Could not accept the license: " + String(error?.message || error) },
-          error.status || 500
-        );
-      }
-    }
-
     /* ---------------- Admin check (any signed-in user) ---------------- */
     if (request.method === "POST" && path === "/api/admin/check") {
       try {
@@ -2411,14 +2371,7 @@ export default {
           const usage = await reserveDailyUsage(env, userId, plan);
 
           try {
-            let text;
-            try {
-              // Gemma 4 reads images and is stronger than the older Llama vision model.
-              text = await callAI(env, DRAWING_PROMPT, true, image, TEXT_MODEL);
-            } catch (firstError) {
-              console.error("Gemma vision failed, trying Llama:", firstError.message);
-              text = await callAI(env, DRAWING_PROMPT, true, image, VISION_MODEL);
-            }
+            const text = await callAI(env, DRAWING_PROMPT, true, image);
             const model = sanitizeModel(
               parseJsonObject(
                 text,

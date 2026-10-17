@@ -4050,5 +4050,43 @@ function renderQuiz(questions) {
   }
 }
 </script>
+  <script>
+(() => {
+  const CASCADE_ORIGIN = "https://8df51bb7.cascadestudio.pages.dev";
+
+  window.addEventListener("message", async (event) => {
+    if (event.origin !== CASCADE_ORIGIN) return;
+
+    const frame = document.getElementById("cascadeStudioFrame");
+    if (!frame || event.source !== frame.contentWindow) return;
+
+    const message = event.data;
+    if (
+      !message ||
+      message.type !== "MALIE_CAD_GENERATE" ||
+      typeof message.prompt !== "string"
+    ) return;
+
+    try {
+      // Uses Malie's existing Firebase-authenticated API helper.
+      const result = await api("/api/cad/generate", {
+        prompt: message.prompt
+      });
+
+      frame.contentWindow.postMessage({
+        type: "MALIE_CAD_RESULT",
+        requestId: message.requestId,
+        result
+      }, CASCADE_ORIGIN);
+    } catch (error) {
+      frame.contentWindow.postMessage({
+        type: "MALIE_CAD_RESULT",
+        requestId: message.requestId,
+        error: error?.message || "CAD generation failed. Please try again."
+      }, CASCADE_ORIGIN);
+    }
+  });
+})();
+  </script>
 </body>
 </html>

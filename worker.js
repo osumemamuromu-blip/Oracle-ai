@@ -1328,6 +1328,99 @@ function buildAllViews(model, projection) {
 }
 
 /* ------------------------------------------------------------------ */
+/* CAD code validation                                                 */
+/* ------------------------------------------------------------------ */
+
+function validateCadCode(rawCode) {
+  let code = String(rawCode || "").trim();
+
+  code = code
+    .replace(/^```(?:javascript|js)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+
+  if (!code || code.length > 12000) {
+    throw new Error("The generated CAD script was empty or too long. Please try again.");
+  }
+
+  const forbidden =
+    /\b(?:window|document|globalThis|self|fetch|XMLHttpRequest|WebSocket|import|export|eval|Function|constructor|prototype|__proto__|localStorage|sessionStorage|navigator|location|process|require|Worker|setTimeout|setInterval|postMessage|cookie|indexedDB|await|async|class|while|for|do|try|catch|throw|debugger)\b/i;
+
+  if (forbidden.test(code)) {
+    throw new Error("The AI returned unsupported CAD code. Please try a simpler description.");
+  }
+
+  const allowedFunctions = new Set([
+    "Box", "Sphere", "Cylinder", "Cone",
+    "Translate", "Rotate", "Union", "Difference",
+    "Intersection", "Sketch", "Extrude", "Revolve"
+  ]);
+
+  const keywords = new Set([
+    "const", "let", "var", "return",
+    "true", "false", "null", "undefined"
+  ]);
+
+  const declared = new Set();
+
+  for (const match of code.matchAll(
+    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g
+  )) {
+    declared.add(match[1]);
+  }
+
+  if (
+    /[`'"]|\b[A-Za-z_$][\w$]*\s*\.|\b[A-Za-z_$][\w$]*\s*\[\s*['"]/.test(code)
+  ) {
+    throw new Error("The AI returned unsupported CAD code. Please try a simpler description.");
+  }
+
+  const identifiers = code.match(/[A-Za-z_$][\w$]*/g) || [];
+
+  for (const identifier of identifiers) {
+    if (
+      keywords.has(identifier) ||
+      allowedFunctions.has(identifier) ||
+      declared.has(identifier)
+    ) {
+      continue;
+    }
+
+    throw new Error(
+      "The AI used an unsupported CAD operation (" +
+      identifier +
+      "). Please try a simpler description."
+    );
+  }
+
+  if (
+    ![...allowedFunctions].some(name =>
+      new RegExp("\\b" + name + "\\s*\\(").test(code)
+    )
+  ) {
+    throw new Error(
+      "The AI did not generate a supported 3D geometry operation. Please try again."
+    );
+  }
+
+  let depth = 0;
+
+  for (const ch of code) {
+    if ("([{".includes(ch)) depth++;
+    if (")]}" .includes(ch)) depth--;
+
+    if (depth < 0) {
+      throw new Error("The generated CAD code has invalid brackets.");
+    }
+  }
+
+  if (depth !== 0) {
+    throw new Error("The generated CAD code has invalid brackets.");
+  }
+
+  return code;
+}
+/* ------------------------------------------------------------------ */
 /* Worker                                                              */
 /* ------------------------------------------------------------------ */
 

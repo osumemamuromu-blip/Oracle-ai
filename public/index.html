@@ -267,6 +267,59 @@ button:disabled{opacity:.55;cursor:not-allowed}
 @keyframes pop{from{transform:scale(.75)}to{transform:scale(1)}}
 @keyframes recpulse{0%,100%{box-shadow:0 0 0 0 #ff8b8b88}50%{box-shadow:0 0 0 7px #ff8b8b00}}
 
+/* Malie Video Studio */
+.vs-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:15px;align-items:start}
+.vs-col{display:grid;gap:15px;min-width:0}
+.vs-grid .work-card{margin-bottom:0}
+.vs-field{border:0;margin:0 0 18px;padding:0;min-width:0}
+.vs-field legend{padding:0}
+.vs-meta{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--muted);margin-top:7px}
+.vs-count.warn{color:var(--danger)}
+.vs-tips{margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7}
+.vs-tips summary{cursor:pointer;color:var(--accent);font-size:12px}
+.vs-tips ul{margin:8px 0 0;padding-left:18px}
+.vs-opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.vs-opt{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:68px;padding:10px 6px;border:1px solid var(--border);border-radius:14px;background:var(--panel2);text-align:center;font-size:12px;font-weight:650;line-height:1.3;cursor:pointer;transition:border-color .2s,background .2s,transform .2s}
+.vs-opt input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.vs-opt:hover{border-color:var(--accent);transform:translateY(-1px)}
+.vs-opt:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--panel2))}
+.vs-opt:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:3px}
+.vs-opt:has(input:disabled){opacity:.4;cursor:not-allowed;transform:none}
+.vs-opt:has(input:disabled) input{cursor:not-allowed}
+.vs-opt small{font-size:10px;color:var(--muted);font-weight:500}
+.vs-shape{display:block;border:2px solid currentColor;border-radius:3px;opacity:.85}
+.vs-shape.land{width:28px;height:16px}
+.vs-shape.port{width:16px;height:28px}
+.vs-shape.sq{width:21px;height:21px}
+.vs-opts.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.vs-big{font-size:18px;font-weight:850;letter-spacing:-.5px}
+.vs-res{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px;border:1px solid var(--border);border-radius:12px;background:var(--panel2);font-size:12px;margin-bottom:16px}
+.vs-res span{color:var(--muted);font-size:11px}
+.vs-allow{padding:13px;border:1px solid var(--border);border-radius:14px;background:var(--panel2);margin-bottom:16px}
+.vs-allow-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12px}
+.vs-allow-row strong{font-size:15px}
+.vs-meter{height:7px;border-radius:20px;background:var(--border);overflow:hidden;margin-top:9px}
+.vs-meter>span{display:block;height:100%;width:0;background:var(--accent);border-radius:20px;transition:width .6s cubic-bezier(.22,1,.36,1)}
+.vs-allow small{display:block;margin-top:8px;color:var(--muted);font-size:11px;line-height:1.5}
+.vs-fine{font-size:10px;color:var(--muted);opacity:.75;line-height:1.6;margin:14px 0 0}
+.vs-stage{--vs-r:1.7778;position:relative;width:min(100%,calc(62vh * var(--vs-r)));margin:0 auto;aspect-ratio:var(--vs-r);border-radius:16px;overflow:hidden;background:#000;border:1px solid var(--border);color:#d9d9d6}
+.vs-state{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:18px;text-align:center;font-size:13px;line-height:1.7;animation:appear .35s ease both}
+.vs-state strong{font-size:15px;color:#f5f5f2}
+.vs-state p{margin:0;max-width:340px;color:#a9aaa8}
+.vs-state .vs-icon{font-size:34px;opacity:.8}
+.vs-state.vs-err strong{color:#ff8b8b}
+.vs-state .primary,.vs-state .secondary{margin-top:6px}
+.vs-spin{width:36px;height:36px;border-radius:50%;border:3px solid #ffffff22;border-top-color:var(--accent);animation:vsspin 1s linear infinite}
+.vs-stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+.vs-actions{margin-top:14px;justify-content:center}
+.vs-perks{list-style:none;margin:0 auto 20px;padding:0;max-width:340px;text-align:left;color:var(--muted);font-size:13px;line-height:2}
+.vs-perks li::before{content:"✦";color:var(--accent);margin-right:10px}
+@keyframes vsspin{to{transform:rotate(360deg)}}
+@media(max-width:760px){
+  .vs-grid{grid-template-columns:1fr}
+  .vs-stage{width:min(100%,calc(55vh * var(--vs-r)))}
+}
+
 /* Plans & payments */
 .seg{display:inline-flex;border:1px solid var(--border);border-radius:99px;padding:3px;margin-bottom:16px;background:var(--panel)}
 .seg button{border:0;background:transparent;color:var(--muted);padding:8px 16px;border-radius:99px;font-size:12px;font-weight:700}
@@ -325,6 +378,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
         <button class="side-link" data-view="quiz"><span class="ico">☷</span>Quiz Mode</button>    
 <button class="side-link" data-view="drawing"><span class="ico">◰</span>Engineering Drawing<span class="coming">Pro</span></button>
 <button class="side-link" data-view="advert"><span class="ico">▶</span>Advert Studio<span class="coming">Pro</span></button>
+        <button class="side-link" data-view="video"><span class="ico">✺</span>Malie Video Studio<span class="coming">Pro</span></button>
         <button class="side-link" data-view="plans"><span class="ico">✦</span>Plans &amp; Upgrade</button>
       </nav>
     </div>
@@ -595,6 +649,107 @@ button:disabled{opacity:.55;cursor:not-allowed}
   </div>
 </section>
 
+      <!-- Malie Video Studio (Pro) -->
+      <section class="view" id="view-video">
+        <div class="section-head"><h1>Malie Video Studio<span style="color:var(--accent)">.</span></h1><p>Describe a scene and generate a short AI video clip of 5 or 10 seconds. Pro plan.</p></div>
+
+        <div class="work-card lock-card" id="vsLocked" hidden>
+          <h2 id="vsLockTitle">Pro feature</h2>
+          <p id="vsLockText">Malie Video Studio is available on the Pro plan.</p>
+          <ul class="vs-perks" id="vsPerks" hidden>
+            <li>Text-to-video clips of 5 or 10 seconds</li>
+            <li>Up to 15 seconds of video a day (max 3 videos)</li>
+            <li>Landscape, portrait and square formats</li>
+            <li>Preview and download in one place</li>
+          </ul>
+          <button class="primary" id="vsUpgrade" type="button">View plans</button>
+        </div>
+
+        <div id="vsTool" hidden>
+          <div class="vs-grid">
+            <div class="vs-col">
+              <form class="work-card" id="vsForm" novalidate>
+                <div class="field-group">
+                  <label class="field-label" for="vsPrompt">Describe your video</label>
+                  <textarea class="work-textarea" id="vsPrompt" maxlength="800" rows="5" placeholder="A slow aerial shot over a misty rainforest at sunrise, golden light breaking through the canopy, birds lifting off the treetops. Calm, cinematic."></textarea>
+                  <div class="vs-meta"><span id="vsPromptHint">At least 10 characters.</span><span class="vs-count" id="vsCount">0 / 800</span></div>
+                  <details class="vs-tips">
+                    <summary>Tips for better prompts</summary>
+                    <ul>
+                      <li>Name the subject and what it is doing.</li>
+                      <li>Add the setting, time of day and lighting.</li>
+                      <li>Describe the camera: slow push-in, aerial, close-up, handheld.</li>
+                      <li>Add a mood or style: cinematic, documentary, soft and dreamy.</li>
+                      <li>Keep it to one scene. Avoid requests for written words or logos.</li>
+                    </ul>
+                  </details>
+                </div>
+
+                <fieldset class="vs-field">
+                  <legend class="field-label">Video Duration</legend>
+                  <div class="vs-opts two" role="radiogroup" aria-label="Video Duration">
+                    <label class="vs-opt"><input type="radio" name="vsDuration" value="5" checked><span class="vs-big">5</span><small>seconds</small></label>
+                    <label class="vs-opt"><input type="radio" name="vsDuration" value="10"><span class="vs-big">10</span><small>seconds</small></label>
+                  </div>
+                </fieldset>
+
+                <fieldset class="vs-field">
+                  <legend class="field-label">Aspect ratio</legend>
+                  <div class="vs-opts" role="radiogroup" aria-label="Aspect ratio">
+                    <label class="vs-opt"><input type="radio" name="vsAspect" value="16:9" checked><i class="vs-shape land"></i><span>Landscape</span><small>16:9</small></label>
+                    <label class="vs-opt"><input type="radio" name="vsAspect" value="9:16"><i class="vs-shape port"></i><span>Portrait</span><small>9:16</small></label>
+                    <label class="vs-opt"><input type="radio" name="vsAspect" value="1:1"><i class="vs-shape sq"></i><span>Square</span><small>1:1</small></label>
+                  </div>
+                </fieldset>
+
+                <div class="vs-res"><strong>Resolution: 480p</strong><span>Standard quality</span></div>
+
+                <div class="vs-allow" aria-live="polite">
+                  <div class="vs-allow-row"><span>Video allowance today</span><strong id="vsRemaining">…</strong></div>
+                  <div class="vs-meter"><span id="vsMeter"></span></div>
+                  <small id="vsAllowNote">Checking your allowance…</small>
+                </div>
+
+                <div class="button-row">
+                  <button class="primary" id="vsGenerate" type="submit">Generate Video ↗</button>
+                  <button class="secondary" id="vsClear" type="button">Clear Prompt</button>
+                </div>
+                <p class="status" id="vsStatus" aria-live="polite"></p>
+                <p class="vs-fine">Generation time and results may vary. AI-generated videos may contain visual imperfections.</p>
+              </form>
+            </div>
+
+            <div class="vs-col">
+              <div class="work-card">
+                <div class="vs-stage" id="vsStage">
+                  <div class="vs-state" id="vsEmpty">
+                    <div class="vs-icon">▶</div>
+                    <strong>Your video will appear here</strong>
+                    <p>Describe a scene, pick a duration and format, then press Generate Video.</p>
+                  </div>
+                  <div class="vs-state" id="vsLoading" hidden role="status">
+                    <div class="vs-spin"></div>
+                    <strong>Generating your video…</strong>
+                    <p id="vsElapsed">Elapsed 0:00. This can take a minute or more. Keep this page open.</p>
+                  </div>
+                  <div class="vs-state vs-err" id="vsError" hidden role="alert">
+                    <div class="vs-icon">!</div>
+                    <strong>Video not generated</strong>
+                    <p id="vsErrorText"></p>
+                    <button class="secondary" id="vsRetry" type="button">Try again</button>
+                  </div>
+                  <video id="vsVideo" controls playsinline preload="metadata" hidden></video>
+                </div>
+                <div class="button-row vs-actions" id="vsResultActions" hidden>
+                  <button class="primary" id="vsDownload" type="button">Download video</button>
+                </div>
+                <p class="status" id="vsResultNote"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Plans & Upgrade -->
       <section class="view" id="view-plans">
         <div class="section-head"><h1>Plans<span style="color:var(--accent)">.</span></h1><p>Pay by FirstBank transfer. Your plan is activated only after we verify your payment.</p></div>
@@ -603,7 +758,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
         <div class="plan-grid">
           <div class="plan"><h3>Free</h3><div class="price">₦0</div><ul><li>8 AI requests per day</li><li>Chat, Writing Lab, Quiz</li></ul></div>
           <div class="plan featured"><h3>Premium</h3><div class="price" data-price="premium"></div><ul><li>100 requests per day</li><li>Excel File Builder: photo or table to .xlsx</li></ul><button class="primary" data-choose="premium">Choose Premium</button></div>
-          <div class="plan"><h3>Pro</h3><div class="price" data-price="pro"></div><ul><li>300 requests per day</li><li>Everything in Premium</li><li>Engineering Drawing Studio</li></ul><button class="primary" data-choose="pro">Choose Pro</button></div>
+          <div class="plan"><h3>Pro</h3><div class="price" data-price="pro"></div><ul><li>300 requests per day</li><li>Everything in Premium</li><li>Engineering Drawing Studio</li><li>Malie Video Studio: 15 seconds of video per day</li></ul><button class="primary" data-choose="pro">Choose Pro</button></div>
         </div>
         <div class="work-card" id="payPanel" hidden></div>
 
@@ -1242,7 +1397,7 @@ async function extractAny(file, onStatus = () => {}) {
 }
 
 /* ───────── Navigation ───────── */
-const titles = { explore: "Explore", writing: "Writing Lab", quiz: "Quiz Mode", drawing: "Engineering Drawing", advert: "Advert Studio", premium: "Malie 2 Premium", plans: "Plans" };
+const titles = { explore: "Explore", writing: "Writing Lab", quiz: "Quiz Mode", drawing: "Engineering Drawing", advert: "Advert Studio", video: "Malie Video Studio", premium: "Malie 2 Premium", plans: "Plans" };
 const composerWrap = $("composerWrap");
 
 function closeSidebar() {
@@ -1260,6 +1415,7 @@ function switchView(name) {
   window.scrollTo({ top: 0, behavior: "smooth" });
  if (name === "drawing") drawingEnter();
 if (name === "advert") advertEnter();
+  if (name === "video") videoEnter();
 }
 document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
 document.querySelectorAll("[data-open-view]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.openView)));
@@ -1997,6 +2153,7 @@ function clearWorkspace() {
   setAdminVisible(false);
   resetPlans();
   resetDrawing();
+  resetVideoStudio();
 }
 
 async function loadHistory() {
@@ -2116,7 +2273,7 @@ $("clearQuizHistory").onclick = async () => {
 };
 
   /* ───────── Plans & payments ───────── */
-const PRICES = { premium: { monthly: 2500, annual: 25000 }, pro: { monthly: 7500, annual: 85000 } };
+const PRICES = { premium: { monthly: 2500, annual: 25000 }, pro: { monthly: 10000, annual: 110000 } };
 const naira = n => "₦" + Number(n).toLocaleString("en-NG");
 const PLAN_NAMES = { premium: "Premium", pro: "Pro" };
 let billing = "monthly", chosenPlan = null, activeRequest = null;
@@ -2816,6 +2973,290 @@ $("drawRefFile").onchange = e => {
   $("drawRefPreview").hidden = false;
 };
 
+
+/* ───────── Malie Video Studio (Pro) ───────── */
+// Keep these two numbers in sync with the Worker (VIDEO_STUDIO.promptMin / promptMax).
+const VS_MIN_PROMPT = 10;
+const VS_MAX_PROMPT = 800;
+const VS_RATIOS = { "16:9": 16 / 9, "9:16": 9 / 16, "1:1": 1 };
+
+let vsAccess = null;      // null = unknown, true / false once the server answers
+let vsBusy = false;
+let vsRunId = 0;          // lets a stale response be ignored after sign-out
+let vsAllowance = null;   // { limit/used/remaining for videos and seconds }
+let vsClock = null;
+let vsVideoUrl = null;
+
+const vsPicked = name => document.querySelector(`input[name="${name}"]:checked`)?.value;
+const vsClockText = s => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+
+function vsShowPanel(which) {
+  $("vsEmpty").hidden = which !== "empty";
+  $("vsLoading").hidden = which !== "loading";
+  $("vsError").hidden = which !== "error";
+  $("vsVideo").hidden = which !== "video";
+  $("vsResultActions").hidden = which !== "video";
+}
+
+function vsStopClock() {
+  if (vsClock) { clearInterval(vsClock); vsClock = null; }
+}
+
+function vsSetLocked(title, text, { upgrade = true, perks = false } = {}) {
+  $("vsTool").hidden = true;
+  $("vsLocked").hidden = false;
+  $("vsLockTitle").textContent = title;
+  $("vsLockText").textContent = text;
+  $("vsUpgrade").hidden = !upgrade;
+  $("vsPerks").hidden = !perks;
+}
+
+function vsUpdateCounter() {
+  const n = $("vsPrompt").value.trim().length;
+  $("vsCount").textContent = `${$("vsPrompt").value.length} / ${VS_MAX_PROMPT}`;
+  $("vsCount").classList.toggle("warn", $("vsPrompt").value.length >= VS_MAX_PROMPT);
+  $("vsPromptHint").textContent = n < VS_MIN_PROMPT ? `At least ${VS_MIN_PROMPT} characters.` : "Looks good.";
+}
+
+function vsUpdateGenerateButton() {
+  const noTime = vsAllowance && (vsAllowance.remainingVideos < 1 || vsAllowance.remainingSeconds < 5);
+  $("vsGenerate").disabled = vsBusy || Boolean(noTime);
+  $("vsClear").disabled = vsBusy;
+}
+
+function vsPaintAllowance() {
+  const a = vsAllowance;
+  if (!a) {
+    $("vsRemaining").textContent = "…";
+    $("vsMeter").style.width = "0%";
+    return;
+  }
+  $("vsRemaining").textContent = `${a.remainingSeconds}s · ${a.remainingVideos} video${a.remainingVideos === 1 ? "" : "s"} left`;
+  $("vsMeter").style.width = (a.limitSeconds > 0 ? (100 * a.remainingSeconds / a.limitSeconds) : 0) + "%";
+
+  // Turn off durations that no longer fit in what is left today.
+  const radios = [...document.querySelectorAll('input[name="vsDuration"]')];
+  radios.forEach(r => { r.disabled = Number(r.value) > a.remainingSeconds; });
+  const checked = radios.find(r => r.checked);
+  if (!checked || checked.disabled) {
+    const fit = radios.filter(r => !r.disabled).pop();
+    if (fit) fit.checked = true;
+  }
+
+  $("vsAllowNote").textContent = (a.remainingVideos < 1 || a.remainingSeconds < 5)
+    ? "You have used today's video allowance. It resets at midnight (Lagos time)."
+    : `Daily allowance: ${a.limitSeconds} seconds and up to ${a.limitVideos} videos. Resets at midnight (Lagos time).`;
+  vsUpdateGenerateButton();
+}
+
+function vsSetAllowance(usage) {
+  if (!usage || !Number.isFinite(usage.remainingVideos) || !Number.isFinite(usage.remainingSeconds)) return;
+  vsAllowance = {
+    limitVideos: usage.limitVideos,
+    usedVideos: usage.usedVideos,
+    remainingVideos: usage.remainingVideos,
+    limitSeconds: usage.limitSeconds,
+    usedSeconds: usage.usedSeconds,
+    remainingSeconds: usage.remainingSeconds
+  };
+  vsPaintAllowance();
+}
+
+async function vsRefreshAllowance() {
+  try {
+    const data = await api("/api/video/access", {});
+    vsSetAllowance(data.usage);
+  } catch { /* the previous figure stays on screen */ }
+}
+
+function vsApplyRatio() {
+  $("vsStage").style.setProperty("--vs-r", String(VS_RATIOS[vsPicked("vsAspect")] || VS_RATIOS["16:9"]));
+}
+
+// Called every time the Video Studio view opens. The server decides access.
+async function videoEnter() {
+  if (!currentUid) {
+    vsSetLocked("Sign in to continue", "Please sign in with Google to use Malie Video Studio.", { upgrade: false });
+    return;
+  }
+  if (vsAccess === true) {
+    $("vsLocked").hidden = true;
+    $("vsTool").hidden = false;
+    vsRefreshAllowance();
+    return;
+  }
+
+  const ownerUid = currentUid;
+  vsSetLocked("Checking your plan…", "One moment.", { upgrade: false });
+
+  try {
+    const data = await api("/api/video/access", {});
+    if (currentUid !== ownerUid) return;
+    vsAccess = true;
+    $("vsLocked").hidden = true;
+    $("vsTool").hidden = false;
+    vsSetAllowance(data.usage);
+    vsUpdateCounter();
+    vsApplyRatio();
+  } catch (e) {
+    if (currentUid !== ownerUid) return;
+    vsAccess = false;
+    if (e.status === 403) {
+      vsSetLocked("Pro feature", "Malie Video Studio is available on the Pro plan. Upgrade to turn your ideas into short AI videos.", { perks: true });
+    } else {
+      vsSetLocked("Could not open Video Studio", e.message || "Please try again.", { upgrade: false });
+    }
+  }
+}
+
+function resetVideoStudio() {
+  vsRunId++;
+  vsStopClock();
+  vsAccess = null;
+  vsAllowance = null;
+  vsVideoUrl = null;
+  vsBusy = false;
+  if ($("vsTool")) $("vsTool").hidden = true;
+  if ($("vsLocked")) $("vsLocked").hidden = true;
+  if (!$("vsPrompt")) return;
+  $("vsPrompt").value = "";
+  vsUpdateCounter();
+  const v = $("vsVideo");
+  v.pause();
+  v.removeAttribute("src");
+  v.load();
+  vsShowPanel("empty");
+  $("vsGenerate").disabled = false;
+  $("vsGenerate").textContent = "Generate Video ↗";
+  $("vsClear").disabled = false;
+  $("vsResultNote").textContent = "";
+  setStatus("vsStatus", "");
+  document.querySelectorAll('input[name="vsDuration"]').forEach(r => { r.disabled = false; r.checked = r.value === "5"; });
+  document.querySelector('input[name="vsAspect"][value="16:9"]').checked = true;
+  vsApplyRatio();
+  $("vsRemaining").textContent = "…";
+  $("vsMeter").style.width = "0%";
+  $("vsAllowNote").textContent = "Checking your allowance…";
+}
+
+async function vsGenerate() {
+  if (vsBusy) return;
+  if (!currentUid) return toast("Please sign in with Google first.", true);
+
+  const prompt = $("vsPrompt").value.trim();
+  const duration = Number(vsPicked("vsDuration"));
+  const aspectRatio = vsPicked("vsAspect");
+
+  if (prompt.length < VS_MIN_PROMPT) {
+    return setStatus("vsStatus", `Please describe your video in at least ${VS_MIN_PROMPT} characters.`, true);
+  }
+  if (prompt.length > VS_MAX_PROMPT) {
+    return setStatus("vsStatus", `Please keep your description under ${VS_MAX_PROMPT} characters.`, true);
+  }
+  if (vsAllowance && (vsAllowance.remainingVideos < 1 || duration > vsAllowance.remainingSeconds)) {
+    return setStatus("vsStatus", "You don't have enough of today's video allowance left for that duration.", true);
+  }
+
+  const run = ++vsRunId;
+  vsBusy = true;
+  vsUpdateGenerateButton();
+  setBusy($("vsGenerate"), true, "Generating…");
+  setStatus("vsStatus", "");
+  $("vsResultNote").textContent = "";
+  vsApplyRatio();
+  vsShowPanel("loading");
+
+  const started = Date.now();
+  vsStopClock();
+  $("vsElapsed").textContent = "Elapsed 0:00. This can take a minute or more. Keep this page open.";
+  vsClock = setInterval(() => {
+    const s = Math.floor((Date.now() - started) / 1000);
+    $("vsElapsed").textContent = `Elapsed ${vsClockText(s)}. This can take a minute or more. Keep this page open.`;
+  }, 1000);
+
+  try {
+    // The chosen duration and aspect ratio are sent to the Worker, which validates them
+    // and passes them to the model. Resolution is fixed to 480p on the server.
+    const data = await api("/api/video/generate", { prompt, duration, aspectRatio });
+    if (run !== vsRunId) return;
+
+    let ok = false;
+    try { ok = typeof data.videoUrl === "string" && new URL(data.videoUrl).protocol === "https:"; } catch {}
+    if (!ok) throw new Error("The server did not return a usable video. Please try again.");
+
+    vsVideoUrl = data.videoUrl;
+    const v = $("vsVideo");
+    v.src = vsVideoUrl;
+    v.load();
+    vsShowPanel("video");
+    vsSetAllowance(data.usage);
+    $("vsResultNote").textContent = `Your ${data.durationSeconds}-second ${data.aspectRatio} video is ready. Download it soon; the link may expire.`;
+    side("Video ready", "online");
+  } catch (e) {
+    if (run !== vsRunId) return;
+    if (e.status === 403) {
+      vsAccess = false;
+      vsSetLocked("Pro feature", "Malie Video Studio is available on the Pro plan. Upgrade to turn your ideas into short AI videos.", { perks: true });
+      return;
+    }
+    $("vsErrorText").textContent = e.message || "Something went wrong. Please try again.";
+    vsShowPanel("error");
+    setStatus("vsStatus", "", false);
+    vsRefreshAllowance();
+  } finally {
+    if (run === vsRunId) {
+      vsStopClock();
+      vsBusy = false;
+      setBusy($("vsGenerate"), false);
+      vsUpdateGenerateButton();
+    }
+  }
+}
+
+async function vsDownload() {
+  if (!vsVideoUrl) return;
+  const btn = $("vsDownload");
+  setBusy(btn, true, "Preparing…");
+  try {
+    // Works when the video host allows cross-origin reads; otherwise fall back to opening it.
+    const res = await fetch(vsVideoUrl);
+    if (!res.ok) throw new Error("fetch failed");
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "malie-video.mp4";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  } catch {
+    const w = window.open(vsVideoUrl, "_blank", "noopener,noreferrer");
+    if (!w) toast("Allow pop-ups, or right-click the video and choose Save video.", true);
+    else toast("The video opened in a new tab. Use its menu to save it.");
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
+$("vsForm").addEventListener("submit", e => { e.preventDefault(); vsGenerate(); });
+$("vsPrompt").addEventListener("input", vsUpdateCounter);
+$("vsClear").addEventListener("click", () => {
+  $("vsPrompt").value = "";
+  vsUpdateCounter();
+  setStatus("vsStatus", "");
+  $("vsPrompt").focus();
+});
+$("vsRetry").addEventListener("click", vsGenerate);
+$("vsDownload").addEventListener("click", vsDownload);
+$("vsUpgrade").addEventListener("click", openPlans);
+document.querySelectorAll('input[name="vsAspect"]').forEach(r => r.addEventListener("change", vsApplyRatio));
+$("vsVideo").addEventListener("error", () => {
+  if (!vsVideoUrl || $("vsVideo").hidden) return;
+  $("vsErrorText").textContent = "The video could not be played. Its link may have expired. Please generate it again.";
+  vsShowPanel("error");
+});
+vsUpdateCounter();
+vsApplyRatio();
 
 /* Advert Studio product image upload */
 let advertImageData = null;

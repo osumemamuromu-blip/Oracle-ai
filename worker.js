@@ -1618,87 +1618,224 @@ if (
           {
             duration: 5,
             "background-color": ACCENT,
-            transition: { style: "fade", duration: 0.6 },
-            elements: [
-              {
-                type: "image", src: img,
-                position: "custom", x: "center", y: "6%", height: "48%", width: -1,
-                "z-index": 1
-              },
-              ...(description
-                ? [textBox(description, "58%", "80%", "14%", "38px", { "font-weight": "500" })]
-                : []),
-              textBox(callToAction, "76%", "40%", "14%", "52px", {
-                "background-color": "#111111"
-              }, 6)
-            ]
-          }
-        ]
-      };
-    } else {
-      /* story: 1080x1920 vertical for TikTok / Reels / WhatsApp Status */
-      moviePayload = {
-        resolution: "custom",
-        width: 1080,
-        height: 1920,
-        quality: "high",
-        cache: false,
-        scenes: [{
-          duration: 10,
-          "background-color": "#000000",
-          elements: [
-            { type: "image", src: img, resize: "cover", zoom: 2, "z-index": 0 },
-            textBox(headline, "58%", "92%", "13%", "60px", { "background-color": DARK }),
-            ...(description
-              ? [textBox(description, "72%", "92%", "9%", "34px", {
-                  "font-weight": "400",
-                  "background-color": DARK
-                })]
-              : []),
-            textBox(callToAction, "84%", "62%", "7%", "44px", {
-              "background-color": ACCENT
-            }, 6)
-          ]
-        }]
-      };
+
+/* ---------------- Malie AI Advert Studio (Pro only) ---------------- */
+if (
+  request.method === "POST" &&
+  (path === "/api/advert/start" || path === "/api/advert/status")
+) {
+  try {
+    const userId = await authenticateFirebase(request, env);
+    const plan = await getActivePlan(env, userId);
+
+    if (plan !== "pro") {
+      return respond({
+        error: "Malie AI Advert Studio is available on the Pro plan only."
+      }, 403);
     }
 
-    const renderResponse = await fetch(
-      "https://api.json2video.com/v2/movies",
-      {
-        method: "POST",
-        headers: {
-          ...apiHeaders,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(moviePayload)
+    if (!env.ETERNAL_AI_API_KEY) {
+      return respond({ error: "Advert Studio is not configured yet." }, 500);
+    }
+
+    if (!env.DB) {
+      return respond({ error: "The database is not configured." }, 500);
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return respond({ error: "Please send valid JSON." }, 400);
+    }
+
+    const apiHeaders = {
+      "Authorization": `Bearer ${env.ETERNAL_AI_API_KEY}`,
+      "Content-Type": "application/json"
+    };
+
+    if (path === "/api/advert/status") {
+      const projectId = String(body.projectId || "");
+
+      if (!/^[A-Za-z0-9-]{16,80}$/.test(projectId)) {
+        return respond({ error: "Invalid video project ID." }, 400);
       }
+
+      const owned = await env.DB.prepare(
+        "SELECT project_id, status, video_url FROM advert_projects WHERE project_id = ? AND user_id = ?"
+      ).bind(projectId, userId).first();
+
+      if (!owned) {
+        return respond({ error: "Video project not found for this account." }, 404);
+      }
+
+      if (owned.status === "completed" && owned.video_url) {
+        return respond({
+          ok: true,
+          projectId,
+          status: "completed",
+          videoUrl: owned.video_url,
+          message: "Your advert video is ready. Save it promptly; the provider URL may expire after about 24 hours."
+        });
+      }
+
+      const statusResponse = await fetch(
+        "https://open.eternalai.org/api/image-to-video/" +
+          encodeURIComponent(projectId) + "/status",
+        {
+          headers: { "Authorization": `Bearer ${env.ETERNAL_AI_API_KEY}` },
+          signal: AbortSignal.timeout(15000)
+        }
+      );
+
+      const statusData = await statusResponse.json().catch(() => ({}));
+      const result = statusData.result || {};
+
+      if (!statusResponse.ok || (!statusData.result && statusData.status !== true)) {
+        return respond({
+          error: statusData.error || "Could not retrieve the video status. Please try again."
+        }, 502);
+      }
+
+      const providerStatus = String(result.status || "processing").toLowerCase();
+      const status = providerStatus === "success" ? "completed" : providerStatus;
+      const videoUrl = status === "completed" ? (result.video_url || null) : owned.video_url;
+
+      await env.DB.prepare(
+        "UPDATE advert_projects SET status = ?, video_url = ? WHERE project_id = ? AND user_id = ?"
+      ).bind(status, videoUrl || null, projectId, userId).run();
+
+      return respond({
+        ok: true,
+        projectId,
+        status,
+        videoUrl: videoUrl || null,
+        progress: result.progress ?? null,
+        message: status === "completed"
+          ? "Your advert video is ready. Save it promptly; the provider URL may expire after about 24 hours."
+          : status === "failed"
+            ? (result.error || statusData.error || "The video generation did not complete.")
+            : "Your advert video is still rendering."
+      });
+    }
+
+    const today = getUsageDate();
+    const usage = await env.DB.prepare(
+      "SELECT COUNT(*) AS total FROM advert_projects WHERE user_id = ? AND usage_date = ?"
+    ).bind(userId, today).first();
+
+    if (Number(usage?.total || 0) >= 3) {
+      return respond({
+        error: "You have reached the limit of 3 advert video renders per day. Please try again tomorrow."
+      }, 429);
+    }
+
+    const imageData = String(body.imageData || "");
+    const match = imageData.match(
+      /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\r\n]+)$/
     );
 
-    const renderData = await renderResponse.json();
-
-    if (!renderResponse.ok || !renderData.project) {
-      return respond({
-        error: "JSON2Video could not start the render. Please try again."
-      }, 502);
+    if (!match) {
+      return respond({ error: "Upload a valid JPG, PNG, or WebP product image." }, 400);
     }
 
-    const projectId = String(renderData.project);
+    const base64 = match[2].replace(/\s/g, "");
+
+    if (!base64 || base64.length > 20000000) {
+      return respond({ error: "Image is too large. Please use an image smaller than 15 MB." }, 413);
+    }
+
+    let imageBytes;
+    try {
+      imageBytes = atob(base64);
+    } catch {
+      return respond({ error: "The image data is invalid." }, 400);
+    }
+
+    if (!imageBytes.length || imageBytes.length > 15 * 1024 * 1024) {
+      return respond({ error: "Image must be smaller than 15 MB." }, 413);
+    }
+
+    const cleanText = (value, maxLength) => String(value || "")
+      .replace(/[<>]/g, "")
+      .trim()
+      .slice(0, maxLength);
+
+    let rawHeadline = cleanText(body.headline, 400);
+    let rawDescription = cleanText(body.description, 400);
+    const split = rawHeadline.match(/^\s*(?:headline\s*[:\-]\s*)?(.*?)\s*description\s*[:\-]\s*(.*)$/i);
+
+    if (split) {
+      rawHeadline = split[1];
+      if (!rawDescription) rawDescription = split[2];
+    }
+
+    const stripLabel = (value, label) =>
+      value.replace(new RegExp("^\\s*" + label + "\\s*[:\\-]\\s*", "i"), "").trim();
+
+    const headline = stripLabel(rawHeadline, "headline").slice(0, 70) || "A Product Worth Discovering";
+    const description = stripLabel(rawDescription, "description").slice(0, 120);
+    const callToAction = stripLabel(cleanText(body.callToAction, 40), "call to action") || "Shop Now";
+
+    const videoStyle = ["clean", "fullscreen", "promo", "story"].includes(body.style)
+      ? body.style
+      : "clean";
+
+    const styleDirection = {
+      clean: "Elegant, clean studio commercial. Keep the complete product visible and centred with generous negative space; use a slow cinematic push-in and soft premium lighting.",
+      fullscreen: "Full-frame cinematic product commercial with tasteful camera motion and dramatic but realistic lighting. Keep the product recognizable and do not crop important product details.",
+      promo: "Energetic premium promotional commercial with a smooth camera move, polished lighting changes, and a refined product reveal.",
+      story: "Vertical social-story product commercial, composed for a 9:16 mobile frame. Keep the product fully visible and away from the edges, with smooth cinematic motion."
+    }[videoStyle];
+
+    const promptParts = [
+      "Create a polished 5-second product advertisement from the supplied image.",
+      styleDirection,
+      "Preserve the product's exact shape, proportions, colours, packaging, label and existing logo. Do not redesign, replace, or distort the product.",
+      "Use realistic studio lighting, natural reflections, subtle atmospheric movement, and smooth camera motion. Professional commercial quality.",
+      `Headline concept: ${headline}.`,
+      description ? `Supporting message: ${description}.` : "",
+      `Call to action concept: ${callToAction}.`,
+      "Do not generate new lettering, captions, fake labels, watermarks, or logos; keep any existing product text unchanged."
+    ].filter(Boolean).join(" ").slice(0, 2000);
+
+    const renderResponse = await fetch("https://open.eternalai.org/api/image-to-video", {
+      method: "POST",
+      headers: apiHeaders,
+      body: JSON.stringify({
+        prompt: promptParts,
+        image_url: imageData,
+        model_id: "wan-ai/wan2.2-i2v-a14b-lightning",
+        duration: "5",
+        resolution: "480p",
+        aspect_ratio: videoStyle === "story" ? "9:16" : "16:9",
+        negative_prompt: "blurry, distorted product, warped packaging, changed label, extra objects, illegible text, low quality, watermark",
+        cfg_scale: 0.5
+      }),
+      signal: AbortSignal.timeout(30000)
+    });
+
+    const renderData = await renderResponse.json().catch(() => ({}));
+    const requestId = renderData.result?.request_id;
+
+    if (!renderResponse.ok || !requestId) {
+      return respond({
+        error: renderData.error || "Eternal AI could not start the video generation. Please try again.",
+        provider_status: renderResponse.status
+      }, renderResponse.status === 402 ? 402 : 502);
+    }
 
     await env.DB.prepare(
       "INSERT INTO advert_projects (project_id, user_id, usage_date, status) VALUES (?, ?, ?, ?)"
-    ).bind(
-      projectId,
-      userId,
-      today,
-      "queued"
-    ).run();
+    ).bind(requestId, userId, today, "pending").run();
 
     return respond({
       ok: true,
-      projectId,
-      status: "queued",
-      message: "Your advert video has been submitted for rendering."
+      projectId: requestId,
+      status: "pending",
+      message: "Your advert video has been submitted to Eternal AI. It may take a few minutes to finish.",
+      durationSeconds: 5,
+      resolution: "480p"
     });
 
   } catch (error) {

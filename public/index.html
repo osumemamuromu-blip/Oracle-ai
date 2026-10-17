@@ -2115,7 +2115,7 @@ $("clearQuizHistory").onclick = async () => {
   }
 };
 
-/* ───────── Plans & payments ───────── */
+  /* ───────── Plans & payments ───────── */
 const PRICES = { premium: { monthly: 2500, annual: 25000 }, pro: { monthly: 7500, annual: 85000 } };
 const naira = n => "₦" + Number(n).toLocaleString("en-NG");
 const PLAN_NAMES = { premium: "Premium", pro: "Pro" };
@@ -2937,7 +2937,7 @@ $("advertGenerate").onclick = async () => {
 
     let finished = false;
 
-    for (let attempt = 0; attempt < 36; attempt++) {
+    for (let attempt = 0; attempt < 120; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 5000));
 
       const result = await api("/api/advert/status", { projectId });
@@ -2957,7 +2957,7 @@ $("advertGenerate").onclick = async () => {
       }
 
       $("advertRenderStatus").textContent =
-        `Video rendering… check ${attempt + 1} of 36`;
+        `Video rendering… (${result.status || "processing"}) check ${attempt + 1}`;
     }
 
     if (!finished) {

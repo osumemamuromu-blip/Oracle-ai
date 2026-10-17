@@ -2435,6 +2435,106 @@ export default {
         }, 500);
       }
     }
+    /* ---------------- CAD Studio code generation (Pro only) ---------------- */
+
+if (request.method === "POST" && path === "/api/cad/generate") {
+  let body;
+
+  try {
+    body = await request.json();
+  } catch {
+    return respond({ error: "Please send valid JSON." }, 400);
+  }
+
+  try {
+    const userId = await authenticateFirebase(request, env);
+    const plan = await getActivePlan(env, userId);
+
+    if (plan !== "pro") {
+      return respond({
+        error: "AI CAD generation is available on the Pro plan. Please upgrade to Pro to use it."
+      }, 403);
+    }
+
+    const description = String(
+      body.prompt || body.description || ""
+    ).trim();
+
+    if (description.length < 5) {
+      return respond({
+        error: "Describe the 3D object you want to create."
+      }, 400);
+    }
+
+    if (description.length > 2000) {
+      return respond({
+        error: "Please keep your CAD description under 2,000 characters."
+      }, 400);
+    }
+
+    if (!env.DB) {
+      return respond({
+        error: "Usage tracking is temporarily unavailable."
+      }, 503);
+    }
+
+    const usage = await reserveDailyUsage(env, userId, plan);
+
+    try {
+      const prompt = [
+        "Generate a CAD model script for Cascade Studio using its supported JavaScript geometry API.",
+        "Return ONLY a JSON object with exactly two fields: title (short string) and code (string). No markdown fences.",
+        "Use only these geometry functions: Box, Sphere, Cylinder, Cone, Translate, Rotate, Union, Difference, Intersection, Sketch, Extrude, Revolve.",
+        "Use simple const/let declarations and numeric arguments only.",
+        "Do not use imports, browser APIs, network access, loops, conditionals, custom functions, classes, strings, or arbitrary JavaScript.",
+        "Create a complete model, not an explanation. Prefer dimensions in millimetres and sensible proportions.",
+        "Use multiple supported primitives and Boolean operations when appropriate.",
+        "Do not claim an operation is supported if it cannot be expressed with the listed functions.",
+        "Keep the code concise.",
+        "User's requested object:",
+        description
+      ].join("\n");
+
+      const raw = await callAI(env, prompt, true);
+
+      const result = parseJsonObject(
+        raw,
+        "Malie could not generate CAD code from that description. Please try again."
+      );
+
+      const title = String(
+        result.title || "Generated CAD Model"
+      ).replace(/[<>&"']/g, "").slice(0, 80);
+
+      const code = validateCadCode(result.code);
+
+      return respond({
+        ok: true,
+        title,
+        code,
+        usage
+      });
+    } catch (error) {
+      await refundDailyUsage(env, userId, usage.date);
+      throw error;
+    }
+  } catch (error) {
+    const status = [400, 401, 403, 429, 500, 503].includes(error?.status)
+      ? error.status
+      : 502;
+
+    console.error(
+      "CAD generation error:",
+      String(error?.message || error)
+    );
+
+    return respond({
+      error: error?.status
+        ? error.message
+        : (error?.message || "CAD generation failed. Please try again.")
+    }, status);
+  }
+    }
 
     /* ---------------- Engineering Drawing Studio (Pro only) ---------------- */
     if (request.method === "POST" && path === "/api/drawing") {

@@ -1844,7 +1844,9 @@ export default {
             plan: "pro",
             usage: videoUsageSummary(limit, used.videos, used.seconds, secondsLimit, usageDate),
             options: {
-              durations: VIDEO_STUDIO.durations,
+              durations: VIDEO_STUDIO.durations.filter(
+  seconds => seconds <= secondsLimit
+),
               aspectRatios: VIDEO_STUDIO.aspectRatios,
               resolution: VIDEO_STUDIO.resolution,
               promptMin: VIDEO_STUDIO.promptMin,

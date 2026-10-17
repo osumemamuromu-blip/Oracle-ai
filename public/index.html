@@ -576,6 +576,49 @@ button:disabled{opacity:.55;cursor:not-allowed}
             </div>
             <p class="draw-note">Educational reference only. This is not a verified, manufacturing-ready drawing and carries no engineering certification. Views are generated from the dimensions you enter, or estimated by AI from your uploaded image, and drawn to a fitted scale (not 1:1). Always check them against your original.</p>
           </div>
+          
+<!-- Cascade Studio interactive CAD workspace -->
+<div class="work-card" id="cascadeCadWorkspace">
+  <h3>Interactive 3D CAD Workspace</h3>
+
+  <p class="sub">
+    Build and edit a 3D model in Cascade Studio.
+    This editor is separate from Malie’s automatic drawing
+    generator for now; prompt-to-CAD linking will be a later
+    integration step.
+  </p>
+
+  <div class="button-row" style="margin:12px 0">
+    <a
+      class="secondary"
+      href="https://8df51bb7.cascadestudio.pages.dev/"
+      target="_blank"
+      rel="noopener noreferrer"
+      style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none"
+    >
+      Open CAD editor in new tab ↗
+    </a>
+  </div>
+
+  <div style="width:100%;height:min(78vh,820px);min-height:520px;overflow:hidden;border:1px solid var(--border, #333);border-radius:12px;background:#111">
+    <iframe
+      id="cascadeStudioFrame"
+      src="https://8df51bb7.cascadestudio.pages.dev/"
+      title="Cascade Studio 3D CAD editor"
+      loading="lazy"
+      referrerpolicy="strict-origin-when-cross-origin"
+      allow="fullscreen; clipboard-read; clipboard-write"
+      style="display:block;width:100%;height:100%;border:0;background:#111"
+    ></iframe>
+  </div>
+
+  <p class="sub" style="margin-top:10px">
+    If the editor does not appear inside Malie, use
+    “Open CAD editor in new tab” above. Some hosted editors
+    block embedding on other websites.
+  </p>
+</div>
+
 
           <div class="work-card">
             <h3>Ask Malie about this drawing</h3>

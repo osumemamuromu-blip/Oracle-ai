@@ -1598,6 +1598,89 @@ export default {
       }
     }
 
+    
+/* ---------------- Pro Video Generation ---------------- */
+if (url.pathname === "/api/pro/video" && request.method === "POST") {
+  try {
+    const user = await authenticateFirebase(request, env);
+    if (!user) {
+      return respond({ error: "Please sign in first." }, 401);
+    }
+
+    const plan = await getActivePlan(env, user.uid);
+    if (plan !== "pro") {
+      return respond({
+        error: "Grok Imagine Video is available to active Pro subscribers only."
+      }, 403);
+    }
+
+    const body = await request.json();
+    const prompt = typeof body.prompt === "string"
+      ? body.prompt.trim()
+      : "";
+
+    if (!prompt || prompt.length > 2000) {
+      return respond({
+        error: "Enter a video prompt of 1–2000 characters."
+      }, 400);
+    }
+
+    // Start conservatively to control generation costs.
+    const duration = 5;
+    const resolution = "480p";
+    const aspect_ratio = [
+      "16:9", "9:16", "1:1", "4:3", "3:4", "3:2", "2:3"
+    ].includes(body.aspect_ratio)
+      ? body.aspect_ratio
+      : "16:9";
+
+    if (!env.AI) {
+      return respond({
+        error: "Cloudflare AI is not configured."
+      }, 503);
+    }
+
+    const result = await env.AI.run(
+      "xai/grok-imagine-video",
+      {
+        prompt,
+        duration,
+        resolution,
+        aspect_ratio
+      }
+    );
+
+    const videoUrl = result?.result?.video || result?.video;
+
+    if (result?.state && result.state !== "Completed") {
+      return respond({
+        error: "Video generation did not complete.",
+        state: result.state
+      }, 502);
+    }
+
+    if (!videoUrl) {
+      return respond({
+        error: "No video URL was returned by the model."
+      }, 502);
+    }
+
+    return respond({
+      success: true,
+      video: videoUrl,
+      duration,
+      resolution,
+      aspect_ratio
+    });
+  } catch (error) {
+    console.error("Pro video generation error:", error);
+    return respond({
+      error: "Video generation failed. Please try again later."
+    }, 500);
+  }
+}
+
+
     /* ---------------- Fallbacks ---------------- */
     if (path.startsWith("/api/")) {
       return respond({ error: "API endpoint not found." }, 404);

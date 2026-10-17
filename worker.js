@@ -1251,327 +1251,353 @@ export default {
         );
       }
     }
-/* ---------------- Admin check (any signed-in user) ---------------- */
-if (request.method === "POST" && path === "/api/admin/check") {
-  try {
-    const uid = await authenticateFirebase(request, env);
-    const adminUid = env.MALIE_ADMIN_UID;
-    return respond({ ok: true, isAdmin: Boolean(adminUid) && uid === adminUid });
-  } catch (error) {
-    return respond({ ok: false, isAdmin: false, error: error.message }, error.status || 401);
-  }
-}
-   
-/* Advert Studio access check — does not start a render */
-if (request.method === "POST" && path === "/api/advert/access") {
-  try {
-    const userId = await authenticateFirebase(request, env);
-    const plan = await getActivePlan(env, userId);
 
-    if (plan !== "pro") {
-      return respond({
-        error: "Malie AI Advert Studio is available on the Pro plan only."
-      }, 403);
-    }
-
-    return respond({ ok: true, plan: "pro" });
-  } catch (e) {
-    return respond({
-      error: e.message || "Could not verify Advert Studio access."
-    }, e.status || 500);
-  }
-}
- 
-
-/* ---------------- Malie AI Advert Studio (Pro only) ---------------- */
-if (
-  request.method === "POST" &&
-  (path === "/api/advert/start" || path === "/api/advert/status")
-) {
-  try {
-    const userId = await authenticateFirebase(request, env);
-    const plan = await getActivePlan(env, userId);
-
-    if (plan !== "pro") {
-      return respond({
-        error: "Malie AI Advert Studio is available on the Pro plan only."
-      }, 403);
-    }
-
-    if (!env.ETERNAL_AI_API_KEY) {
-      return respond({ error: "Advert Studio is not configured yet." }, 500);
-    }
-
-    if (!env.DB) {
-      return respond({ error: "The database is not configured." }, 500);
-    }
-
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return respond({ error: "Please send valid JSON." }, 400);
-    }
-
-    const apiHeaders = {
-      "Authorization": `Bearer ${env.ETERNAL_AI_API_KEY}`,
-      "Content-Type": "application/json"
-    };
-
-    if (path === "/api/advert/status") {
-      const projectId = String(body.projectId || "");
-
-      if (!/^[A-Za-z0-9-]{16,80}$/.test(projectId)) {
-        return respond({ error: "Invalid video project ID." }, 400);
+    /* ---------------- Admin check (any signed-in user) ---------------- */
+    if (request.method === "POST" && path === "/api/admin/check") {
+      try {
+        const uid = await authenticateFirebase(request, env);
+        const adminUid = env.MALIE_ADMIN_UID;
+        return respond({ ok: true, isAdmin: Boolean(adminUid) && uid === adminUid });
+      } catch (error) {
+        return respond({ ok: false, isAdmin: false, error: error.message }, error.status || 401);
       }
+    }
 
-      const owned = await env.DB.prepare(
-        "SELECT project_id, status, video_url FROM advert_projects WHERE project_id = ? AND user_id = ?"
-      ).bind(projectId, userId).first();
+    /* Advert Studio access check — does not start a render */
+    if (request.method === "POST" && path === "/api/advert/access") {
+      try {
+        const userId = await authenticateFirebase(request, env);
+        const plan = await getActivePlan(env, userId);
 
-      if (!owned) {
-        return respond({ error: "Video project not found for this account." }, 404);
+        if (plan !== "pro") {
+          return respond({
+            error: "Malie AI Advert Studio is available on the Pro plan only."
+          }, 403);
+        }
+
+        return respond({ ok: true, plan: "pro" });
+      } catch (e) {
+        return respond({
+          error: e.message || "Could not verify Advert Studio access."
+        }, e.status || 500);
       }
+    }
 
-      if (owned.status === "completed" && owned.video_url) {
+    /* ---------------- Malie AI Advert Studio (Pro only) ---------------- */
+    if (
+      request.method === "POST" &&
+      (path === "/api/advert/start" || path === "/api/advert/status")
+    ) {
+      try {
+        const userId = await authenticateFirebase(request, env);
+        const plan = await getActivePlan(env, userId);
+
+        if (plan !== "pro") {
+          return respond({
+            error: "Malie AI Advert Studio is available on the Pro plan only."
+          }, 403);
+        }
+
+        if (!env.ETERNAL_AI_API_KEY) {
+          return respond({ error: "Advert Studio is not configured yet." }, 500);
+        }
+
+        if (!env.DB) {
+          return respond({ error: "The database is not configured." }, 500);
+        }
+
+        let body;
+        try {
+          body = await request.json();
+        } catch {
+          return respond({ error: "Please send valid JSON." }, 400);
+        }
+
+        const apiHeaders = {
+          "Authorization": `Bearer ${env.ETERNAL_AI_API_KEY}`,
+          "Content-Type": "application/json"
+        };
+
+        if (path === "/api/advert/status") {
+          const projectId = String(body.projectId || "");
+
+          if (!/^[A-Za-z0-9-]{16,80}$/.test(projectId)) {
+            return respond({ error: "Invalid video project ID." }, 400);
+          }
+
+          const owned = await env.DB.prepare(
+            "SELECT project_id, status, video_url FROM advert_projects WHERE project_id = ? AND user_id = ?"
+          ).bind(projectId, userId).first();
+
+          if (!owned) {
+            return respond({ error: "Video project not found for this account." }, 404);
+          }
+
+          if (owned.status === "completed" && owned.video_url) {
+            return respond({
+              ok: true,
+              projectId,
+              status: "completed",
+              videoUrl: owned.video_url,
+              message: "Your advert video is ready. Save it promptly; the provider URL may expire after about 24 hours."
+            });
+          }
+
+          const statusResponse = await fetch(
+            "https://open.eternalai.org/api/image-to-video/" +
+              encodeURIComponent(projectId) + "/status",
+            {
+              headers: { "Authorization": `Bearer ${env.ETERNAL_AI_API_KEY}` },
+              signal: AbortSignal.timeout(15000)
+            }
+          );
+
+          const statusData = await statusResponse.json().catch(() => ({}));
+          const result = statusData.result || {};
+          console.log("ETERNAL STATUS HTTP:", statusResponse.status);
+          console.log("ETERNAL STATUS BODY:", JSON.stringify(statusData));
+
+          if (!statusResponse.ok || (!statusData.result && statusData.status !== true)) {
+            return respond({
+              error: statusData.error || "Could not retrieve the video status. Please try again."
+            }, 502);
+          }
+
+          /* ---- FIXED: find the video URL and recognise every finished/failed status ---- */
+          const providerStatus = String(result.status || "processing").toLowerCase();
+
+          // Eternal AI puts the finished video at result.output.video_url
+          // (other shapes are checked too).
+          const foundUrl =
+            result.output?.video_url ||
+            result.video_url ||
+            (Array.isArray(result.output)
+              ? result.output[0]?.video_url || result.output[0]
+              : null) ||
+            result.output?.url ||
+            result.url ||
+            null;
+
+          const DONE = ["success", "succeeded", "completed", "complete", "ready", "done", "finished"];
+          const FAILED = ["failed", "error", "cancelled", "canceled", "timeout"];
+
+          let status;
+          if (typeof foundUrl === "string" && foundUrl) status = "completed";
+          else if (DONE.includes(providerStatus)) status = "completed";
+          else if (FAILED.includes(providerStatus)) status = "failed";
+          else status = providerStatus; // pending / processing / queued
+
+          const videoUrl =
+            status === "completed"
+              ? (typeof foundUrl === "string" ? foundUrl : null)
+              : owned.video_url;
+
+          await env.DB.prepare(
+            "UPDATE advert_projects SET status = ?, video_url = ? WHERE project_id = ? AND user_id = ?"
+          ).bind(status, videoUrl || null, projectId, userId).run();
+
+          return respond({
+            ok: true,
+            projectId,
+            status,
+            videoUrl: videoUrl || null,
+            progress: result.progress ?? null,
+            message: status === "completed"
+              ? "Your advert video is ready. Save it promptly; the provider URL may expire after about 24 hours."
+              : status === "failed"
+                ? (result.error || statusData.error || "The video generation did not complete.")
+                : "Your advert video is still rendering."
+          });
+        }
+
+        const today = getUsageDate();
+        const usage = await env.DB.prepare(
+          "SELECT COUNT(*) AS total FROM advert_projects WHERE user_id = ? AND usage_date = ?"
+        ).bind(userId, today).first();
+
+        if (Number(usage?.total || 0) >= 3) {
+          return respond({
+            error: "You have reached the limit of 3 advert video renders per day. Please try again tomorrow."
+          }, 429);
+        }
+
+        const imageData = String(body.imageData || "");
+        const match = imageData.match(
+          /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\r\n]+)$/
+        );
+
+        if (!match) {
+          return respond({ error: "Upload a valid JPG, PNG, or WebP product image." }, 400);
+        }
+
+        const base64 = match[2].replace(/\s/g, "");
+
+        if (!base64 || base64.length > 20000000) {
+          return respond({ error: "Image is too large. Please use an image smaller than 15 MB." }, 413);
+        }
+
+        let imageBytes;
+        try {
+          imageBytes = atob(base64);
+        } catch {
+          return respond({ error: "The image data is invalid." }, 400);
+        }
+
+        if (!imageBytes.length || imageBytes.length > 15 * 1024 * 1024) {
+          return respond({ error: "Image must be smaller than 15 MB." }, 413);
+        }
+
+        const cleanText = (value, maxLength) => String(value || "")
+          .replace(/[<>]/g, "")
+          .trim()
+          .slice(0, maxLength);
+
+        let rawHeadline = cleanText(body.headline, 400);
+        let rawDescription = cleanText(body.description, 400);
+        const split = rawHeadline.match(/^\s*(?:headline\s*[:\-]\s*)?(.*?)\s*description\s*[:\-]\s*(.*)$/i);
+
+        if (split) {
+          rawHeadline = split[1];
+          if (!rawDescription) rawDescription = split[2];
+        }
+
+        const stripLabel = (value, label) =>
+          value.replace(new RegExp("^\\s*" + label + "\\s*[:\\-]\\s*", "i"), "").trim();
+
+        const headline = stripLabel(rawHeadline, "headline").slice(0, 70) || "A Product Worth Discovering";
+        const description = stripLabel(rawDescription, "description").slice(0, 120);
+        const callToAction = stripLabel(cleanText(body.callToAction, 40), "call to action") || "Shop Now";
+
+        const videoStyle = ["clean", "fullscreen", "promo", "story"].includes(body.style)
+          ? body.style
+          : "clean";
+
+        const styleDirection = {
+          clean: "Elegant, clean studio commercial. Keep the complete product visible and centred with generous negative space; use a slow cinematic push-in and soft premium lighting.",
+          fullscreen: "Full-frame cinematic product commercial with tasteful camera motion and dramatic but realistic lighting. Keep the product recognizable and do not crop important product details.",
+          promo: "Energetic premium promotional commercial with a smooth camera move, polished lighting changes, and a refined product reveal.",
+          story: "Vertical social-story product commercial, composed for a 9:16 mobile frame. Keep the product fully visible and away from the edges, with smooth cinematic motion."
+        }[videoStyle];
+
+        const promptParts = [
+          "Create a polished 5-second product advertisement from the supplied image.",
+          styleDirection,
+          "Preserve the product's exact shape, proportions, colours, packaging, label and existing logo. Do not redesign, replace, or distort the product.",
+          "Use realistic studio lighting, natural reflections, subtle atmospheric movement, and smooth camera motion. Professional commercial quality.",
+          `Headline concept: ${headline}.`,
+          description ? `Supporting message: ${description}.` : "",
+          `Call to action concept: ${callToAction}.`,
+          "Do not generate new lettering, captions, fake labels, watermarks, or logos; keep any existing product text unchanged."
+        ].filter(Boolean).join(" ").slice(0, 2000);
+
+        const renderResponse = await fetch("https://open.eternalai.org/api/image-to-video", {
+          method: "POST",
+          headers: apiHeaders,
+          body: JSON.stringify({
+            prompt: promptParts,
+            image_url: imageData,
+            model_id: "wan-ai/wan2.2-i2v-a14b-lightning",
+            duration: "5",
+            resolution: "480p",
+            aspect_ratio: videoStyle === "story" ? "9:16" : "16:9",
+            negative_prompt: "blurry, distorted product, warped packaging, changed label, extra objects, illegible text, low quality, watermark",
+            cfg_scale: 0.5
+          }),
+          signal: AbortSignal.timeout(30000)
+        });
+
+        const renderData = await renderResponse.json().catch(() => ({}));
+        const requestId = renderData.result?.request_id;
+
+        if (!renderResponse.ok || !requestId) {
+          return respond({
+            error: renderData.error || "Eternal AI could not start the video generation. Please try again.",
+            provider_status: renderResponse.status
+          }, renderResponse.status === 402 ? 402 : 502);
+        }
+
+        await env.DB.prepare(
+          "INSERT INTO advert_projects (project_id, user_id, usage_date, status) VALUES (?, ?, ?, ?)"
+        ).bind(requestId, userId, today, "pending").run();
+
         return respond({
           ok: true,
-          projectId,
-          status: "completed",
-          videoUrl: owned.video_url,
-          message: "Your advert video is ready. Save it promptly; the provider URL may expire after about 24 hours."
+          projectId: requestId,
+          status: "pending",
+          message: "Your advert video has been submitted to Eternal AI. It may take a few minutes to finish.",
+          durationSeconds: 5,
+          resolution: "480p"
         });
-      }
 
-      const statusResponse = await fetch(
-        "https://open.eternalai.org/api/image-to-video/" +
-          encodeURIComponent(projectId) + "/status",
-        {
-          headers: { "Authorization": `Bearer ${env.ETERNAL_AI_API_KEY}` },
-          signal: AbortSignal.timeout(15000)
-        }
-      );
-
-      const statusData = await statusResponse.json().catch(() => ({}));
-      const result = statusData.result || {};
-      console.log("ETERNAL STATUS HTTP:", statusResponse.status);
-console.log("ETERNAL STATUS BODY:", JSON.stringify(statusData));
-
-      if (!statusResponse.ok || (!statusData.result && statusData.status !== true)) {
+      } catch (error) {
+        console.error("Advert Studio error:", error);
         return respond({
-          error: statusData.error || "Could not retrieve the video status. Please try again."
-        }, 502);
-      }
-
-      const providerStatus = String(result.status || "processing").toLowerCase();
-      const status = providerStatus === "success" ? "completed" : providerStatus;
-      const videoUrl = status === "completed" ? (result.video_url || null) : owned.video_url;
-
-      await env.DB.prepare(
-        "UPDATE advert_projects SET status = ?, video_url = ? WHERE project_id = ? AND user_id = ?"
-      ).bind(status, videoUrl || null, projectId, userId).run();
-
-      return respond({
-        ok: true,
-        projectId,
-        status,
-        videoUrl: videoUrl || null,
-        progress: result.progress ?? null,
-        message: status === "completed"
-          ? "Your advert video is ready. Save it promptly; the provider URL may expire after about 24 hours."
-          : status === "failed"
-            ? (result.error || statusData.error || "The video generation did not complete.")
-            : "Your advert video is still rendering."
-      });
-    }
-
-    const today = getUsageDate();
-    const usage = await env.DB.prepare(
-      "SELECT COUNT(*) AS total FROM advert_projects WHERE user_id = ? AND usage_date = ?"
-    ).bind(userId, today).first();
-
-    if (Number(usage?.total || 0) >= 3) {
-      return respond({
-        error: "You have reached the limit of 3 advert video renders per day. Please try again tomorrow."
-      }, 429);
-    }
-
-    const imageData = String(body.imageData || "");
-    const match = imageData.match(
-      /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\r\n]+)$/
-    );
-
-    if (!match) {
-      return respond({ error: "Upload a valid JPG, PNG, or WebP product image." }, 400);
-    }
-
-    const base64 = match[2].replace(/\s/g, "");
-
-    if (!base64 || base64.length > 20000000) {
-      return respond({ error: "Image is too large. Please use an image smaller than 15 MB." }, 413);
-    }
-
-    let imageBytes;
-    try {
-      imageBytes = atob(base64);
-    } catch {
-      return respond({ error: "The image data is invalid." }, 400);
-    }
-
-    if (!imageBytes.length || imageBytes.length > 15 * 1024 * 1024) {
-      return respond({ error: "Image must be smaller than 15 MB." }, 413);
-    }
-
-    const cleanText = (value, maxLength) => String(value || "")
-      .replace(/[<>]/g, "")
-      .trim()
-      .slice(0, maxLength);
-
-    let rawHeadline = cleanText(body.headline, 400);
-    let rawDescription = cleanText(body.description, 400);
-    const split = rawHeadline.match(/^\s*(?:headline\s*[:\-]\s*)?(.*?)\s*description\s*[:\-]\s*(.*)$/i);
-
-    if (split) {
-      rawHeadline = split[1];
-      if (!rawDescription) rawDescription = split[2];
-    }
-
-    const stripLabel = (value, label) =>
-      value.replace(new RegExp("^\\s*" + label + "\\s*[:\\-]\\s*", "i"), "").trim();
-
-    const headline = stripLabel(rawHeadline, "headline").slice(0, 70) || "A Product Worth Discovering";
-    const description = stripLabel(rawDescription, "description").slice(0, 120);
-    const callToAction = stripLabel(cleanText(body.callToAction, 40), "call to action") || "Shop Now";
-
-    const videoStyle = ["clean", "fullscreen", "promo", "story"].includes(body.style)
-      ? body.style
-      : "clean";
-
-    const styleDirection = {
-      clean: "Elegant, clean studio commercial. Keep the complete product visible and centred with generous negative space; use a slow cinematic push-in and soft premium lighting.",
-      fullscreen: "Full-frame cinematic product commercial with tasteful camera motion and dramatic but realistic lighting. Keep the product recognizable and do not crop important product details.",
-      promo: "Energetic premium promotional commercial with a smooth camera move, polished lighting changes, and a refined product reveal.",
-      story: "Vertical social-story product commercial, composed for a 9:16 mobile frame. Keep the product fully visible and away from the edges, with smooth cinematic motion."
-    }[videoStyle];
-
-    const promptParts = [
-      "Create a polished 5-second product advertisement from the supplied image.",
-      styleDirection,
-      "Preserve the product's exact shape, proportions, colours, packaging, label and existing logo. Do not redesign, replace, or distort the product.",
-      "Use realistic studio lighting, natural reflections, subtle atmospheric movement, and smooth camera motion. Professional commercial quality.",
-      `Headline concept: ${headline}.`,
-      description ? `Supporting message: ${description}.` : "",
-      `Call to action concept: ${callToAction}.`,
-      "Do not generate new lettering, captions, fake labels, watermarks, or logos; keep any existing product text unchanged."
-    ].filter(Boolean).join(" ").slice(0, 2000);
-
-    const renderResponse = await fetch("https://open.eternalai.org/api/image-to-video", {
-      method: "POST",
-      headers: apiHeaders,
-      body: JSON.stringify({
-        prompt: promptParts,
-        image_url: imageData,
-        model_id: "wan-ai/wan2.2-i2v-a14b-lightning",
-        duration: "5",
-        resolution: "480p",
-        aspect_ratio: videoStyle === "story" ? "9:16" : "16:9",
-        negative_prompt: "blurry, distorted product, warped packaging, changed label, extra objects, illegible text, low quality, watermark",
-        cfg_scale: 0.5
-      }),
-      signal: AbortSignal.timeout(30000)
-    });
-
-    const renderData = await renderResponse.json().catch(() => ({}));
-    const requestId = renderData.result?.request_id;
-
-    if (!renderResponse.ok || !requestId) {
-      return respond({
-        error: renderData.error || "Eternal AI could not start the video generation. Please try again.",
-        provider_status: renderResponse.status
-      }, renderResponse.status === 402 ? 402 : 502);
-    }
-
-    await env.DB.prepare(
-      "INSERT INTO advert_projects (project_id, user_id, usage_date, status) VALUES (?, ?, ?, ?)"
-    ).bind(requestId, userId, today, "pending").run();
-
-    return respond({
-      ok: true,
-      projectId: requestId,
-      status: "pending",
-      message: "Your advert video has been submitted to Eternal AI. It may take a few minutes to finish.",
-      durationSeconds: 5,
-      resolution: "480p"
-    });
-
-  } catch (error) {
-    console.error("Advert Studio error:", error);
-    return respond({
-      error: "Advert Studio encountered an error. Please try again."
-    }, 500);
-  }
-}
-
-/* ---------------- Engineering Drawing Studio (Pro only) ---------------- */
-if (request.method === "POST" && path === "/api/drawing") {
-  try {
-    const userId = await authenticateFirebase(request, env);
-    const plan = await getActivePlan(env, userId);
-
-    if (plan !== "pro") {
-      return respond(
-        { error: "The Engineering Drawing Studio is available on the Pro plan. Please upgrade to Pro to use it." },
-        403
-      );
-    }
-
-    let body;
-    try { body = await request.json(); }
-    catch { return respond({ error: "Please send valid JSON." }, 400); }
-
-    const raw = body.params || {};
-    const p = {
-      d: Number(raw.d),
-      D1: Number(raw.D1),
-      L1: Number(raw.L1),
-      D2: Number(raw.D2),
-      T: Number(raw.T)
-    };
-
-    for (const [key, value] of Object.entries(p)) {
-      if (!Number.isFinite(value) || value <= 0 || value > 1000) {
-        return respond({ error: `Dimension "${key}" must be a number greater than 0 and not more than 1000.` }, 400);
+          error: "Advert Studio encountered an error. Please try again."
+        }, 500);
       }
     }
-    if (!(p.d < p.D1)) return respond({ error: "The bore diameter must be smaller than the body diameter." }, 400);
-    if (!(p.D1 < p.D2)) return respond({ error: "The flange diameter must be larger than the body diameter." }, 400);
 
-    const views = ["front", "top", "side", "iso", "section", "aux"];
-    const view = views.includes(body.view) ? body.view : "section";
-    const projection = body.projection === "first" ? "first" : "third";
-    const unit = raw.unit === "in" ? "in" : "mm";
-    const title = String(raw.title || "Stepped flanged bush").replace(/[<>&"']/g, "").slice(0, 60);
+    /* ---------------- Engineering Drawing Studio (Pro only) ---------------- */
+    if (request.method === "POST" && path === "/api/drawing") {
+      try {
+        const userId = await authenticateFirebase(request, env);
+        const plan = await getActivePlan(env, userId);
 
-    if (view === "aux") {
-      return respond({
-        ok: true,
-        supported: false,
-        message: "An auxiliary view is only needed for inclined surfaces. This part is a body of revolution with no inclined faces, so no auxiliary view is generated."
-      });
+        if (plan !== "pro") {
+          return respond(
+            { error: "The Engineering Drawing Studio is available on the Pro plan. Please upgrade to Pro to use it." },
+            403
+          );
+        }
+
+        let body;
+        try { body = await request.json(); }
+        catch { return respond({ error: "Please send valid JSON." }, 400); }
+
+        const raw = body.params || {};
+        const p = {
+          d: Number(raw.d),
+          D1: Number(raw.D1),
+          L1: Number(raw.L1),
+          D2: Number(raw.D2),
+          T: Number(raw.T)
+        };
+
+        for (const [key, value] of Object.entries(p)) {
+          if (!Number.isFinite(value) || value <= 0 || value > 1000) {
+            return respond({ error: `Dimension "${key}" must be a number greater than 0 and not more than 1000.` }, 400);
+          }
+        }
+        if (!(p.d < p.D1)) return respond({ error: "The bore diameter must be smaller than the body diameter." }, 400);
+        if (!(p.D1 < p.D2)) return respond({ error: "The flange diameter must be larger than the body diameter." }, 400);
+
+        const views = ["front", "top", "side", "iso", "section", "aux"];
+        const view = views.includes(body.view) ? body.view : "section";
+        const projection = body.projection === "first" ? "first" : "third";
+        const unit = raw.unit === "in" ? "in" : "mm";
+        const title = String(raw.title || "Stepped flanged bush").replace(/[<>&"']/g, "").slice(0, 60);
+
+        if (view === "aux") {
+          return respond({
+            ok: true,
+            supported: false,
+            message: "An auxiliary view is only needed for inclined surfaces. This part is a body of revolution with no inclined faces, so no auxiliary view is generated."
+          });
+        }
+
+        return respond({
+          ok: true,
+          supported: true,
+          view,
+          projection,
+          params: { ...p, unit, title },
+          totalLength: p.L1 + p.T
+        });
+      } catch (error) {
+        return respond({ error: error.message || "Could not generate the drawing." }, getErrorStatus(error));
+      }
     }
 
-    return respond({
-      ok: true,
-      supported: true,
-      view,
-      projection,
-      params: { ...p, unit, title },
-      totalLength: p.L1 + p.T
-    });
-  } catch (error) {
-    return respond({ error: error.message || "Could not generate the drawing." }, getErrorStatus(error));
-  }
-}
     /* ---------------- Fallbacks ---------------- */
     if (path.startsWith("/api/")) {
       return respond({ error: "API endpoint not found." }, 404);

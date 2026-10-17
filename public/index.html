@@ -2942,7 +2942,7 @@ $("advertGenerate").onclick = async () => {
 
       const result = await api("/api/advert/status", { projectId });
 
-      if (result.status === "done" && result.videoUrl) {
+      if (result.status === "completed" && result.videoUrl) {
         $("advertVideo").src = result.videoUrl;
         $("advertVideo").hidden = false;
         $("advertVideoLink").href = result.videoUrl;
@@ -2952,7 +2952,7 @@ $("advertGenerate").onclick = async () => {
         break;
       }
 
-      if (["error", "timeout"].includes(result.status)) {
+      if (["failed", "error", "timeout"].includes(result.status)) {
         throw new Error(result.message || "The video render failed.");
       }
 

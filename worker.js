@@ -18,7 +18,7 @@ const DAILY_LIMITS = {
 
 const PRICES = {
   premium: { monthly: 2500, annual: 25000 },
-  pro: { monthly: 7500, annual: 85000 }
+  pro: { monthly: 10000, annual: 110000 }
 };
 
 const taskInstructions = {
@@ -524,6 +524,218 @@ async function refundDailyUsage(env, userId, usageDate) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Malie Video Studio (Pro) — settings and helpers                     */
+/* ------------------------------------------------------------------ */
+
+// >>> DAILY VIDEO ALLOWANCE <<<
+// Two limits apply to each Pro user per day. A video is refused if EITHER is used up:
+//   1. at most VIDEO_DEFAULT_DAILY_VIDEOS videos, and
+//   2. at most VIDEO_DEFAULT_DAILY_SECONDS seconds of video in total.
+// Each video is 5 or 10 seconds. Worst-case spend per user per day =
+// seconds limit x $0.05 (480p) = 15 x 0.05 = $0.75.
+// Change the numbers below, or set Worker variables VIDEO_DAILY_VIDEOS and
+// VIDEO_DAILY_SECONDS (Settings > Variables) to override them without editing code.
+const VIDEO_DEFAULT_DAILY_VIDEOS = 3;
+const VIDEO_DEFAULT_DAILY_SECONDS = 15;
+
+const VIDEO_STUDIO = {
+  model: "xai/grok-imagine-video",
+  resolution: "480p",
+  durations: [5, 10],
+  aspectRatios: ["16:9", "9:16", "1:1"],
+  promptMin: 10,
+  promptMax: 800,
+  timeoutMs: 170000
+};
+
+function videoError(message, status, refund = true) {
+  const error = new Error(message);
+  error.status = status;
+  error.refund = refund;
+  return error;
+}
+
+function getVideoDailyLimit(env) {
+  const raw = Number.parseInt(env.VIDEO_DAILY_VIDEOS, 10);
+  return Number.isInteger(raw) && raw >= 0 && raw <= 50
+    ? raw
+    : VIDEO_DEFAULT_DAILY_VIDEOS;
+}
+
+function getVideoDailySeconds(env) {
+  const raw = Number.parseInt(env.VIDEO_DAILY_SECONDS, 10);
+  return Number.isInteger(raw) && raw >= 0 && raw <= 600
+    ? raw
+    : VIDEO_DEFAULT_DAILY_SECONDS;
+}
+
+function videoUsageSummary(limit, videos, seconds, secondsLimit, date) {
+  return {
+    limitVideos: limit,
+    usedVideos: videos,
+    remainingVideos: Math.max(0, limit - videos),
+    limitSeconds: secondsLimit,
+    usedSeconds: seconds,
+    remainingSeconds: Math.max(0, secondsLimit - seconds),
+    date
+  };
+}
+
+async function getVideoUsage(env, userId, usageDate) {
+  const row = await env.DB.prepare(
+    `SELECT videos_used, seconds_used FROM video_usage
+     WHERE user_id = ? AND usage_date = ?`
+  ).bind(userId, usageDate).first();
+
+  return {
+    videos: Number(row?.videos_used || 0),
+    seconds: Number(row?.seconds_used || 0)
+  };
+}
+
+// Atomically counts one video (and its seconds) for today, but only if the
+// user is still under the daily limit. Two simultaneous requests cannot both
+// take the last slot.
+async function reserveVideo(env, userId, usageDate, seconds, limit, secondsLimit) {
+  const limitError = () =>
+    videoError(
+      limit <= 0 || secondsLimit <= 0
+        ? "Video generation is switched off right now."
+        : `You don't have enough of today's video allowance left for this video (daily limit: ${limit} video${limit === 1 ? "" : "s"} and ${secondsLimit} seconds). Try a shorter video, or come back after midnight (Lagos time).`,
+      429,
+      false
+    );
+
+  if (limit <= 0 || secondsLimit <= 0 || seconds > secondsLimit) throw limitError();
+
+  const row = await env.DB.prepare(
+    `INSERT INTO video_usage (user_id, usage_date, seconds_used, videos_used)
+     VALUES (?, ?, ?, 1)
+     ON CONFLICT(user_id, usage_date)
+     DO UPDATE SET
+       seconds_used = seconds_used + excluded.seconds_used,
+       videos_used = videos_used + 1
+     WHERE videos_used < ?
+       AND seconds_used + excluded.seconds_used <= ?
+     RETURNING videos_used, seconds_used`
+  ).bind(userId, usageDate, seconds, limit, secondsLimit).first();
+
+  if (!row) throw limitError();
+
+  return { videos: Number(row.videos_used), seconds: Number(row.seconds_used) };
+}
+
+async function refundVideo(env, userId, usageDate, seconds) {
+  try {
+    await env.DB.prepare(
+      `UPDATE video_usage
+       SET seconds_used = MAX(seconds_used - ?, 0),
+           videos_used = MAX(videos_used - 1, 0)
+       WHERE user_id = ? AND usage_date = ?`
+    ).bind(seconds, userId, usageDate).run();
+  } catch (error) {
+    console.error("Video usage refund failed:", String(error));
+  }
+}
+
+// Cloudflare documents the result as { state: "Completed", result: { video: "<url>" } }
+// and the raw output schema as { video: "<url>" }. Both shapes are accepted.
+function extractVideoUrl(result) {
+  const state = typeof result?.state === "string" ? result.state.toLowerCase() : "";
+
+  if (state && !["completed", "complete", "succeeded", "success"].includes(state)) {
+    if (/fail|error|cancel|reject/.test(state)) {
+      throw videoError("The video could not be generated. Please try again.", 502, true);
+    }
+    // Not finished and no way to check again: do not claim success, do not refund.
+    throw videoError(
+      "The video provider has not confirmed completion, so no video is available. Please wait a minute before trying again.",
+      504,
+      false
+    );
+  }
+
+  const candidate =
+    typeof result === "string"
+      ? result
+      : result?.result?.video ?? result?.video ?? result?.result?.video?.url ?? result?.video?.url;
+
+  if (typeof candidate !== "string" || candidate.length > 2048) {
+    console.error("Unexpected video response:", JSON.stringify(result)?.slice(0, 500));
+    throw videoError("The provider finished but returned no usable video. Please try again.", 502, true);
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(candidate);
+  } catch {
+    throw videoError("The provider returned an invalid video link. Please try again.", 502, true);
+  }
+
+  if (parsed.protocol !== "https:") {
+    throw videoError("The provider returned an unsafe video link. Please try again.", 502, true);
+  }
+
+  return parsed.toString();
+}
+
+async function runVideoModel(env, { prompt, duration, aspectRatio }) {
+  let timeoutId;
+
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(
+      () =>
+        reject(
+          videoError(
+            "The video is taking longer than expected. It may still finish on the provider's side, so your seconds were not returned. Please wait a few minutes before trying again.",
+            504,
+            false
+          )
+        ),
+      VIDEO_STUDIO.timeoutMs
+    );
+  });
+
+  let result;
+
+  try {
+    result = await Promise.race([
+      env.AI.run(VIDEO_STUDIO.model, {
+        prompt,
+        aspect_ratio: aspectRatio,
+        duration,
+        resolution: VIDEO_STUDIO.resolution
+      }),
+      timeout
+    ]);
+  } catch (cause) {
+    if (cause && cause.refund === false) throw cause;
+
+    const message = String(cause?.message || cause);
+    console.error("Video model error:", message);
+
+    if (/moderat|safety|policy|prohibit|not allowed|violat/i.test(message)) {
+      throw videoError(
+        "That prompt could not be used because it may break content guidelines. Please rephrase it and try again.",
+        400,
+        true
+      );
+    }
+    if (/invalid|bad request|unprocessable|validation/i.test(message)) {
+      throw videoError("The video settings or prompt were not accepted. Please adjust them and try again.", 400, true);
+    }
+    if (/quota|credit|balance|billing|insufficient|limit|429/i.test(message)) {
+      throw videoError("Video generation is busy or temporarily unavailable. Please try again later.", 503, true);
+    }
+    throw videoError("The video provider could not complete the request. Please try again.", 502, true);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  return extractVideoUrl(result);
+}
+
+/* ------------------------------------------------------------------ */
 /* Worker                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -550,7 +762,9 @@ export default {
           "/api/excel",
           "/api/subscription/status",
           "/api/payment/request",
-          "/api/payment/submit-reference"
+          "/api/payment/submit-reference",
+          "/api/video/access",
+          "/api/video/generate"
         ]
       });
     }
@@ -1598,88 +1812,134 @@ export default {
       }
     }
 
-    
-/* ---------------- Pro Video Generation ---------------- */
-if (url.pathname === "/api/pro/video" && request.method === "POST") {
-  try {
-    const user = await authenticateFirebase(request, env);
-    if (!user) {
-      return respond({ error: "Please sign in first." }, 401);
-    }
+    /* ---------------- Malie Video Studio (Pro only) ---------------- */
+    if (
+      request.method === "POST" &&
+      (path === "/api/video/access" || path === "/api/video/generate")
+    ) {
+      try {
+        // 1. Who is this? (verified with Firebase, never trusted from the browser)
+        const userId = await authenticateFirebase(request, env);
 
-    const plan = await getActivePlan(env, user.uid);
-    if (plan !== "pro") {
-      return respond({
-        error: "Grok Imagine Video is available to active Pro subscribers only."
-      }, 403);
-    }
+        // 2. Active Pro plan, read from the subscriptions table
+        const plan = await getActivePlan(env, userId);
 
-    const body = await request.json();
-    const prompt = typeof body.prompt === "string"
-      ? body.prompt.trim()
-      : "";
+        if (plan !== "pro") {
+          return respond(
+            { error: "Malie Video Studio is available on the Pro plan only." },
+            403
+          );
+        }
 
-    if (!prompt || prompt.length > 2000) {
-      return respond({
-        error: "Enter a video prompt of 1–2000 characters."
-      }, 400);
-    }
+        const limit = getVideoDailyLimit(env);
+        const secondsLimit = getVideoDailySeconds(env);
+        const usageDate = getUsageDate();
 
-    // Start conservatively to control generation costs.
-    const duration = 5;
-    const resolution = "480p";
-    const aspect_ratio = [
-      "16:9", "9:16", "1:1", "4:3", "3:4", "3:2", "2:3"
-    ].includes(body.aspect_ratio)
-      ? body.aspect_ratio
-      : "16:9";
+        /* ----- Access check + remaining allowance (no generation, no cost) ----- */
+        if (path === "/api/video/access") {
+          const used = await getVideoUsage(env, userId, usageDate);
 
-    if (!env.AI) {
-      return respond({
-        error: "Cloudflare AI is not configured."
-      }, 503);
-    }
+          return respond({
+            ok: true,
+            plan: "pro",
+            usage: videoUsageSummary(limit, used.videos, used.seconds, secondsLimit, usageDate),
+            options: {
+              durations: VIDEO_STUDIO.durations,
+              aspectRatios: VIDEO_STUDIO.aspectRatios,
+              resolution: VIDEO_STUDIO.resolution,
+              promptMin: VIDEO_STUDIO.promptMin,
+              promptMax: VIDEO_STUDIO.promptMax
+            }
+          });
+        }
 
-    const result = await env.AI.run(
-      "xai/grok-imagine-video",
-      {
-        prompt,
-        duration,
-        resolution,
-        aspect_ratio
+        /* ----- Generate ----- */
+        let body;
+        try {
+          body = await request.json();
+        } catch {
+          return respond({ error: "Please send valid JSON." }, 400);
+        }
+
+        const prompt = String(body.prompt || "").trim();
+        const duration = Number(body.duration);
+        const aspectRatio = String(body.aspectRatio || "");
+
+        if (prompt.length < VIDEO_STUDIO.promptMin) {
+          return respond(
+            { error: `Please describe your video in at least ${VIDEO_STUDIO.promptMin} characters.` },
+            400
+          );
+        }
+
+        if (prompt.length > VIDEO_STUDIO.promptMax) {
+          return respond(
+            { error: `Please keep your description under ${VIDEO_STUDIO.promptMax} characters.` },
+            400
+          );
+        }
+
+        if (!VIDEO_STUDIO.durations.includes(duration)) {
+          return respond({ error: "Choose a duration of 5 or 10 seconds." }, 400);
+        }
+
+        if (!VIDEO_STUDIO.aspectRatios.includes(aspectRatio)) {
+          return respond({ error: "Choose Landscape (16:9), Portrait (9:16) or Square (1:1)." }, 400);
+        }
+
+        // Resolution is fixed on the server (480p) for cost control; any value
+        // sent by the browser is ignored.
+
+        if (!env.AI || typeof env.AI.run !== "function") {
+          return respond(
+            { error: "Video generation is not configured yet. The site owner must add the Workers AI binding named AI." },
+            500
+          );
+        }
+
+        // 3. Reserve one of today's videos BEFORE spending money. Atomic, so
+        //    parallel requests cannot exceed the daily allowance.
+        const usedAfterReserve = await reserveVideo(env, userId, usageDate, duration, limit, secondsLimit);
+
+        let videoUrl;
+
+        try {
+          videoUrl = await runVideoModel(env, { prompt, duration, aspectRatio });
+        } catch (error) {
+          // 4. Give the video back when the failure is definite.
+          if (error.refund !== false) {
+            await refundVideo(env, userId, usageDate, duration);
+          }
+          throw error;
+        }
+
+        return respond({
+          ok: true,
+          videoUrl,
+          durationSeconds: duration,
+          aspectRatio,
+          resolution: VIDEO_STUDIO.resolution,
+          usage: videoUsageSummary(limit, usedAfterReserve.videos, usedAfterReserve.seconds, secondsLimit, usageDate)
+        });
+      } catch (error) {
+        console.error("Video Studio error:", String(error?.message || error));
+
+        // Errors we raised on purpose carry a status and a safe message.
+        // Anything else (for example a missing table) gets a generic reply.
+        const status = [400, 401, 403, 429, 500, 502, 503, 504].includes(error?.status)
+          ? error.status
+          : 500;
+
+        return respond(
+          {
+            error: error?.status
+              ? error.message
+              : "Video Studio could not process your request. Please try again."
+          },
+          status
+        );
       }
-    );
-
-    const videoUrl = result?.result?.video || result?.video;
-
-    if (result?.state && result.state !== "Completed") {
-      return respond({
-        error: "Video generation did not complete.",
-        state: result.state
-      }, 502);
     }
-
-    if (!videoUrl) {
-      return respond({
-        error: "No video URL was returned by the model."
-      }, 502);
-    }
-
-    return respond({
-      success: true,
-      video: videoUrl,
-      duration,
-      resolution,
-      aspect_ratio
-    });
-  } catch (error) {
-    console.error("Pro video generation error:", error);
-    return respond({
-      error: "Video generation failed. Please try again later."
-    }, 500);
-  }
-}
-
 
     /* ---------------- Fallbacks ---------------- */
     if (path.startsWith("/api/")) {

@@ -259,7 +259,7 @@ function buildWorkbook(spec) {
 /* AI call                                                             */
 /* ------------------------------------------------------------------ */
 
-async function callAI(env, prompt, jsonMode = false, imageDataUrl = null) {
+async function callAI(env, prompt, jsonMode = false, imageDataUrl = null, visionModel = null) {
   if (!env.AI || typeof env.AI.run !== "function") {
     const error = new Error(
       "Cloudflare Workers AI is not connected. Check that your Worker has an AI binding named AI."
@@ -269,7 +269,7 @@ async function callAI(env, prompt, jsonMode = false, imageDataUrl = null) {
   }
 
   const hasImage = Boolean(imageDataUrl);
-  const model = hasImage ? VISION_MODEL : TEXT_MODEL;
+  const model = hasImage ? (visionModel || VISION_MODEL) : TEXT_MODEL;
 
   const identityRules = [
     "You are Malie AI, the AI assistant created and developed by Campus Creative, founded by Osume Prosper.",
@@ -312,8 +312,8 @@ async function callAI(env, prompt, jsonMode = false, imageDataUrl = null) {
     max_tokens: jsonMode ? 4096 : 2048
   };
 
-  // These options are only sent to the Gemma text model.
-  if (!hasImage) {
+  // These options are only sent to the Gemma model (text or image).
+  if (model === TEXT_MODEL) {
     if (jsonMode) payload.response_format = { type: "json_object" };
     payload.chat_template_kwargs = { enable_thinking: false };
   }
@@ -328,7 +328,7 @@ async function callAI(env, prompt, jsonMode = false, imageDataUrl = null) {
     const message = String(cause?.message || cause);
     const isLimit = /limit|quota|neuron|429/i.test(message);
     const isBusy = /capacity|busy|overload|503/i.test(message);
-    const needsLicense = /agree|license/i.test(message) && hasImage;
+    const needsLicense = /agree|license/i.test(message) && hasImage && model === VISION_MODEL;
 
     const error = new Error(
       needsLicense
@@ -757,8 +757,9 @@ const DRAWING_PROMPT = [
   '{"type":"cyl","op":"add","axis":"x","cx":centreX,"cy":centreY,"cz":centreZ,"r":radius,"len":lengthAlongAxis}',
   'The "axis" of a cylinder is "x", "y" or "z". Holes, bores and slots use "op":"cut" and must come after all "add" solids.',
   "Place the part so its lowest-left-back corner is at x=0, y=0, z=0. Use at most 12 solids. Radius is half of any diameter (a diameter symbol means diameter).",
+  "Look carefully at the picture before answering. First say what the object is and which view is shown, then give its overall proportions (width : height : depth), then list the solids so that together they match the picture's outline and proportions as closely as possible.",
   "Return ONLY valid JSON in this exact structure:",
-  '{"title":"short part name","unit":"mm","estimated":false,"parts":[{"type":"box","op":"add","x":0,"y":0,"z":0,"w":40,"h":20,"d":30}]}'
+  '{"object":"what the object is","view_shown":"front|top|side|3D|section","title":"short part name","unit":"mm","estimated":false,"parts":[{"type":"box","op":"add","x":0,"y":0,"z":0,"w":40,"h":20,"d":30}]}'
 ].join("\n");
 
 const DRAW = {
@@ -846,7 +847,9 @@ function sanitizeModel(raw) {
   }
 
   return {
-    title: cleanXml(String(raw?.title || "Machine part")).slice(0, 60),
+    title: cleanXml(String(raw?.title || raw?.object || "Machine part")).slice(0, 60),
+    object: cleanXml(String(raw?.object || "")).slice(0, 120),
+    viewShown: cleanXml(String(raw?.view_shown || "")).slice(0, 30),
     unit: String(raw?.unit || "").toLowerCase() === "in" ? "in" : "mm",
     estimated: Boolean(raw?.estimated),
     parts: [...adds, ...cuts]
@@ -2408,7 +2411,14 @@ export default {
           const usage = await reserveDailyUsage(env, userId, plan);
 
           try {
-            const text = await callAI(env, DRAWING_PROMPT, true, image);
+            let text;
+            try {
+              // Gemma 4 reads images and is stronger than the older Llama vision model.
+              text = await callAI(env, DRAWING_PROMPT, true, image, TEXT_MODEL);
+            } catch (firstError) {
+              console.error("Gemma vision failed, trying Llama:", firstError.message);
+              text = await callAI(env, DRAWING_PROMPT, true, image, VISION_MODEL);
+            }
             const model = sanitizeModel(
               parseJsonObject(
                 text,

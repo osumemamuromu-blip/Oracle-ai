@@ -747,9 +747,9 @@ async function runVideoModel(env, { prompt, duration, aspectRatio }) {
 //              y = height (up), z = depth (toward the viewer in the front view).
 
 const DRAWING_PROMPT = [
-  "You are a mechanical drafting assistant.",
-  "The image shows ONE view (a drawing, sketch, screenshot or photo) of a single machine part. It may be a front, top, side, sectional or 3D view.",
-  "Work out the part's 3D shape and describe it using simple solids.",
+  "You are a technical drafting assistant.",
+  "The image shows ONE view (a drawing, sketch, screenshot, PDF page or photo) of a single object or part: a machine part, a tool, a product or any everyday object. It may be a front, top, side, sectional or 3D view.",
+  "Work out the object's 3D shape and describe it using simple solids. Curved or organic shapes should be approximated with the nearest boxes and cylinders.",
   "Coordinates: x = width (left to right in the front view), y = height (up), z = depth (toward the viewer in the front view).",
   "Use the unit shown on the drawing (mm if none is shown). If dimensions are printed, use them exactly. If they are not printed, estimate sensible proportions from the picture and set \"estimated\" to true.",
   "Solid types:",
@@ -2049,6 +2049,42 @@ export default {
         return respond(
           { error: error.message || "The request failed. Please try again." },
           status
+        );
+      }
+    }
+
+    /* ---------------- Admin: one-time image model license ---------------- */
+    if (request.method === "POST" && path === "/api/admin/accept-vision-license") {
+      try {
+        const adminUid = env.MALIE_ADMIN_UID;
+
+        if (!adminUid) {
+          return respond({ error: "Admin access is not configured." }, 500);
+        }
+
+        const uid = await authenticateFirebase(request, env);
+
+        if (uid !== adminUid) {
+          return respond({ error: "Unauthorized." }, 403);
+        }
+
+        if (!env.AI || typeof env.AI.run !== "function") {
+          return respond({ error: "Cloudflare Workers AI is not connected." }, 500);
+        }
+
+        // Cloudflare asks for the word "agree" the first time this model is used.
+        const result = await env.AI.run(VISION_MODEL, { prompt: "agree" });
+
+        return respond({
+          ok: true,
+          message: "License accepted. The image model is now enabled.",
+          reply: extractText(result).slice(0, 200)
+        });
+      } catch (error) {
+        console.error("Vision license error:", String(error?.message || error));
+        return respond(
+          { error: "Could not accept the license: " + String(error?.message || error) },
+          error.status || 500
         );
       }
     }

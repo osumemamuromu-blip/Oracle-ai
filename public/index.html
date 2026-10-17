@@ -522,7 +522,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 
       <!-- Engineering Drawing Studio (Pro) -->
       <section class="view" id="view-drawing">
-        <div class="section-head"><h1>Engineering Drawing<span style="color:var(--accent)">.</span></h1><p>Generate dimensioned orthographic, sectional and isometric views of a stepped flanged bush. Pro plan.</p></div>
+        <div class="section-head"><h1>Engineering Drawing<span style="color:var(--accent)">.</span></h1><p>Upload a picture of a part in any single view and Malie generates the other views. Or type the dimensions of a stepped flanged bush. Pro plan.</p></div>
 
         <div class="work-card lock-card" id="drawLocked" hidden>
           <h2 id="drawLockTitle">Pro feature</h2>
@@ -533,7 +533,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
         <div id="drawTool" hidden>
           <div class="work-card">
             <h3>Part dimensions</h3>
-            <p class="sub">Enter the dimensions you know. Malie never invents missing dimensions.</p>
+            <p class="sub">Used when no image is uploaded. Malie never invents missing dimensions.</p>
             <div class="field-row">
               <div><label class="field-label" for="dpTitle">Drawing title</label><input class="work-input" id="dpTitle" maxlength="60" value="Stepped flanged bush"></div>
               <div><label class="field-label" for="dpUnit">Units</label>
@@ -552,8 +552,8 @@ button:disabled{opacity:.55;cursor:not-allowed}
               <div><label class="field-label">Projection method</label>
                 <div class="seg" id="projToggle" style="margin-bottom:0"><button type="button" data-proj="first">First-angle</button><button type="button" class="active" data-proj="third">Third-angle</button></div></div>
             </div>
-            <div class="upload-zone" style="margin-bottom:14px"><strong>Reference drawing (optional)</strong><p>Upload a photo or screenshot to keep beside your drawing. It is shown for comparison only; read the dimensions from it and type them above.</p><input id="drawRefFile" type="file" accept="image/png,image/jpeg,image/webp"></div>
-            <div class="ref-preview" id="drawRefPreview" hidden><img id="drawRefImg" alt="Reference drawing"><span class="sub" id="drawRefName" style="margin:0"></span></div>
+            <div class="upload-zone" style="margin-bottom:14px"><strong>Upload a drawing or photo of any part</strong><p>Use any single view: front, top, side, sectional or 3D. Malie works out the shape and generates every view below. Printed dimensions are used when readable; otherwise they are estimated. Leave this empty to use the typed dimensions above. Each upload uses one daily request.</p><input id="drawRefFile" type="file" accept="image/png,image/jpeg,image/webp"></div>
+            <div class="ref-preview" id="drawRefPreview" hidden><img id="drawRefImg" alt="Reference drawing"><span class="sub" id="drawRefName" style="margin:0"></span><button type="button" class="secondary" id="drawRefClear" style="margin-left:auto">Remove</button></div>
             <div class="button-row" style="margin-top:14px"><button class="primary" id="drawGenerate">Generate drawing ↗</button></div>
             <p class="status" id="drawStatus"></p>
           </div>
@@ -574,7 +574,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
               <button class="secondary" id="drawPng">Download PNG</button>
               <button class="secondary" id="drawPdf">Export PDF</button>
             </div>
-            <p class="draw-note">Educational reference only. This is not a verified, manufacturing-ready drawing and carries no engineering certification. Views are generated from the dimensions you enter, drawn to a fitted scale (not 1:1).</p>
+            <p class="draw-note">Educational reference only. This is not a verified, manufacturing-ready drawing and carries no engineering certification. Views are generated from the dimensions you enter, or estimated by AI from your uploaded image, and drawn to a fitted scale (not 1:1). Always check them against your original.</p>
           </div>
 
           <div class="work-card">
@@ -2510,6 +2510,10 @@ let drawParams = null;
 let drawAccess = null;      // null = unknown, true/false after the server answers
 let drawBusy = false;
 let drawRefUrl = null;
+let drawImgData = null;   // compressed copy of the uploaded picture
+let drawImgViews = null;  // SVG for every view, returned by the server
+let drawImgInfo = null;
+let drawImgModel = null;
 
 const fx = n => String(Math.round(n * 100) / 100);
 
@@ -2752,6 +2756,7 @@ function resetDrawing() {
   const tool = $("drawTool"), locked = $("drawLocked");
   if (tool) tool.hidden = true;
   if (locked) locked.hidden = true;
+  clearDrawImage();
   if ($("drawOut")) $("drawOut").innerHTML = '<div class="draw-msg">Enter dimensions and press “Generate drawing”.</div>';
   if ($("drawAnswer")) $("drawAnswer").innerHTML = '<span class="placeholder">Malie’s explanation will appear here.</span>';
   setStatus("drawStatus", "");
@@ -2847,6 +2852,8 @@ async function generateDrawing(view) {
   if (drawBusy) return;
   if (!currentUid) return toast("Please sign in with Google first.", true);
 
+  if (drawImgData) return generateFromImage(view);
+
   let p;
   try { p = readDrawParams(); }
   catch (e) { return setStatus("drawStatus", e.message, true); }
@@ -2890,14 +2897,109 @@ async function generateDrawing(view) {
   }
 }
 
+const IMG_VIEW_CAPTIONS = {
+  front: "Front view generated from your image, with hidden holes dashed.",
+  top: "Top view generated from your image.",
+  side: "Right-hand side view generated from your image.",
+  iso: "Isometric pictorial of the part (approximate).",
+  section: "Full section through the middle of the part, hatched where material is cut."
+};
+
+function setDrawTab(view) {
+  drawView = view;
+  document.querySelectorAll("#drawTabs .draw-tab").forEach(b => b.classList.toggle("active", b.dataset.dview === view));
+}
+
+// Server SVGs are dark. The projection label is swapped here so toggling needs no new request.
+function imgViewSvg(view) {
+  const label = drawProj === "first" ? "FIRST-ANGLE" : "THIRD-ANGLE";
+  return drawImgViews[view].replace(/(FIRST|THIRD)-ANGLE/, label);
+}
+
+function showImageView(view) {
+  setDrawTab(view);
+  if (view === "aux" || !drawImgViews[view]) {
+    $("drawOut").innerHTML = `<div class="draw-msg">${esc((drawImgInfo && drawImgInfo.auxMessage) || "This view is not available for this part.")}</div>`;
+    setStatus("drawViewStatus", "This view is not applicable to this part.");
+    return;
+  }
+  $("drawOut").innerHTML = imgViewSvg(view);
+  setStatus("drawViewStatus", IMG_VIEW_CAPTIONS[view] + (drawImgInfo && drawImgInfo.estimated ? " Dimensions were estimated from the picture, so please check them." : ""));
+}
+
+async function generateFromImage(view) {
+  // Already built: switching views is instant and free.
+  if (drawImgViews) { showImageView(view); return; }
+
+  setDrawTab(view);
+  drawBusy = true;
+  setBusy($("drawGenerate"), true, "Generating…");
+  $("drawOut").innerHTML = '<div class="draw-msg">Reading your image and building the views… this can take up to a minute.</div>';
+  setStatus("drawViewStatus", "Working…");
+  setStatus("drawStatus", "");
+
+  try {
+    const data = await api("/api/drawing", { action: "image", image: drawImgData, projection: drawProj });
+    drawAccess = true;
+    drawImgViews = data.views;
+    drawImgInfo = data;
+    drawImgModel = data.model || null;
+    showImageView(view);
+  } catch (e) {
+    if (e.status === 403) {
+      drawAccess = false;
+      setDrawLocked("Pro feature", "The Engineering Drawing Studio is available on the Pro plan. Upgrade to Pro to generate technical drawings.");
+    } else {
+      $("drawOut").innerHTML = `<div class="draw-msg" style="color:var(--danger)">${esc(e.message)}</div>`;
+      setStatus("drawViewStatus", "Error: " + e.message, true);
+    }
+  } finally {
+    drawBusy = false;
+    setBusy($("drawGenerate"), false);
+  }
+}
+
+function clearDrawImage() {
+  drawImgData = null;
+  drawImgViews = null;
+  drawImgInfo = null;
+  drawImgModel = null;
+  if (drawRefUrl) { URL.revokeObjectURL(drawRefUrl); drawRefUrl = null; }
+  if ($("drawRefFile")) $("drawRefFile").value = "";
+  if ($("drawRefPreview")) $("drawRefPreview").hidden = true;
+}
+
+function loadImageFrom(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Could not read that image. Please try a different file."));
+    img.src = url;
+  });
+}
+
+// Shrinks the picture so it uploads quickly and stays under the server limit.
+function compressImage(img) {
+  const scale = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+  c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.85);
+}
+
 function svgToPngBlob(svgStr) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" }));
     img.onload = () => {
       const c = document.createElement("canvas");
-      c.width = DRAW_W * 2;
-      c.height = DRAW_H * 2;
+      const vb = svgStr.match(/viewBox="0 0 (\d+) (\d+)"/);
+      c.width = (vb ? Number(vb[1]) : DRAW_W) * 2;
+      c.height = (vb ? Number(vb[2]) : DRAW_H) * 2;
       const ctx = c.getContext("2d");
       ctx.fillStyle = "#fff";
       ctx.fillRect(0, 0, c.width, c.height);
@@ -2911,6 +3013,13 @@ function svgToPngBlob(svgStr) {
 }
 
 function currentPrintSvg() {
+  if (drawImgData && drawImgViews && drawImgViews[drawView]) {
+    return imgViewSvg(drawView)
+      .replace(/ style="[^"]*"/, "")
+      .replace('width="100%"', 'width="900" height="620"')
+      .replaceAll("#0b0d10", "#ffffff")
+      .replaceAll("#d3ec8a", "#3f7d12");
+  }
   if (!drawParams) return null;
   return buildDrawing(drawView, drawParams, drawProj, "print").svg;
 }
@@ -2919,9 +3028,11 @@ document.querySelectorAll("#drawTabs .draw-tab").forEach(b => b.addEventListener
 document.querySelectorAll("#projToggle button").forEach(b => b.addEventListener("click", () => {
   drawProj = b.dataset.proj;
   document.querySelectorAll("#projToggle button").forEach(x => x.classList.toggle("active", x === b));
-  if (drawParams) generateDrawing(drawView);
+  if (drawImgViews) showImageView(drawView);
+  else if (drawParams) generateDrawing(drawView);
 }));
-$("drawGenerate").onclick = () => generateDrawing(drawView);
+// Pressing Generate always builds fresh (re-reads the image if one is uploaded).
+$("drawGenerate").onclick = () => { drawImgViews = null; generateDrawing(drawView); };
 $("drawUpgrade").onclick = openPlans;
 
 $("drawPng").onclick = async () => {
@@ -2958,19 +3069,34 @@ $("drawPdf").onclick = () => {
   toast("In the print window, choose “Save as PDF”.");
 };
 
-$("drawRefFile").onchange = e => {
+$("drawRefFile").onchange = async e => {
   const file = e.target.files?.[0];
-  if (drawRefUrl) { URL.revokeObjectURL(drawRefUrl); drawRefUrl = null; }
-  if (!file) { $("drawRefPreview").hidden = true; return; }
+  if (!file) { clearDrawImage(); return; }
   if (!/^image\/(png|jpe?g|webp)$/i.test(file.type) || file.size > 15 * 1024 * 1024) {
-    e.target.value = "";
-    $("drawRefPreview").hidden = true;
+    clearDrawImage();
     return toast("Please choose a PNG, JPG or WebP image under 15 MB.", true);
   }
-  drawRefUrl = URL.createObjectURL(file);
-  $("drawRefImg").src = drawRefUrl;
-  $("drawRefName").textContent = file.name + " — reference only. Type the dimensions you can read from it.";
-  $("drawRefPreview").hidden = false;
+  try {
+    if (drawRefUrl) URL.revokeObjectURL(drawRefUrl);
+    drawRefUrl = URL.createObjectURL(file);
+    const img = await loadImageFrom(drawRefUrl);
+    drawImgData = compressImage(img);
+    drawImgViews = null;
+    drawImgInfo = null;
+    drawImgModel = null;
+    $("drawRefImg").src = drawRefUrl;
+    $("drawRefName").textContent = file.name;
+    $("drawRefPreview").hidden = false;
+    setStatus("drawStatus", "Image ready. Press “Generate drawing” to build all the views from it.");
+  } catch (err) {
+    clearDrawImage();
+    toast(err.message, true);
+  }
+};
+
+$("drawRefClear").onclick = () => {
+  clearDrawImage();
+  setStatus("drawStatus", "Image removed. The typed dimensions will be used.");
 };
 
 
@@ -3418,12 +3544,18 @@ $("advertGenerate").onclick = async () => {
 $("drawAskBtn").onclick = async () => {
   const q = $("drawAsk").value.trim();
   if (!q) return toast("Type a question first.", true);
-  let p;
-  try { p = readDrawParams(); } catch (e) { return toast(e.message, true); }
+  let p = null;
+  if (!drawImgModel) {
+    try { p = readDrawParams(); } catch (e) { return toast(e.message, true); }
+  }
+
+  const partInfo = drawImgModel
+    ? `The student uploaded a picture of a part called "${drawImgModel.title}". An AI described it as these simple solids (x = width, y = height, z = depth, units ${drawImgModel.unit}${drawImgModel.estimated ? ", dimensions were estimated" : ""}): ${JSON.stringify(drawImgModel.parts)}.\n`
+    : `The student generated a ${drawView} view (${drawProj}-angle projection) of a stepped flanged bush: bore diameter ${p.d} ${p.unit}, body diameter ${p.D1} ${p.unit}, body length ${p.L1} ${p.unit}, flange diameter ${p.D2} ${p.unit}, flange thickness ${p.T} ${p.unit}, total length ${p.L1 + p.T} ${p.unit}.\n`;
 
   const prompt =
     "You are helping an engineering drawing student. This is an educational reference only, not a verified manufacturing drawing, and you must not claim it is certified or manufacturing-ready.\n" +
-    `The student generated a ${drawView} view (${drawProj}-angle projection) of a stepped flanged bush: bore diameter ${p.d} ${p.unit}, body diameter ${p.D1} ${p.unit}, body length ${p.L1} ${p.unit}, flange diameter ${p.D2} ${p.unit}, flange thickness ${p.T} ${p.unit}, total length ${p.L1 + p.T} ${p.unit}.\n` +
+    partInfo +
     "Answer clearly and step by step. If you need information that was not given, say so instead of inventing it.\n\nStudent question:\n" + q;
 
   setBusy($("drawAskBtn"), true, "Thinking…");

@@ -1449,6 +1449,8 @@ export default {
           "/api/payment/request",
           "/api/payment/submit-reference",
           "/api/drawing",
+          "/api/drawing",
+          "/api/cad/generate",
           "/api/video/access",
           "/api/video/generate"
         ]

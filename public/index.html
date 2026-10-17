@@ -552,7 +552,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
               <div><label class="field-label">Projection method</label>
                 <div class="seg" id="projToggle" style="margin-bottom:0"><button type="button" data-proj="first">First-angle</button><button type="button" class="active" data-proj="third">Third-angle</button></div></div>
             </div>
-            <div class="upload-zone" style="margin-bottom:14px"><strong>Upload a drawing or photo of any part</strong><p>Use any single view: front, top, side, sectional or 3D. Malie works out the shape and generates every view below. Printed dimensions are used when readable; otherwise they are estimated. Leave this empty to use the typed dimensions above. Each upload uses one daily request.</p><input id="drawRefFile" type="file" accept="image/png,image/jpeg,image/webp"></div>
+            <div class="upload-zone" style="margin-bottom:14px"><strong>Upload any picture or PDF of an object</strong><p>Use any single view: front, top, side, sectional or 3D, a photo, a sketch or a PDF page. Malie works out the shape and generates every view below. Printed dimensions are used when readable; otherwise they are estimated. Leave this empty to use the typed dimensions above. Each upload uses one daily request.</p><input id="drawRefFile" type="file" accept="image/*,application/pdf,.pdf"></div>
             <div class="ref-preview" id="drawRefPreview" hidden><img id="drawRefImg" alt="Reference drawing"><span class="sub" id="drawRefName" style="margin:0"></span><button type="button" class="secondary" id="drawRefClear" style="margin-left:auto">Remove</button></div>
             <div class="button-row" style="margin-top:14px"><button class="primary" id="drawGenerate">Generate drawing ↗</button></div>
             <p class="status" id="drawStatus"></p>
@@ -2950,8 +2950,22 @@ async function generateFromImage(view) {
       drawAccess = false;
       setDrawLocked("Pro feature", "The Engineering Drawing Studio is available on the Pro plan. Upgrade to Pro to generate technical drawings.");
     } else {
-      $("drawOut").innerHTML = `<div class="draw-msg" style="color:var(--danger)">${esc(e.message)}</div>`;
+      const needsLicense = isAdmin && /license/i.test(e.message || "");
+      $("drawOut").innerHTML = `<div class="draw-msg" style="color:var(--danger)">${esc(e.message)}${needsLicense ? '<br><br><button class="primary" id="drawLicenseBtn">Accept model license now</button>' : ""}</div>`;
       setStatus("drawViewStatus", "Error: " + e.message, true);
+      if (needsLicense) {
+        $("drawLicenseBtn").onclick = async () => {
+          setBusy($("drawLicenseBtn"), true, "Accepting…");
+          try {
+            await api("/api/admin/accept-vision-license", {});
+            toast("License accepted. Press Generate drawing again.");
+            $("drawOut").innerHTML = '<div class="draw-msg">License accepted. Press “Generate drawing” again.</div>';
+          } catch (err) {
+            toast(err.message, true);
+            setBusy($("drawLicenseBtn"), false);
+          }
+        };
+      }
     }
   } finally {
     drawBusy = false;
@@ -2980,10 +2994,11 @@ function loadImageFrom(url) {
 
 // Shrinks the picture so it uploads quickly and stays under the server limit.
 function compressImage(img) {
-  const scale = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight));
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+  const scale = Math.min(1, 1280 / Math.max(iw, ih));
   const c = document.createElement("canvas");
-  c.width = Math.max(1, Math.round(img.naturalWidth * scale));
-  c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+  c.width = Math.max(1, Math.round(iw * scale));
+  c.height = Math.max(1, Math.round(ih * scale));
   const ctx = c.getContext("2d");
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, c.width, c.height);
@@ -3072,24 +3087,42 @@ $("drawPdf").onclick = () => {
 $("drawRefFile").onchange = async e => {
   const file = e.target.files?.[0];
   if (!file) { clearDrawImage(); return; }
-  if (!/^image\/(png|jpe?g|webp)$/i.test(file.type) || file.size > 15 * 1024 * 1024) {
+  const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+  const isImg = /^image\//i.test(file.type);
+  if ((!isPdf && !isImg) || file.size > 25 * 1024 * 1024) {
     clearDrawImage();
-    return toast("Please choose a PNG, JPG or WebP image under 15 MB.", true);
+    return toast("Please choose a picture or a PDF under 25 MB.", true);
   }
   try {
-    if (drawRefUrl) URL.revokeObjectURL(drawRefUrl);
-    drawRefUrl = URL.createObjectURL(file);
-    const img = await loadImageFrom(drawRefUrl);
-    drawImgData = compressImage(img);
+    if (drawRefUrl) { URL.revokeObjectURL(drawRefUrl); drawRefUrl = null; }
+    let previewSrc, note = file.name;
+
+    if (isPdf) {
+      setStatus("drawStatus", "Reading the PDF…");
+      await loadPdfJs();
+      const pdf = await openPdf(await file.arrayBuffer());
+      const page = await pdf.getPage(1);
+      const canvas = await renderPageToCanvas(page, 1280);
+      drawImgData = compressImage(canvas);
+      previewSrc = drawImgData;
+      if (pdf.numPages > 1) note += " (page 1 of " + pdf.numPages + " is used)";
+    } else {
+      drawRefUrl = URL.createObjectURL(file);
+      const img = await loadImageFrom(drawRefUrl);
+      drawImgData = compressImage(img);
+      previewSrc = drawRefUrl;
+    }
+
     drawImgViews = null;
     drawImgInfo = null;
     drawImgModel = null;
-    $("drawRefImg").src = drawRefUrl;
-    $("drawRefName").textContent = file.name;
+    $("drawRefImg").src = previewSrc;
+    $("drawRefName").textContent = note;
     $("drawRefPreview").hidden = false;
-    setStatus("drawStatus", "Image ready. Press “Generate drawing” to build all the views from it.");
+    setStatus("drawStatus", "Ready. Press “Generate drawing” to build all the views from it.");
   } catch (err) {
     clearDrawImage();
+    setStatus("drawStatus", "", false);
     toast(err.message, true);
   }
 };

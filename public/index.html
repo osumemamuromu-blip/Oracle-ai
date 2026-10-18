@@ -4072,7 +4072,7 @@ function renderQuiz(questions) {
 
     try {
       // Uses Malie's existing Firebase-authenticated API helper.
-      const result = await api("/api/cad/generate", {
+      const result = await window.malieApi("/api/cad/generate", {
         prompt: message.prompt
       });
 

@@ -1351,21 +1351,14 @@ function validateCadCode(rawCode) {
   }
 
   
+
 const allowedFunctions = new Set([
-  "Box",
-  "Sphere",
-  "Cylinder",
-  "Cone",
-  "Polygon",
-  "Translate",
-  "Rotate",
-  "Union",
-  "Difference",
-  "Intersection",
-  "Sketch",
-  "Extrude",
-  "Revolve"
+  "Box", "Sphere", "Cylinder", "Cone", "Polygon",
+  "Translate", "Rotate", "Scale", "Mirror",
+  "Union", "Difference", "Intersection",
+  "Extrude", "Revolve"
 ]);
+
 
 
   const keywords = new Set([

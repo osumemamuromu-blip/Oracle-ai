@@ -2483,19 +2483,30 @@ if (request.method === "POST" && path === "/api/cad/generate") {
     const usage = await reserveDailyUsage(env, userId, plan);
 
     try {
-      const prompt = [
-        "Generate a CAD model script for Cascade Studio using its supported JavaScript geometry API.",
-        "Return ONLY a JSON object with exactly two fields: title (short string) and code (string). No markdown fences.",
-        "Use only these geometry functions: Box, Sphere, Cylinder, Cone, Translate, Rotate, Union, Difference, Intersection, Sketch, Extrude, Revolve.",
-        "Use simple const/let declarations and numeric arguments only.",
-        "Do not use imports, browser APIs, network access, loops, conditionals, custom functions, classes, strings, or arbitrary JavaScript.",
-        "Create a complete model, not an explanation. Prefer dimensions in millimetres and sensible proportions.",
-        "Use multiple supported primitives and Boolean operations when appropriate.",
-        "Do not claim an operation is supported if it cannot be expressed with the listed functions.",
-        "Keep the code concise.",
-        "User's requested object:",
-        description
-      ].join("\n");
+      
+const prompt = [
+  "Generate a 3D CAD model script compatible with Cascade Studio's JavaScript geometry API.",
+  "Return ONLY a JSON object with exactly two fields: title (short string) and code (string). No markdown fences.",
+  "For this initial stable generator, use only Box, Sphere, Cylinder, Cone, and Translate.",
+  "Use these exact signatures:",
+  "Box(x, y, z)",
+  "Sphere(radius)",
+  "Cylinder(radius, height)",
+  "Cone(bottomRadius, topRadius, height)",
+  "Translate([x, y, z], shape)",
+  "The translation vector MUST come first, followed by the shape.",
+  "Example: const body = Cylinder(10, 30); Translate([0, 0, 15], body);",
+  "Use only positive numeric dimensions and simple const or let declarations.",
+  "Create the requested object using valid primitive shapes and translations.",
+  "You may create multiple separate solids; each must be a valid primitive or translated primitive.",
+  "Do NOT use Union, Difference, Intersection, Sketch, Extrude, Revolve, Rotate, or any other function in this initial version.",
+  "Do not use imports, browser APIs, loops, conditionals, custom functions, classes, strings inside the CAD code, or arbitrary JavaScript.",
+  "Do not invent API functions or argument signatures.",
+  "Keep the code concise and use sensible proportions in millimetres.",
+  "User's requested object:",
+  description
+].join("\n");
+
 
       const raw = await callAI(env, prompt, true);
 

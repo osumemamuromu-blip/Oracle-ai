@@ -2517,7 +2517,11 @@ const prompt = [
   
 "For hollow pipes, tubes, and rings, create an outer cylinder and an inner cylinder, then subtract the inner cylinder using Difference(outerCylinder, [innerCylinder]).",
 "The inner cylinder must have a smaller radius than the outer cylinder and extend completely through the part.",
-"For holes through flanges, create cutter cylinders that extend completely through the flange, then subtract all cutters using Difference(mainBody, [cutters]).",
+"
+"For bolt holes through a flange, make every cutter cylinder longer than the flange thickness by at least 2 mm, position it so it extends at least 1 mm beyond BOTH faces of the flange, and subtract all cutters from the flange using Difference(mainBody, [cutters]). Ensure the final result has completely open through-holes, not blind holes or shallow indentations.",
+
+"Before finishing, check that each cutter intersects the flange completely along its thickness and that the final Boolean subtraction result is used in the final model.",
+
 "Never use a solid cylinder when the user requests a hollow cylinder or pipe.",
 
 "Do not use Sketch, chained methods, strings inside the CAD code, or unsupported functions.",

@@ -2514,6 +2514,12 @@ const prompt = [
 "Use only these geometry functions: Box, Sphere, Cylinder, Cone, Polygon, Translate, Rotate, Union, Difference, Intersection, Extrude, Revolve.",
 "Use these exact signatures: Box(x,y,z), Cylinder(r,h), Polygon(points), Translate([x,y,z],shape), Extrude(face,[dx,dy,dz]), Union(shapes), Difference(mainBody,[tools]).",
 "For a hexagonal bolt head, use Polygon with six numeric 2D points, then Extrude it vertically. Never substitute a box for a hexagon.",
+  
+"For hollow pipes, tubes, and rings, create an outer cylinder and an inner cylinder, then subtract the inner cylinder using Difference(outerCylinder, [innerCylinder]).",
+"The inner cylinder must have a smaller radius than the outer cylinder and extend completely through the part.",
+"For holes through flanges, create cutter cylinders that extend completely through the flange, then subtract all cutters using Difference(mainBody, [cutters]).",
+"Never use a solid cylinder when the user requests a hollow cylinder or pipe.",
+
 "Do not use Sketch, chained methods, strings inside the CAD code, or unsupported functions.",
 
   "Intersection([shape1, shape2])",

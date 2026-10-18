@@ -1356,6 +1356,7 @@ const allowedFunctions = new Set([
   "Sphere",
   "Cylinder",
   "Cone",
+  "Polygon",
   "Translate",
   "Rotate",
   "Union",

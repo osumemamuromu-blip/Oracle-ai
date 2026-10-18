@@ -2497,45 +2497,35 @@ if (request.method === "POST" && path === "/api/cad/generate") {
     try {
       
 
+
 const prompt = [
-  "Generate a 3D CAD model script compatible with Cascade Studio's JavaScript geometry API.",
+  "Generate reliable 3D CAD JavaScript for Cascade Studio.",
   "Return ONLY a JSON object with exactly two fields: title (short string) and code (string). No markdown fences.",
-  "Use only these geometry functions: Box, Sphere, Cylinder, Cone, Translate, Rotate, Union, Difference, Intersection, Sketch, Extrude, Revolve.",
-  "Use the exact API signatures:",
-  "Box(x, y, z)",
-  "Sphere(radius)",
-  "Cylinder(radius, height)",
-  "Cone(bottomRadius, topRadius, height)",
-  "Translate([x, y, z], shape)",
-  "Rotate([axisX, axisY, axisZ], degrees, shape)",
-  "Union([shape1, shape2])",
-  "Difference(mainShape, [toolShape])",
-  
-"Use only these geometry functions: Box, Sphere, Cylinder, Cone, Polygon, Translate, Rotate, Union, Difference, Intersection, Extrude, Revolve.",
-"Use these exact signatures: Box(x,y,z), Cylinder(r,h), Polygon(points), Translate([x,y,z],shape), Extrude(face,[dx,dy,dz]), Union(shapes), Difference(mainBody,[tools]).",
-"For a hexagonal bolt head, use Polygon with six numeric 2D points, then Extrude it vertically. Never substitute a box for a hexagon.",
-  
-"For hollow pipes, tubes, and rings, create an outer cylinder and an inner cylinder, then subtract the inner cylinder using Difference(outerCylinder, [innerCylinder]).",
-"The inner cylinder must have a smaller radius than the outer cylinder and extend completely through the part.",
-"For bolt holes through a flange, make every cutter cylinder longer than the flange thickness by at least 2 mm, position it so it extends at least 1 mm beyond BOTH faces of the flange, and subtract all cutters from the flange using Difference(mainBody, [cutters]). Ensure the final result has completely open through-holes, not blind holes or shallow indentations.",
-
-"Before finishing, check that each cutter intersects the flange completely along its thickness and that the final Boolean subtraction result is used in the final model.",
-
-"Never use a solid cylinder when the user requests a hollow cylinder or pipe.",
-
-"Do not use Sketch, chained methods, strings inside the CAD code, or unsupported functions.",
-
-  "Intersection([shape1, shape2])",
-  "Use Sketch and Extrude only when their exact supported signatures are known.",
-  "Use only positive numeric dimensions and simple const or let declarations.",
-  "For a bolt, create a cylindrical shaft and a hexagonal head if Sketch and Extrude are supported; never substitute a box for a hexagonal head.",
-  "Use separate valid solids if a Boolean operation is not necessary.",
-  "Do not use imports, browser APIs, loops, conditionals, custom functions, classes, or arbitrary JavaScript.",
-  "Do not invent API functions or argument signatures.",
-  "Keep the code concise and use sensible proportions in millimetres.",
-  "User's requested object:",
+  "Supported functions and signatures:",
+  "Box(x,y,z), Sphere(r), Cylinder(r,h), Cone(r1,r2,h), Polygon(points)",
+  "Translate([x,y,z],shape), Rotate([ax,ay,az],degrees,shape), Scale(factor,shape), Mirror([x,y,z],shape)",
+  "Union(shapes), Difference(mainBody,[tools]), Intersection(shapes)",
+  "Extrude(face,[dx,dy,dz]), Revolve(shape,degrees,[ax,ay,az]?)",
+  "Use only these functions. No imports, custom functions, loops, conditions, comments, strings inside CAD code, or unsupported JavaScript.",
+  "Use simple const/let declarations, numeric coordinates, and positive dimensions. Translation coordinates may be negative.",
+  "The complete final model must be assigned to a variable named finalModel.",
+  "Use separate valid primitives for each component. Use Union only when solids should form one connected solid. Overlap joined components slightly when appropriate.",
+  "For hollow pipes, subtract an inner cylinder using Difference. The cutter must extend at least 1 mm beyond both ends.",
+  "For holes through plates and flanges, use cylindrical cutters that extend at least 1 mm beyond both faces. Subtract every cutter from the actual body using Difference.",
+  "For multiple holes, position cutters at the correct coordinates, include every cutter in the tools array, and preserve the Difference result in finalModel.",
+  "Never leave a Boolean result unused. Never show a cutter as a separate final solid.",
+  "For hexagonal heads, use Polygon with six numeric 2D points and Extrude it to create the head. Do not substitute a box.",
+  "Keep connected solids overlapping slightly to avoid coincident-face Boolean problems. Do not use Union for parts that should remain separate.",
+  "Example hollow pipe: const finalModel = Difference(Cylinder(20,60), [Translate([0,0,-1],Cylinder(12,62))]);",
+  "Example flange with a hollow tube and four through-holes:",
+  "const body = Union([Cylinder(50,10),Translate([0,0,9.9],Cylinder(20,60))]);",
+  "const finalModel = Difference(body,[Translate([0,0,-1],Cylinder(12,72)),Translate([30,0,-1],Cylinder(4,12)),Translate([0,30,-1],Cylinder(4,12)),Translate([-30,0,-1],Cylinder(4,12)),Translate([0,-30,-1],Cylinder(4,12))]);",
+  "The example illustrates the required Boolean structure; adapt dimensions and positions to the user's request.",
+  "Generate the requested object as actual 3D geometry, not a description.",
+  "User requested object:",
   description
 ].join("\n");
+
 
 
 

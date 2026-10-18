@@ -1350,11 +1350,22 @@ function validateCadCode(rawCode) {
     throw new Error("The AI returned unsupported CAD code. Please try a simpler description.");
   }
 
-  const allowedFunctions = new Set([
-    "Box", "Sphere", "Cylinder", "Cone",
-    "Translate", "Rotate", "Union", "Difference",
-    "Intersection", "Sketch", "Extrude", "Revolve"
-  ]);
+  
+const allowedFunctions = new Set([
+  "Box",
+  "Sphere",
+  "Cylinder",
+  "Cone",
+  "Translate",
+  "Rotate",
+  "Union",
+  "Difference",
+  "Intersection",
+  "Sketch",
+  "Extrude",
+  "Revolve"
+]);
+
 
   const keywords = new Set([
     "const", "let", "var", "return",

@@ -2510,6 +2510,12 @@ const prompt = [
   "Rotate([axisX, axisY, axisZ], degrees, shape)",
   "Union([shape1, shape2])",
   "Difference(mainShape, [toolShape])",
+  
+"Use only these geometry functions: Box, Sphere, Cylinder, Cone, Polygon, Translate, Rotate, Union, Difference, Intersection, Extrude, Revolve.",
+"Use these exact signatures: Box(x,y,z), Cylinder(r,h), Polygon(points), Translate([x,y,z],shape), Extrude(face,[dx,dy,dz]), Union(shapes), Difference(mainBody,[tools]).",
+"For a hexagonal bolt head, use Polygon with six numeric 2D points, then Extrude it vertically. Never substitute a box for a hexagon.",
+"Do not use Sketch, chained methods, strings inside the CAD code, or unsupported functions.",
+
   "Intersection([shape1, shape2])",
   "Use Sketch and Extrude only when their exact supported signatures are known.",
   "Use only positive numeric dimensions and simple const or let declarations.",

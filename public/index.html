@@ -1164,6 +1164,9 @@ async function api(path, body) {
 
   return data;
 }
+ 
+window.malieApi = api;
+ 
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; }
   catch { return false; }

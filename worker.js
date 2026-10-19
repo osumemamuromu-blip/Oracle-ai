@@ -2645,6 +2645,15 @@ const prompt = [
   "Assign the completed requested model to a variable named finalModel. Preserve the result of every Boolean operation.",
   "Use const or let declarations and numeric coordinates. Use positive dimensions and sensible proportions. Negative coordinates are allowed in point arrays and translations.",
   "Do not use imports, custom functions, loops, conditions, browser APIs, arbitrary JavaScript, or markdown fences. Do not invent unsupported CAD functions.",
+  CRITICAL CODE RESTRICTIONS:
+
+- Never use "for", "while", or "do" loops.
+- Never use ".map()", ".forEach()", ".filter()", or ".reduce()".
+- Do not generate helper functions, callbacks, or custom JavaScript functions.
+- Create geometry using direct, explicit calls to the documented CascadeStudio API.
+- For repeated features such as bolt holes, write each hole operation explicitly.
+- Return only valid JSON containing the model title and code.
+- Before returning, check that the code contains no forbidden JavaScript keywords or unsupported syntax.
   "Generate actual 3D geometry, not a description. Choose operations appropriate to the requested shape and its dimensions.",
   "User requested object:",
   description

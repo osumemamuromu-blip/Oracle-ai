@@ -2643,7 +2643,7 @@ const prompt = [
   "For a hollow cylinder, use Difference(Cylinder(outerRadius,height),[Translate([0,0,-1],Cylinder(innerRadius,height+2))]). Ensure the inner radius is smaller than the outer radius.",
   "For holes, use cylindrical cutters that extend at least 1 mm beyond both faces. Subtract the cutters from the actual body using Difference.",
   "Assign the completed requested model to a variable named finalModel. Preserve the result of every Boolean operation.",
-"The final line of the script must be: return finalModel; so CascadeStudio receives the completed 3D shape.",
+
   "Use const or let declarations and numeric coordinates. Use positive dimensions and sensible proportions. Negative coordinates are allowed in point arrays and translations.",
   "Do not use imports, custom functions, loops, conditions, browser APIs, arbitrary JavaScript, or markdown fences. Do not invent unsupported CAD functions.",
   

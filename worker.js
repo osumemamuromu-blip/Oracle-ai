@@ -1420,11 +1420,15 @@ function validateCadCode(rawCode) {
   const forbidden =
     /\b(?:window|document|globalThis|self|fetch|XMLHttpRequest|WebSocket|import|export|eval|Function|constructor|prototype|__proto__|localStorage|sessionStorage|navigator|location|process|require|Worker|setTimeout|setInterval|postMessage|cookie|indexedDB|await|async|class|while|for|do|try|catch|throw|debugger|this|delete|with|yield|function|new\s+Function|Proxy|Reflect|WebAssembly|SharedArrayBuffer|Atomics|arguments|super)\b/i;
 
-  if (forbidden.test(masked)) {
-    throw new Error(
-      "The generated CAD script contains unsupported JavaScript."
-    );
-  }
+  const forbiddenMatch = masked.match(forbidden);
+
+if (forbiddenMatch) {
+  throw new Error(
+    "Unsupported JavaScript token: " +
+    forbiddenMatch[0] +
+    ". Please regenerate the CAD model."
+  );
+}
 
   // Only allow documented CAD operations and their supported methods.
   const allowedFunctions = new Set([

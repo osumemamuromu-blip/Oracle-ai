@@ -1331,6 +1331,7 @@ function buildAllViews(model, projection) {
 /* CAD code validation                                                 */
 /* ------------------------------------------------------------------ */
 
+
 function validateCadCode(rawCode) {
   let code = String(rawCode || "").trim();
 
@@ -1339,92 +1340,224 @@ function validateCadCode(rawCode) {
     .replace(/\s*```$/, "")
     .trim();
 
-  if (!code || code.length > 12000) {
-    throw new Error("The generated CAD script was empty or too long. Please try again.");
+  if (!code || code.length > 20000) {
+    throw new Error(
+      "The generated CAD script was empty or too long. Please try again."
+    );
   }
 
+  // Scan the source while preserving string literals safely.
+  // Comments are removed, and template strings are not supported.
+  let masked = "";
+  const strings = [];
+  let i = 0;
+
+  while (i < code.length) {
+    const ch = code[i];
+    const next = code[i + 1];
+
+    if (ch === "`") {
+      throw new Error("Template strings are not supported in CAD scripts.");
+    }
+
+    if (ch === "/" && next === "/") {
+      i += 2;
+      while (i < code.length && code[i] !== "\n") i++;
+      masked += "\n";
+      continue;
+    }
+
+    if (ch === "/" && next === "*") {
+      i += 2;
+      while (
+        i < code.length &&
+        !(code[i] === "*" && code[i + 1] === "/")
+      ) i++;
+
+      if (i >= code.length) {
+        throw new Error("The generated CAD script has an unclosed comment.");
+      }
+
+      i += 2;
+      masked += "  ";
+      continue;
+    }
+
+    if (ch === "'" || ch === '"') {
+      const quote = ch;
+      let literal = "";
+      i++;
+
+      while (i < code.length && code[i] !== quote) {
+        if (code[i] === "\\") {
+          throw new Error(
+            "Escaped characters are not supported in CAD text."
+          );
+        }
+
+        if (code.charCodeAt(i) < 32) {
+          throw new Error("Invalid character in a CAD text literal.");
+        }
+
+        literal += code[i++];
+      }
+
+      if (i >= code.length) {
+        throw new Error("The generated CAD script has an unclosed string.");
+      }
+
+      i++;
+      strings.push(literal);
+      masked += " STRLITERAL ";
+      continue;
+    }
+
+    masked += ch;
+    i++;
+  }
+
+  // Never permit general-purpose JavaScript or browser access.
   const forbidden =
-    /\b(?:window|document|globalThis|self|fetch|XMLHttpRequest|WebSocket|import|export|eval|Function|constructor|prototype|__proto__|localStorage|sessionStorage|navigator|location|process|require|Worker|setTimeout|setInterval|postMessage|cookie|indexedDB|await|async|class|while|for|do|try|catch|throw|debugger)\b/i;
+    /\b(?:window|document|globalThis|self|fetch|XMLHttpRequest|WebSocket|import|export|eval|Function|constructor|prototype|__proto__|localStorage|sessionStorage|navigator|location|process|require|Worker|setTimeout|setInterval|postMessage|cookie|indexedDB|await|async|class|while|for|do|try|catch|throw|debugger|this|delete|with|yield|function|new\s+Function|Proxy|Reflect|WebAssembly|SharedArrayBuffer|Atomics|arguments|super)\b/i;
 
-  if (forbidden.test(code)) {
-    throw new Error("The AI returned unsupported CAD code. Please try a simpler description.");
+  if (forbidden.test(masked)) {
+    throw new Error(
+      "The generated CAD script contains unsupported JavaScript."
+    );
   }
 
-  
+  // Only allow documented CAD operations and their supported methods.
+  const allowedFunctions = new Set([
+    "Box", "Sphere", "Cylinder", "Cone", "Circle", "Polygon",
+    "BSpline", "Text3D", "Sketch", "Translate", "Rotate", "Scale",
+    "Mirror", "Union", "Difference", "Intersection", "Extrude",
+    "Revolve", "Loft", "Pipe", "Offset", "FilletEdges",
+    "ChamferEdges", "Edges", "Volume", "SurfaceArea", "CenterOfMass"
+  ]);
 
-const allowedFunctions = new Set([
-  "Box", "Sphere", "Cylinder", "Cone", "Polygon",
-  "Translate", "Rotate", "Scale", "Mirror",
-  "Union", "Difference", "Intersection",
-  "Extrude", "Revolve"
-]);
+  const allowedMethods = new Set([
+    "LineTo", "Fillet", "ArcTo", "BSplineTo", "End", "Face", "Wire",
+    "ofType", "parallel", "max", "min", "indices"
+  ]);
 
-
-
-  const keywords = new Set([
-    "const", "let", "var", "return",
+  const allowedKeywords = new Set([
+    "const", "let", "var", "return", "new",
     "true", "false", "null", "undefined"
   ]);
 
   const declared = new Set();
 
-  for (const match of code.matchAll(
+  for (const match of masked.matchAll(
     /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g
   )) {
     declared.add(match[1]);
   }
 
-  if (
-    /[`'"]|\b[A-Za-z_$][\w$]*\s*\.|\b[A-Za-z_$][\w$]*\s*\[\s*['"]/.test(code)
-  ) {
-    throw new Error("The AI returned unsupported CAD code. Please try a simpler description.");
+  // Restrict property access to approved CAD methods.
+  for (const match of masked.matchAll(
+    /\.\s*([A-Za-z_$][\w$]*)/g
+  )) {
+    const property = match[1];
+
+    if (
+      !allowedMethods.has(property) &&
+      !["PI", "abs", "min", "max", "sqrt", "sin", "cos", "tan",
+        "round", "floor", "ceil", "pow"].includes(property)
+    ) {
+      throw new Error(
+        "The CAD script uses an unsupported property: " + property
+      );
+    }
   }
 
-  const identifiers = code.match(/[A-Za-z_$][\w$]*/g) || [];
+  // Reject computed property access and indirect function calls.
+  if (
+    /\b[A-Za-z_$][\w$]*\s*\[\s*[A-Za-z_$]/.test(masked) ||
+    /\]\s*\(/.test(masked) ||
+    /\)\s*\(/.test(masked) ||
+    /=>|\?\./.test(masked)
+  ) {
+    throw new Error(
+      "The generated CAD script uses unsupported JavaScript syntax."
+    );
+  }
+
+  // Reject object literals, function bodies, and other block syntax.
+  if (/[{}]/.test(masked)) {
+    throw new Error(
+      "Use CAD operations and variable declarations only."
+    );
+  }
+
+  const identifiers = masked.match(/[A-Za-z_$][\w$]*/g) || [];
 
   for (const identifier of identifiers) {
     if (
-      keywords.has(identifier) ||
+      identifier === "STRLITERAL" ||
+      allowedKeywords.has(identifier) ||
       allowedFunctions.has(identifier) ||
+      allowedMethods.has(identifier) ||
       declared.has(identifier)
     ) {
       continue;
     }
 
+    // Math is allowed only with the approved properties listed above.
+    if (identifier === "Math") continue;
+
     throw new Error(
-      "The AI used an unsupported CAD operation (" +
-      identifier +
-      "). Please try a simpler description."
+      "The CAD script uses an unsupported identifier: " + identifier
     );
+  }
+
+  // Permit only safe literal text for plane and selector names.
+  for (const literal of strings) {
+    if (
+      literal.length > 500 ||
+      /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(literal)
+    ) {
+      throw new Error("The CAD script contains invalid text.");
+    }
   }
 
   if (
     ![...allowedFunctions].some(name =>
-      new RegExp("\\b" + name + "\\s*\\(").test(code)
+      new RegExp("\\b" + name + "\\s*\\(").test(masked)
     )
   ) {
     throw new Error(
-      "The AI did not generate a supported 3D geometry operation. Please try again."
+      "The CAD script did not contain a supported geometry operation."
     );
   }
 
+  // Check bracket balance.
   let depth = 0;
+  const pairs = { ")": "(", "]": "[" };
+  const stack = [];
 
-  for (const ch of code) {
-    if ("([{".includes(ch)) depth++;
-    if (")]}" .includes(ch)) depth--;
+  for (const ch of masked) {
+    if (ch === "(" || ch === "[") {
+      stack.push(ch);
+      depth++;
+    } else if (ch === ")" || ch === "]") {
+      if (stack.pop() !== pairs[ch]) {
+        throw new Error("The generated CAD script has invalid brackets.");
+      }
+      depth--;
+    }
 
     if (depth < 0) {
-      throw new Error("The generated CAD code has invalid brackets.");
+      throw new Error("The generated CAD script has invalid brackets.");
     }
   }
 
   if (depth !== 0) {
-    throw new Error("The generated CAD code has invalid brackets.");
+    throw new Error("The generated CAD script has invalid brackets.");
   }
 
   return code;
 }
+
 /* ------------------------------------------------------------------ */
 /* Worker                                                              */
 /* ------------------------------------------------------------------ */

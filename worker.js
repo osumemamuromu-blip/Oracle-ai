@@ -2662,6 +2662,7 @@ const prompt = [
 
 
 
+     
       const raw = await callAI(env, prompt, true);
 
       const result = parseJsonObject(
@@ -2669,11 +2670,46 @@ const prompt = [
         "Malie could not generate CAD code from that description. Please try again."
       );
 
-      const title = String(
+      let title = String(
         result.title || "Generated CAD Model"
       ).replace(/[<>&"']/g, "").slice(0, 80);
 
-      const code = validateCadCode(result.code);
+      let code;
+
+      try {
+        code = validateCadCode(result.code);
+      } catch (validationError) {
+        const repairPrompt = [
+          "Repair the invalid CascadeStudio CAD JavaScript below.",
+          "The validation error was: " + String(validationError.message || validationError),
+          "Return ONLY valid JSON with exactly two fields: title and code.",
+          "Preserve the requested object's shape and dimensions.",
+          "Use only documented CascadeStudio geometry operations.",
+          "Do not use loops, helper functions, comments, template strings, or unsupported JavaScript.",
+          "Ensure every parenthesis and square bracket is correctly balanced and nested.",
+          "Assign the completed model to finalModel.",
+          "Requested object:",
+          description,
+          "Previous title:",
+          title,
+          "Previous invalid code:",
+          String(result.code || "")
+        ].join("\n");
+
+        const repairedRaw = await callAI(env, repairPrompt, true);
+
+        const repairedResult = parseJsonObject(
+          repairedRaw,
+          "Malie could not repair the CAD script. Please generate the model again."
+        );
+
+        title = String(
+          repairedResult.title || title
+        ).replace(/[<>&"']/g, "").slice(0, 80);
+
+        code = validateCadCode(repairedResult.code);
+      }
+ 
 
       return respond({
         ok: true,

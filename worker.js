@@ -1445,7 +1445,7 @@ if (forbiddenMatch) {
   ]);
 
   const allowedKeywords = new Set([
-    "const", "let", "var", "return", "new",
+    "const", "let", "var", "new",,
     "true", "false", "null", "undefined"
   ]);
 

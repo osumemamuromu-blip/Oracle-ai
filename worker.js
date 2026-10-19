@@ -2638,11 +2638,12 @@ const prompt = [
   "Supported operations: Translate([x,y,z],shape), Rotate([ax,ay,az],degrees,shape), Scale(factor,shape), Mirror([x,y,z],shape), Union(shapes), Difference(body,[tools]), Intersection(shapes), Extrude(face,[dx,dy,dz]), Revolve(shape,degrees), Loft(wires), Pipe(shape,path), Offset(shape,distance), FilletEdges(shape,radius,indices), ChamferEdges(shape,distance,indices).",
   "Supported selectors and measurements: Edges(shape).ofType(type).parallel(axis).max(axis).min(axis).indices(), Volume(shape), SurfaceArea(shape), CenterOfMass(shape).",
   "For square or rectangular profiles, prefer Sketch with 2D points followed by End(true).Face() and Extrude(face,[0,0,height]).",
-  "Example rectangular block: const face = new Sketch([-20,-20]).LineTo([20,-20]).LineTo([20,20]).LineTo([-20,20]).End(true).Face(); const finalModel = Extrude(face,[0,0,20]);",
+  "Example rectangular block: const face = new Sketch([-20,-20]).LineTo([20,-20]).LineTo([20,20]).LineTo([-20,20]).End(true).Face(); const finalModel = Extrude(face,[0,0,20]); return finalModel;",
   "Polygon requires an array of 3D points. Correct example: const face = Polygon([[0,0,0],[40,0,0],[40,40,0],[0,40,0]]); const finalModel = Extrude(face,[0,0,20]); Never pass a flat list of coordinates to Polygon.",
   "For a hollow cylinder, use Difference(Cylinder(outerRadius,height),[Translate([0,0,-1],Cylinder(innerRadius,height+2))]). Ensure the inner radius is smaller than the outer radius.",
   "For holes, use cylindrical cutters that extend at least 1 mm beyond both faces. Subtract the cutters from the actual body using Difference.",
   "Assign the completed requested model to a variable named finalModel. Preserve the result of every Boolean operation.",
+"The final line of the script must be: return finalModel; so CascadeStudio receives the completed 3D shape.",
   "Use const or let declarations and numeric coordinates. Use positive dimensions and sensible proportions. Negative coordinates are allowed in point arrays and translations.",
   "Do not use imports, custom functions, loops, conditions, browser APIs, arbitrary JavaScript, or markdown fences. Do not invent unsupported CAD functions.",
   

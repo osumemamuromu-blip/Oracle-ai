@@ -2709,7 +2709,11 @@ const prompt = [
           "Use only documented CascadeStudio geometry operations with the correct argument order and geometry types.",
 "Do not use loops, helper functions, comments, template strings, unsupported JavaScript, or top-level return statements.",
 "Ensure every parenthesis and square bracket is correctly balanced and nested.",
-"Pipe(shape, wirePath, keepInputs) requires a compatible TopoDS_Wire as its second argument.",
+"Supported sweep operation: Pipe(shape, path). Use exactly the documented two-argument signature unless the actual Cascade Studio implementation confirms otherwise.",
+"Do not call GetWire unless it is confirmed to be a supported function and its required input type is known.",
+"Before using Pipe, ensure the profile and path are the exact geometry types required by Cascade Studio. Do not pass a Sketch, face, or general shape where a wire is required.",
+"For a hollow swept part, create compatible outer and inner profiles and use the documented sweep operation. Subtract the inner swept volume from the outer volume only when both operations return valid compatible shapes.",
+"Do not invent function names, overloads, argument types, or extra arguments. Return one complete script with unique variable names and assign the final result to finalModel."
 "For hollow sweeps, use compatible outer and inner profiles and subtract the inner sweep from the outer sweep.",
 "Preserve the user's requested dimensions and shape when repairing invalid code.",
 "Assign the completed model to finalModel.",

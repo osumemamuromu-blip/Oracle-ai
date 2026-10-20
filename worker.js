@@ -1451,11 +1451,21 @@ if (forbiddenMatch) {
 
   const declared = new Set();
 
-  for (const match of masked.matchAll(
-    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g
-  )) {
-    declared.add(match[1]);
+for (const match of masked.matchAll(
+  /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g
+)) {
+  const name = match[1];
+
+  if (declared.has(name)) {
+    throw new Error(
+      "The generated CAD script declares '" +
+      name +
+      "' more than once. Regenerate the complete script with unique variable names."
+    );
   }
+
+  declared.add(name);
+    }
 
   // Restrict property access to approved CAD methods.
   for (const match of masked.matchAll(

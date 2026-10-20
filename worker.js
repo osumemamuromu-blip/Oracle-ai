@@ -2713,7 +2713,7 @@ const prompt = [
 "Do not call GetWire unless it is confirmed to be a supported function and its required input type is known.",
 "Before using Pipe, ensure the profile and path are the exact geometry types required by Cascade Studio. Do not pass a Sketch, face, or general shape where a wire is required.",
 "For a hollow swept part, create compatible outer and inner profiles and use the documented sweep operation. Subtract the inner swept volume from the outer volume only when both operations return valid compatible shapes.",
-"Do not invent function names, overloads, argument types, or extra arguments. Return one complete script with unique variable names and assign the final result to finalModel."
+"Do not invent function names, overloads, argument types, or extra arguments. Return one complete script with unique variable names and assign the final result to finalModel.",
 "For hollow sweeps, use compatible outer and inner profiles and subtract the inner sweep from the outer sweep.",
 "Preserve the user's requested dimensions and shape when repairing invalid code.",
 "Assign the completed model to finalModel.",

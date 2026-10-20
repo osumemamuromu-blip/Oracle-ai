@@ -1,4 +1,6 @@
 import * as XLSX from "xlsx";
+import { parseRepairRequest } from "./cad.js";
+import { generateCad } from "./cadspec.js";
 
 /* ------------------------------------------------------------------ */
 /* Settings                                                            */
@@ -1328,241 +1330,6 @@ function buildAllViews(model, projection) {
 }
 
 /* ------------------------------------------------------------------ */
-/* CAD code validation                                                 */
-/* ------------------------------------------------------------------ */
-
-
-function validateCadCode(rawCode) {
-  let code = String(rawCode || "").trim();
-
-  code = code
-    .replace(/^```(?:javascript|js)?\s*/i, "")
-    .replace(/\s*```$/, "")
-    .trim();
-
-  if (!code || code.length > 20000) {
-    throw new Error(
-      "The generated CAD script was empty or too long. Please try again."
-    );
-  }
-
-  // Scan the source while preserving string literals safely.
-  // Comments are removed, and template strings are not supported.
-  let masked = "";
-  const strings = [];
-  let i = 0;
-
-  while (i < code.length) {
-    const ch = code[i];
-    const next = code[i + 1];
-
-    if (ch === "`") {
-      throw new Error("Template strings are not supported in CAD scripts.");
-    }
-
-    if (ch === "/" && next === "/") {
-      i += 2;
-      while (i < code.length && code[i] !== "\n") i++;
-      masked += "\n";
-      continue;
-    }
-
-    if (ch === "/" && next === "*") {
-      i += 2;
-      while (
-        i < code.length &&
-        !(code[i] === "*" && code[i + 1] === "/")
-      ) i++;
-
-      if (i >= code.length) {
-        throw new Error("The generated CAD script has an unclosed comment.");
-      }
-
-      i += 2;
-      masked += "  ";
-      continue;
-    }
-
-    if (ch === "'" || ch === '"') {
-      const quote = ch;
-      let literal = "";
-      i++;
-
-      while (i < code.length && code[i] !== quote) {
-        if (code[i] === "\\") {
-          throw new Error(
-            "Escaped characters are not supported in CAD text."
-          );
-        }
-
-        if (code.charCodeAt(i) < 32) {
-          throw new Error("Invalid character in a CAD text literal.");
-        }
-
-        literal += code[i++];
-      }
-
-      if (i >= code.length) {
-        throw new Error("The generated CAD script has an unclosed string.");
-      }
-
-      i++;
-      strings.push(literal);
-      masked += " STRLITERAL ";
-      continue;
-    }
-
-    masked += ch;
-    i++;
-  }
-
-  // Never permit general-purpose JavaScript or browser access.
-  const forbidden =
-    /\b(?:window|document|globalThis|self|fetch|XMLHttpRequest|WebSocket|import|export|eval|Function|constructor|prototype|__proto__|localStorage|sessionStorage|navigator|location|process|require|Worker|setTimeout|setInterval|postMessage|cookie|indexedDB|await|async|class|while|for|do|try|catch|throw|debugger|this|delete|with|yield|return|function|new\s+Function|Proxy|Reflect|WebAssembly|SharedArrayBuffer|Atomics|arguments|super)\b/i;
-
-  const forbiddenMatch = masked.match(forbidden);
-
-if (forbiddenMatch) {
-  throw new Error(
-    "Unsupported JavaScript token: " +
-    forbiddenMatch[0] +
-    ". Please regenerate the CAD model."
-  );
-}
-
-  // Only allow documented CAD operations and their supported methods.
-  const allowedFunctions = new Set([
-    "Box", "Sphere", "Cylinder", "Cone", "Circle", "Polygon",
-    "BSpline", "Text3D", "Sketch", "Translate", "Rotate", "Scale",
-    "Mirror", "Union", "Difference", "Intersection", "Extrude",
-    "Revolve", "Loft", "Pipe", "Offset", "FilletEdges",
-    "ChamferEdges", "Edges", "Volume", "SurfaceArea", "CenterOfMass"
-  ]);
-
-  const allowedMethods = new Set([
-    "LineTo", "Fillet", "ArcTo", "BSplineTo", "End", "Face", "Wire",
-    "ofType", "parallel", "max", "min", "indices"
-  ]);
-
-  const allowedKeywords = new Set([
-    "const", "let", "var", "new",,
-    "true", "false", "null", "undefined"
-  ]);
-
-  const declared = new Set();
-
-  for (const match of masked.matchAll(
-    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g
-  )) {
-    declared.add(match[1]);
-  }
-
-  // Restrict property access to approved CAD methods.
-  for (const match of masked.matchAll(
-    /\.\s*([A-Za-z_$][\w$]*)/g
-  )) {
-    const property = match[1];
-
-    if (
-      !allowedMethods.has(property) &&
-      !["PI", "abs", "min", "max", "sqrt", "sin", "cos", "tan",
-        "round", "floor", "ceil", "pow"].includes(property)
-    ) {
-      throw new Error(
-        "The CAD script uses an unsupported property: " + property
-      );
-    }
-  }
-
-  // Reject computed property access and indirect function calls.
-  if (
-    /\b[A-Za-z_$][\w$]*\s*\[\s*[A-Za-z_$]/.test(masked) ||
-    /\]\s*\(/.test(masked) ||
-    /\)\s*\(/.test(masked) ||
-    /=>|\?\./.test(masked)
-  ) {
-    throw new Error(
-      "The generated CAD script uses unsupported JavaScript syntax."
-    );
-  }
-
-  // Reject object literals, function bodies, and other block syntax.
-  if (/[{}]/.test(masked)) {
-    throw new Error(
-      "Use CAD operations and variable declarations only."
-    );
-  }
-
-  const identifiers = masked.match(/[A-Za-z_$][\w$]*/g) || [];
-
-  for (const identifier of identifiers) {
-    if (
-      identifier === "STRLITERAL" ||
-      allowedKeywords.has(identifier) ||
-      allowedFunctions.has(identifier) ||
-      allowedMethods.has(identifier) ||
-      declared.has(identifier)
-    ) {
-      continue;
-    }
-
-    // Math is allowed only with the approved properties listed above.
-    if (identifier === "Math") continue;
-
-    throw new Error(
-      "The CAD script uses an unsupported identifier: " + identifier
-    );
-  }
-
-  // Permit only safe literal text for plane and selector names.
-  for (const literal of strings) {
-    if (
-      literal.length > 500 ||
-      /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(literal)
-    ) {
-      throw new Error("The CAD script contains invalid text.");
-    }
-  }
-
-  if (
-    ![...allowedFunctions].some(name =>
-      new RegExp("\\b" + name + "\\s*\\(").test(masked)
-    )
-  ) {
-    throw new Error(
-      "The CAD script did not contain a supported geometry operation."
-    );
-  }
-
-  // Check bracket balance.
-  let depth = 0;
-  const pairs = { ")": "(", "]": "[" };
-  const stack = [];
-
-  for (const ch of masked) {
-    if (ch === "(" || ch === "[") {
-      stack.push(ch);
-      depth++;
-    } else if (ch === ")" || ch === "]") {
-      if (stack.pop() !== pairs[ch]) {
-        throw new Error("The generated CAD script has invalid brackets.");
-      }
-      depth--;
-    }
-
-    if (depth < 0) {
-      throw new Error("The generated CAD script has invalid brackets.");
-    }
-  }
-
-  if (depth !== 0) {
-    throw new Error("The generated CAD script has invalid brackets.");
-  }
-
-  return code;
-}
-
-/* ------------------------------------------------------------------ */
 /* Worker                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -2581,177 +2348,82 @@ export default {
     }
     /* ---------------- CAD Studio code generation (Pro only) ---------------- */
 
-if (request.method === "POST" && path === "/api/cad/generate") {
-  let body;
-
-  try {
-    body = await request.json();
-  } catch {
-    return respond({ error: "Please send valid JSON." }, 400);
-  }
-
-  try {
-    const userId = await authenticateFirebase(request, env);
-    const plan = await getActivePlan(env, userId);
-
-    if (plan !== "pro") {
-      return respond({
-        error: "AI CAD generation is available on the Pro plan. Please upgrade to Pro to use it."
-      }, 403);
-    }
-
-    const description = String(
-      body.prompt || body.description || ""
-    ).trim();
-
-    if (description.length < 5) {
-      return respond({
-        error: "Describe the 3D object you want to create."
-      }, 400);
-    }
-
-    if (description.length > 2000) {
-      return respond({
-        error: "Please keep your CAD description under 2,000 characters."
-      }, 400);
-    }
-
-    if (!env.DB) {
-      return respond({
-        error: "Usage tracking is temporarily unavailable."
-      }, 503);
-    }
-
-    const usage = await reserveDailyUsage(env, userId, plan);
-
-    try {
-      
-
-
-
-const prompt = [
-  "Generate reliable 3D CAD JavaScript for Cascade Studio.",
-  "Return ONLY a JSON object with exactly two fields: title (short string) and code (string). No markdown fences.",
-  "The code must use only the documented CascadeStudio standard library.",
-  "Supported primitives: Box(x,y,z), Sphere(r), Cylinder(r,h), Cone(r1,r2,h), Circle(r,wire?), Polygon(points,wire?), Text3D(text,size,height,font?), BSpline(points,closed?).",
-  "Supported sketch API: new Sketch([x,y], plane?).LineTo([x,y]).Fillet(r).ArcTo([midX,midY],[endX,endY]).BSplineTo(points).End(true).Face(). The plane may be XY, XZ, or YZ.",
-  "Supported operations: Translate([x,y,z],shape), Rotate([ax,ay,az],degrees,shape), Scale(factor,shape), Mirror([x,y,z],shape), Union(shapes), Difference(body,[tools]), Intersection(shapes), Extrude(face,[dx,dy,dz]), Revolve(shape,degrees), Loft(wires), Pipe(shape,path), Offset(shape,distance), FilletEdges(shape,radius,indices), ChamferEdges(shape,distance,indices).",
-"For Pipe(shape, wirePath, keepInputs) requires a valid TopoDS_Wire as its second argument. Never pass a Sketch object, face, or general shape as the path.",
-"Use only documented CascadeStudio operations with their correct argument order and compatible geometry types.",
-"For swept parts, construct a valid path and ensure the profile is correctly oriented to the path at its start.",
-"For hollow swept parts, create outer and inner sweeps from the same valid centerline wire. Preserve shared inputs when supported, then subtract the inner sweep from the outer sweep using Difference(outerPipe, [innerPipe]).",
-"Avoid duplicate path points, sharp unintended kinks, self-intersections, pinched ends, and invalid or incomplete solids.",
-"For a 90-degree elbow, create a quarter-circle bend with the requested centerline radius and straight sections at both ends. Do not claim exact dimensions when using an approximate spline.",
-"Translate(offset, shape) takes the translation vector first and the shape second. Rotate(axis, degrees, shape) takes the axis first, then degrees, then the shape.",
-"The script executes at top level. Never use a return statement. Assign the completed model to a variable named finalModel.",
-"For hollow pipes, create the outer and inner pipes using the SAME centerline wire and pass true as the third Pipe argument to preserve the shared inputs.",
-"Subtract the inner pipe from the outer pipe using Difference(outerPipe, [innerPipe]) and assign the result to finalModel.",
-"Never use return finalModel; at the end of the generated script.",
-  "Supported selectors and measurements: Edges(shape).ofType(type).parallel(axis).max(axis).min(axis).indices(), Volume(shape), SurfaceArea(shape), CenterOfMass(shape).",
-  "For square or rectangular profiles, prefer Sketch with 2D points followed by End(true).Face() and Extrude(face,[0,0,height]).",
-  "Example rectangular block: const face = new Sketch([-20,-20]).LineTo([20,-20]).LineTo([20,20]).LineTo([-20,20]).End(true).Face(); const finalModel = Extrude(face,[0,0,20]);",
-  "Polygon requires an array of 3D points. Correct example: const face = Polygon([[0,0,0],[40,0,0],[40,40,0],[0,40,0]]); const finalModel = Extrude(face,[0,0,20]); Never pass a flat list of coordinates to Polygon.",
-  "For a hollow cylinder, use Difference(Cylinder(outerRadius,height),[Translate([0,0,-1],Cylinder(innerRadius,height+2))]). Ensure the inner radius is smaller than the outer radius.",
-  "For holes, use cylindrical cutters that extend at least 1 mm beyond both faces. Subtract the cutters from the actual body using Difference.",
-  "Assign the completed requested model to a variable named finalModel. Preserve the result of every Boolean operation.",
-
-  "Use const or let declarations and numeric coordinates. Use positive dimensions and sensible proportions. Negative coordinates are allowed in point arrays and translations.",
-  "Do not use imports, custom functions, loops, conditions, browser APIs, arbitrary JavaScript, or markdown fences. Do not invent unsupported CAD functions.",
-  
-  "CRITICAL CODE RESTRICTIONS:",
-  "Never use for, while, or do loops.",
-  "Never use map, forEach, filter, or reduce.",
-  "Do not generate helper functions or callbacks.",
-  "Create geometry using direct, explicit calls to the documented CascadeStudio API.",
-  "For repeated features such as bolt holes, write each operation explicitly.",
-  "Return only valid JSON containing the model title and code.",
-  "Before returning, check that the code contains no forbidden JavaScript keywords or unsupported syntax.",
-  "Generate actual 3D geometry, not a description. Choose operations appropriate to the requested shape and its dimensions.",
-  "User requested object:",
-  description
-].join("\n");
-
-
-
-
-     
-      const raw = await callAI(env, prompt, true);
-
-      const result = parseJsonObject(
-        raw,
-        "Malie could not generate CAD code from that description. Please try again."
-      );
-
-      let title = String(
-        result.title || "Generated CAD Model"
-      ).replace(/[<>&"']/g, "").slice(0, 80);
-
-      let code;
+    if (request.method === "POST" && path === "/api/cad/generate") {
+      let body;
 
       try {
-        code = validateCadCode(result.code);
-      } catch (validationError) {
-        const repairPrompt = [
-          "Repair the invalid CascadeStudio CAD JavaScript below.",
-          "The validation error was: " + String(validationError.message || validationError),
-          "Return ONLY valid JSON with exactly two fields: title and code.",
-          "Preserve the requested object's shape and dimensions.",
-          "Use only documented CascadeStudio geometry operations with the correct argument order and geometry types.",
-"Do not use loops, helper functions, comments, template strings, unsupported JavaScript, or top-level return statements.",
-"Ensure every parenthesis and square bracket is correctly balanced and nested.",
-"Pipe(shape, wirePath, keepInputs) requires a compatible TopoDS_Wire as its second argument.",
-"For hollow sweeps, use compatible outer and inner profiles and subtract the inner sweep from the outer sweep.",
-"Preserve the user's requested dimensions and shape when repairing invalid code.",
-"Assign the completed model to finalModel.",
-          "Requested object:",
-          description,
-          "Previous title:",
-          title,
-          "Previous invalid code:",
-          String(result.code || "")
-        ].join("\n");
-
-        const repairedRaw = await callAI(env, repairPrompt, true);
-
-        const repairedResult = parseJsonObject(
-          repairedRaw,
-          "Malie could not repair the CAD script. Please generate the model again."
-        );
-
-        title = String(
-          repairedResult.title || title
-        ).replace(/[<>&"']/g, "").slice(0, 80);
-
-        code = validateCadCode(repairedResult.code);
+        body = await request.json();
+      } catch {
+        return respond({ error: "Please send valid JSON." }, 400);
       }
- 
 
-      return respond({
-        ok: true,
-        title,
-        code,
-        usage
-      });
-    } catch (error) {
-      await refundDailyUsage(env, userId, usage.date);
-      throw error;
-    }
-  } catch (error) {
-    const status = [400, 401, 403, 429, 500, 503].includes(error?.status)
-      ? error.status
-      : 502;
+      try {
+        const userId = await authenticateFirebase(request, env);
+        const plan = await getActivePlan(env, userId);
 
-    console.error(
-      "CAD generation error:",
-      String(error?.message || error)
-    );
+        if (plan !== "pro") {
+          return respond({
+            error: "AI CAD generation is available on the Pro plan. Please upgrade to Pro to use it."
+          }, 403);
+        }
 
-    return respond({
-      error: error?.status
-        ? error.message
-        : (error?.message || "CAD generation failed. Please try again.")
-    }, status);
-  }
+        const description = String(body.prompt || body.description || "").trim();
+
+        if (description.length < 5) {
+          return respond({ error: "Describe the 3D object you want to create." }, 400);
+        }
+
+        if (description.length > 2000) {
+          return respond({ error: "Please keep your CAD description under 2,000 characters." }, 400);
+        }
+
+        // Optional: the editor reports a script that failed to build and asks for a repair.
+        const repair = parseRepairRequest(body.repair);
+
+        if (!env.DB) {
+          return respond({ error: "Usage tracking is temporarily unavailable." }, 503);
+        }
+
+        // A request (or a repair that needs the AI) uses one daily request, like any other.
+        const usage = await reserveDailyUsage(env, userId, plan);
+
+        try {
+          const model = await generateCad({ callAI, parseJsonObject }, env, description, repair);
+
+          // A repair that needed no AI call (for example dropping fillets) is free.
+          if (model.aiCalls === 0) {
+            await refundDailyUsage(env, userId, usage.date);
+            usage.used = Math.max(0, usage.used - 1);
+            usage.remaining = usage.remaining + 1;
+          }
+
+          return respond({
+            ok: true,
+            title: model.title,
+            code: model.code,
+            spec: model.spec || null,
+            mode: model.mode,
+            note: model.note || null,
+            attempts: model.attempts,
+            usage
+          });
+        } catch (error) {
+          await refundDailyUsage(env, userId, usage.date);
+          throw error;
+        }
+      } catch (error) {
+        const status = [400, 401, 403, 429, 500, 503].includes(error?.status)
+          ? error.status
+          : 502;
+
+        console.error("CAD generation error:", String(error?.message || error));
+
+        return respond({
+          error: error?.status
+            ? error.message
+            : (error?.message || "CAD generation failed. Please try again.")
+        }, status);
+      }
     }
 
     /* ---------------- Engineering Drawing Studio (Pro only) ---------------- */

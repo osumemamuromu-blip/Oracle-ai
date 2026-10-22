@@ -204,6 +204,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .work-card h3{margin:0 0 4px;font-size:16px}
 .sub{color:var(--muted);font-size:12px;margin:0 0 14px}
 
+.btn{border:0;border-radius:11px;background:var(--accent);color:var(--accent-ink);font-weight:800;padding:10px 14px;font-size:12px;margin:10px 0}
 /* Premium */
 .premium-card h2{font-size:24px;letter-spacing:-.8px;margin:0 0 12px}
 .premium-card p{color:var(--muted);font-size:13px;line-height:1.8;max-width:560px}
@@ -1498,7 +1499,7 @@ async function extractAny(file, onStatus = () => {}) {
 }
 
 /* ───────── Navigation ───────── */
-const titles = { explore: "Explore", writing: "Writing Lab", quiz: "Quiz Mode", drawing: "Engineering Drawing", advert: "Advert Studio", video: "Malie Video Studio", premium: "Malie 2 Premium", plans: "Plans" };
+
   
 const titles = {
   explore: "Explore",
@@ -4170,7 +4171,7 @@ function knowledgeStatus(message, error = false) {
 
 async function knowledgeRequest(path, body) {
   // Uses the existing Firebase-authenticated API helper.
-  return api(path, body);
+  return window.malieApi(path, body);
 }
 
 async function knowledgeRefresh() {

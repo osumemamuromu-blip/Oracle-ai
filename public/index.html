@@ -526,6 +526,54 @@ button:disabled{opacity:.55;cursor:not-allowed}
           </div>
         </div>
       </section>
+      
+<section class="view" id="view-knowledge">
+  <div class="work-card">
+    <h3>Knowledge Studio</h3>
+    <p class="sub">
+      Your private document library and AI study assistant.
+      Available on Premium and Pro.
+    </p>
+
+    <label class="field-label" for="knowledgeFile">
+      Upload a PDF or TXT document
+    </label>
+    <input id="knowledgeFile" type="file"
+      accept=".pdf,.txt,application/pdf,text/plain">
+
+    <button class="btn" id="knowledgeUpload" type="button">
+      Add document
+    </button>
+
+    <p class="status" id="knowledgeStatus" aria-live="polite"></p>
+  </div>
+
+  <div class="work-card">
+    <h3>Your documents</h3>
+    <div id="knowledgeDocuments"></div>
+    <button class="btn" id="knowledgeRefresh" type="button">
+      Refresh library
+    </button>
+  </div>
+
+  <div class="work-card">
+    <h3>Ask your documents</h3>
+    <label class="field-label" for="knowledgeQuestion">
+      Your question
+    </label>
+    <textarea class="work-textarea short"
+      id="knowledgeQuestion"
+      maxlength="4000"
+      placeholder="Ask a question about your selected document..."></textarea>
+
+    <button class="btn" id="knowledgeAsk" type="button">
+      Ask Malie
+    </button>
+
+    <div class="result-box" id="knowledgeAnswer"></div>
+  </div>
+</section>
+
 
       <!-- Engineering Drawing Studio (Pro) -->
       <section class="view" id="view-drawing">
@@ -698,6 +746,162 @@ button:disabled{opacity:.55;cursor:not-allowed}
     </div>
   </div>
 </section>
+      
+/* ---------------- Knowledge Studio ---------------- */
+let knowledgeDocs = [];
+
+function knowledgeStatus(message, error = false) {
+  const el = document.getElementById("knowledgeStatus");
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle("error", error);
+}
+
+async function knowledgeRequest(path, body) {
+  // Uses the existing Firebase-authenticated API helper.
+  return api(path, body);
+}
+
+async function knowledgeRefresh() {
+  try {
+    const result = await knowledgeRequest("/api/knowledge/list", {});
+    knowledgeDocs = result.documents || [];
+
+    const container = document.getElementById("knowledgeDocuments");
+    container.replaceChildren();
+
+    if (!knowledgeDocs.length) {
+      container.textContent = "No documents uploaded yet.";
+      return;
+    }
+
+    for (const doc of knowledgeDocs) {
+      const row = document.createElement("div");
+      row.className = "history-card";
+
+      const label = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = doc.id;
+      checkbox.className = "knowledge-select";
+
+      const title = document.createElement("strong");
+      title.textContent = " " + doc.name;
+
+      const details = document.createElement("p");
+      details.textContent =
+        `${doc.file_type.toUpperCase()} · ${doc.characters} characters`;
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "btn";
+      remove.textContent = "Delete";
+      remove.addEventListener("click", async () => {
+        if (!confirm(`Delete "${doc.name}"?`)) return;
+        try {
+          await knowledgeRequest("/api/knowledge/delete", { id: doc.id });
+          await knowledgeRefresh();
+          knowledgeStatus("Document deleted.");
+        } catch (error) {
+          knowledgeStatus(error.message || "Could not delete document.", true);
+        }
+      });
+
+      label.append(checkbox, title);
+      row.append(label, details, remove);
+      container.append(row);
+    }
+  } catch (error) {
+    knowledgeStatus(error.message || "Could not load documents.", true);
+  }
+}
+
+document.getElementById("knowledgeRefresh")?.addEventListener(
+  "click", knowledgeRefresh
+);
+
+document.getElementById("knowledgeUpload")?.addEventListener(
+  "click", async () => {
+    const file = document.getElementById("knowledgeFile").files?.[0];
+    if (!file) {
+      knowledgeStatus("Choose a PDF or TXT file first.", true);
+      return;
+    }
+
+    const type = file.name.toLowerCase().endsWith(".pdf") ? "pdf" :
+      file.name.toLowerCase().endsWith(".txt") ? "txt" : "";
+
+    if (!type) {
+      knowledgeStatus("Only PDF and TXT files are supported.", true);
+      return;
+    }
+
+    try {
+      knowledgeStatus("Reading document...");
+      let content = "";
+
+      if (type === "txt") {
+        content = await file.text();
+      } else {
+        knowledgeStatus(
+          "PDF text extraction has not been connected yet. Please use TXT for this first backend test.",
+          true
+        );
+        return;
+      }
+
+      if (!content.trim()) {
+        knowledgeStatus("The document contains no readable text.", true);
+        return;
+      }
+
+      const result = await knowledgeRequest("/api/knowledge/upload", {
+        name: file.name,
+        type,
+        content
+      });
+
+      knowledgeStatus(`Saved ${result.document.name}.`);
+      document.getElementById("knowledgeFile").value = "";
+      await knowledgeRefresh();
+    } catch (error) {
+      knowledgeStatus(error.message || "Upload failed.", true);
+    }
+  }
+);
+
+document.getElementById("knowledgeAsk")?.addEventListener(
+  "click", async () => {
+    const question = document.getElementById("knowledgeQuestion").value.trim();
+    const ids = [...document.querySelectorAll(".knowledge-select:checked")]
+      .map(el => el.value);
+
+    if (!question) {
+      knowledgeStatus("Enter a question first.", true);
+      return;
+    }
+    if (!ids.length) {
+      knowledgeStatus("Select a document first.", true);
+      return;
+    }
+
+    const answer = document.getElementById("knowledgeAnswer");
+    answer.textContent = "Malie is reading your documents...";
+
+    try {
+      const result = await knowledgeRequest("/api/knowledge/ask", {
+        question,
+        documentIds: ids
+      });
+      answer.textContent = result.answer || "No answer was returned.";
+      knowledgeStatus("Answer ready.");
+    } catch (error) {
+      answer.textContent = "";
+      knowledgeStatus(error.message || "Question failed.", true);
+    }
+  }
+);
+
 
       <!-- Malie Video Studio (Pro) -->
       <section class="view" id="view-video">

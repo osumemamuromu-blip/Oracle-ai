@@ -1609,6 +1609,191 @@ export default {
       });
     }
 
+/* ---------------- Knowledge Studio: Premium + Pro ---------------- */
+if (path.startsWith("/api/knowledge/")) {
+  try {
+    const userId = await authenticateFirebase(request, env);
+    const plan = await getActivePlan(env, userId);
+
+    if (plan !== "premium" && plan !== "pro") {
+      return respond({
+        error: "Knowledge Studio is available on Premium and Pro plans. Upgrade to access it."
+      }, 403);
+    }
+
+    if (!env.DB || !env.AI) {
+      return respond({
+        error: "Knowledge Studio is temporarily unavailable."
+      }, 503);
+    }
+
+    const limits = plan === "pro"
+      ? { documents: 50, chars: 100000 }
+      : { documents: 10, chars: 30000 };
+
+    const readBody = async () => {
+      try {
+        return await request.json();
+      } catch {
+        const error = new Error("Invalid JSON request.");
+        error.status = 400;
+        throw error;
+      }
+    };
+
+    if (request.method === "POST" &&
+        path === "/api/knowledge/upload") {
+      const body = await readBody();
+      const name = String(body.name || "").trim();
+      const content = String(body.content || "").trim();
+      const type = String(body.type || "").toLowerCase();
+
+      if (!name || name.length > 180) {
+        return respond({ error: "Provide a valid document name." }, 400);
+      }
+
+      if (!["pdf", "txt"].includes(type)) {
+        return respond({ error: "Only PDF and TXT documents are supported." }, 400);
+      }
+
+      if (!content || content.length > limits.chars) {
+        return respond({
+          error: `Document text must be between 1 and ${limits.chars} characters on your ${plan} plan.`
+        }, 400);
+      }
+
+      const count = await env.DB.prepare(
+        "SELECT COUNT(*) AS count FROM knowledge_documents WHERE user_id = ?"
+      ).bind(userId).first();
+
+      if ((count?.count || 0) >= limits.documents) {
+        return respond({
+          error: `Your ${plan} plan allows up to ${limits.documents} saved documents.`
+        }, 429);
+      }
+
+      const id = crypto.randomUUID();
+
+      await env.DB.prepare(`
+        INSERT INTO knowledge_documents
+          (id, user_id, name, file_type, content)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(id, userId, name, type, content).run();
+
+      return respond({
+        ok: true,
+        document: { id, name, type, characters: content.length }
+      });
+    }
+
+    if (request.method === "GET" &&
+        path === "/api/knowledge/list") {
+      const result = await env.DB.prepare(`
+        SELECT id, name, file_type, created_at,
+               LENGTH(content) AS characters
+        FROM knowledge_documents
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+      `).bind(userId).all();
+
+      return respond({ ok: true, documents: result.results || [] });
+    }
+
+    if (request.method === "POST" &&
+        path === "/api/knowledge/delete") {
+      const body = await readBody();
+      const id = String(body.id || "");
+
+      if (!id) return respond({ error: "Document ID is required." }, 400);
+
+      await env.DB.prepare(`
+        DELETE FROM knowledge_documents
+        WHERE id = ? AND user_id = ?
+      `).bind(id, userId).run();
+
+      return respond({ ok: true });
+    }
+
+    if (request.method === "POST" &&
+        path === "/api/knowledge/ask") {
+      const body = await readBody();
+      const question = String(body.question || "").trim();
+      const ids = Array.isArray(body.documentIds)
+        ? body.documentIds.slice(0, 2).map(String)
+        : [];
+
+      if (!question || question.length > 4000) {
+        return respond({ error: "Enter a question of up to 4,000 characters." }, 400);
+      }
+
+      if (!ids.length) {
+        return respond({ error: "Select at least one document." }, 400);
+      }
+
+      const placeholders = ids.map(() => "?").join(",");
+
+      const docs = await env.DB.prepare(`
+        SELECT id, name, content
+        FROM knowledge_documents
+        WHERE user_id = ? AND id IN (${placeholders})
+      `).bind(userId, ...ids).all();
+
+      const documents = docs.results || [];
+
+      if (!documents.length || documents.length !== new Set(ids).size) {
+        return respond({ error: "One or more selected documents were not found." }, 404);
+      }
+
+      // Bound the context so requests cannot send arbitrarily large documents.
+      const context = documents.map(doc =>
+        `DOCUMENT: ${doc.name}\nCONTENT:\n${doc.content.slice(0, 25000)}`
+      ).join("\n\n---\n\n").slice(0, plan === "pro" ? 50000 : 30000);
+
+      const usage = await reserveDailyUsage(env, userId, plan);
+
+      try {
+        const prompt = `
+You are Malie AI Knowledge Studio, a document-grounded study assistant.
+
+Answer using the supplied document content only.
+Do not invent facts, quotations, page numbers, or citations.
+If the answer is not supported by the supplied content, say so.
+When possible, quote a short relevant passage and identify its document name.
+The text may come from PDF extraction, so page numbers are not available unless explicitly included.
+
+DOCUMENTS:
+${context}
+
+USER QUESTION:
+${question}
+
+Give a clear, useful answer and identify which document supports it.
+`;
+
+        const answer = await callAI(env, prompt, false);
+
+        if (!answer || !String(answer).trim()) {
+          throw new Error("The AI returned an empty answer.");
+        }
+
+        return respond({ ok: true, answer, usage });
+      } catch (error) {
+        await refundDailyUsage(env, userId, usage.date);
+        throw error;
+      }
+    }
+
+    return respond({ error: "Knowledge Studio endpoint not found." }, 404);
+  } catch (error) {
+    console.error("Knowledge Studio error:", error);
+    return respond({
+      error: error?.status
+        ? error.message
+        : "Knowledge Studio could not complete the request."
+    }, getErrorStatus(error));
+  }
+}
+
     /* ---------------- Subscription status ---------------- */
     if (request.method === "POST" && path === "/api/subscription/status") {
       try {

@@ -1686,7 +1686,7 @@ if (path.startsWith("/api/knowledge/")) {
       });
     }
 
-    if (request.method === "GET" &&
+  if (request.method === "POST" &&
         path === "/api/knowledge/list") {
       const result = await env.DB.prepare(`
         SELECT id, name, file_type, created_at,

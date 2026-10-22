@@ -376,6 +376,13 @@ button:disabled{opacity:.55;cursor:not-allowed}
         <button class="side-link active" data-view="explore"><span class="ico">⌂</span>Explore</button>
         <button class="side-link" data-view="writing"><span class="ico">✎</span>Writing Lab</button>
         <button class="side-link" data-view="quiz"><span class="ico">☷</span>Quiz Mode</button>    
+        
+<button class="side-link" data-view="knowledge">
+  <span class="ico">▤</span>
+  Knowledge Studio
+  <span class="coming">Premium</span>
+</button>
+
 <button class="side-link" data-view="drawing"><span class="ico">◰</span>Engineering Drawing<span class="coming">Pro</span></button>
 <button class="side-link" data-view="advert"><span class="ico">▶</span>Advert Studio<span class="coming">Pro</span></button>
         <button class="side-link" data-view="video"><span class="ico">✺</span>Malie Video Studio<span class="coming">Pro</span></button>
@@ -1444,6 +1451,18 @@ async function extractAny(file, onStatus = () => {}) {
 
 /* ───────── Navigation ───────── */
 const titles = { explore: "Explore", writing: "Writing Lab", quiz: "Quiz Mode", drawing: "Engineering Drawing", advert: "Advert Studio", video: "Malie Video Studio", premium: "Malie 2 Premium", plans: "Plans" };
+  
+const titles = {
+  explore: "Explore",
+  writing: "Writing Lab",
+  quiz: "Quiz Mode",
+  knowledge: "Knowledge Studio",
+  drawing: "Engineering Drawing",
+  advert: "Advert Studio",
+  video: "Malie Video Studio",
+  premium: "Malie 2 Premium",
+  plans: "Plans"
+};
 const composerWrap = $("composerWrap");
 
 function closeSidebar() {

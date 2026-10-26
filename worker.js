@@ -707,7 +707,7 @@ async function callNvidiaAI(env, prompt, jsonMode = true) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "nvidia/nemotron-3.5-30b-a3b",
+        model: "nvidia/nemotron-3.5-lightning-30b-a3b",
         messages: [
           {
             role: "system",

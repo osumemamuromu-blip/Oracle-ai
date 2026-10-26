@@ -3529,7 +3529,7 @@ const prompt = [
 
 
      
-      const raw = await callAI(env, prompt, true);
+      const raw = await callNvidiaAI(env, prompt, true);
 
       const result = parseJsonObject(
         raw,

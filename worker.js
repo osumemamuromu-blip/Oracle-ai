@@ -755,7 +755,7 @@ async function nvidiaStreamOnce(env, model, prompt, jsonMode) {
             { role: "user", content: prompt }
           ],
           temperature: 0.2,
-          max_tokens: 16384,
+          max_tokens: 8192,
           stream: true
         })
       }

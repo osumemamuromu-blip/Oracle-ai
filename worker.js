@@ -3598,11 +3598,14 @@ const prompt = [
     const status = [400, 401, 403, 429, 500, 503].includes(error?.status)
       ? error.status
       : 502;
-
-    console.error(
-      "CAD generation error:",
-      String(error?.message || error)
-    );
+console.error(
+  "CAD generation error:",
+  JSON.stringify({
+    message: String(error?.message || error),
+    status: error?.status || null,
+    name: error?.name || null
+  })
+);
 
     return respond({
       error: error?.status

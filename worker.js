@@ -742,7 +742,7 @@ async function nvidiaStreamOnce(env, model, prompt, jsonMode) {
         },
         // Whole-request ceiling. Streaming keeps bytes flowing, so the gateway
         // no longer sees a long silent wait and answers 502.
-        signal: AbortSignal.timeout(170000),
+        signal: AbortSignal.timeout(100000),
         body: JSON.stringify({
           model,
           messages: [

@@ -759,22 +759,39 @@ async function callNvidiaAI(env, prompt, jsonMode = true) {
 
     error.status = response.status === 429 ? 429 : 502;
     throw error;
-  }
+ 
+const data = await response.json();
+const choice = data?.choices?.[0];
+const message = choice?.message;
 
-  const data = await response.json();
-  const result = data?.choices?.[0]?.message?.content;
+console.log("NVIDIA CAD response diagnostic:", JSON.stringify({
+  responseId: data?.id || null,
+  hasChoices: Array.isArray(data?.choices),
+  choiceCount: data?.choices?.length || 0,
+  finishReason: choice?.finish_reason || null,
+  messageRole: message?.role || null,
+  contentType: typeof message?.content,
+  contentLength: typeof message?.content === "string"
+    ? message.content.length
+    : null,
+  hasRefusal: Boolean(message?.refusal),
+  hasError: Boolean(data?.error)
+}));
 
-  if (typeof result !== "string" || !result.trim()) {
-    console.error("NVIDIA returned no usable content:", JSON.stringify({
-      responseId: data?.id || null,
-      finishReason: data?.choices?.[0]?.finish_reason || null
-    }));
+const result = message?.content;
 
-    throw new Error("NVIDIA returned no usable CAD response.");
-  }
-
-  return result;
+if (typeof result !== "string" || !result.trim()) {
+  const error = new Error(
+    message?.refusal
+      ? "NVIDIA refused the CAD request."
+      : "NVIDIA returned an empty or unexpected response."
+  );
+  error.status = 502;
+  throw error;
 }
+
+return result;
+ 
 
 
 

@@ -18,7 +18,7 @@ const DAILY_LIMITS = {
 
 const PRICES = {
   premium: { monthly: 2500, annual: 25000 },
-  pro: { monthly: 10000, annual: 110000 }
+  pro: { monthly: 7500, annual: 82500 }
 };
 
 const taskInstructions = {
@@ -259,7 +259,7 @@ function buildWorkbook(spec) {
 /* AI call                                                             */
 /* ------------------------------------------------------------------ */
 
-async function callAI(env, prompt, jsonMode = false, imageDataUrl = null) {
+async function callAI(env, prompt, jsonMode = false, imageDataUrl = null, options = {}) {
   if (!env.AI || typeof env.AI.run !== "function") {
     const error = new Error(
       "Cloudflare Workers AI is not connected. Check that your Worker has an AI binding named AI."
@@ -292,10 +292,12 @@ async function callAI(env, prompt, jsonMode = false, imageDataUrl = null) {
     "Be honest about uncertainty and do not invent facts, sources, or citations."
   ];
 
-  const systemPrompt = (jsonMode
-    ? identityRules
-    : [...identityRules, ...tutorRules]
-  ).join(" ");
+  const systemPrompt = options.system
+    ? [...identityRules, options.system].join(" ")
+    : (jsonMode
+        ? identityRules
+        : [...identityRules, ...tutorRules]
+      ).join(" ");
 
   const userContent = hasImage
     ? [
@@ -309,7 +311,7 @@ async function callAI(env, prompt, jsonMode = false, imageDataUrl = null) {
       { role: "system", content: systemPrompt },
       { role: "user", content: userContent }
     ],
-    max_tokens: jsonMode ? 4096 : 2048
+    max_tokens: options.maxTokens || (jsonMode ? 4096 : 2048)
   };
 
   // These options are only sent to the Gemma text model.
@@ -1572,6 +1574,39 @@ for (const match of masked.matchAll(
   return code;
 }
 
+
+/* ------------------------------------------------------------------ */
+/* Code Studio (Pro)                                                   */
+/* ------------------------------------------------------------------ */
+
+const CODE_SYSTEM = [
+  "You are Malie Code, an expert front-end web developer inside Malie AI's Code Studio.",
+  "You build complete, working, responsive, accessible and visually polished websites and small web apps using plain HTML, CSS and JavaScript.",
+  "Follow the output format given in the user's message exactly.",
+  "Never stop mid-file: always finish every file you start, and keep the code compact enough to fit.",
+  "Do not use external images or libraries that need an API key. Use CSS, inline SVG or emoji for visuals."
+].join(" ");
+
+const CODE_LIMITS = { maxPromptChars: 80000, maxOutputTokens: 8192, maxPublishChars: 400000, maxPublished: 20 };
+
+async function ensurePublishedTable(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS published_pages (
+       id TEXT PRIMARY KEY,
+       user_id TEXT NOT NULL,
+       title TEXT,
+       html TEXT NOT NULL,
+       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+     )`
+  ).run();
+}
+
+function randomPageId() {
+  const bytes = crypto.getRandomValues(new Uint8Array(9));
+  return Array.from(bytes, b => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36]).join("");
+}
+
 /* ------------------------------------------------------------------ */
 /* Worker                                                              */
 /* ------------------------------------------------------------------ */
@@ -1584,6 +1619,152 @@ export default {
 
     const url = new URL(request.url);
     const path = url.pathname;
+
+
+    /* ---------------- Published pages (public, sandboxed) ---------------- */
+    if (request.method === "GET" && /^\/p\/[a-z0-9]{6,20}$/.test(path)) {
+      if (!env.DB) return new Response("Not available.", { status: 503 });
+      try {
+        await ensurePublishedTable(env);
+        const page = await env.DB.prepare(
+          "SELECT html FROM published_pages WHERE id = ?"
+        ).bind(path.slice(3)).first();
+
+        if (!page) return new Response("This page does not exist.", { status: 404 });
+
+        return new Response(page.html, {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            // Runs the page in an isolated origin so it can never touch Malie AI.
+            "Content-Security-Policy": "sandbox allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "no-referrer",
+            "Cache-Control": "public, max-age=60"
+          }
+        });
+      } catch (error) {
+        console.error("Published page error:", String(error?.message || error));
+        return new Response("Could not load this page.", { status: 500 });
+      }
+    }
+
+    /* ---------------- Code Studio (Pro only) ---------------- */
+    if (
+      request.method === "POST" &&
+      ["/api/code/access", "/api/code/generate", "/api/code/publish", "/api/code/unpublish"].includes(path)
+    ) {
+      try {
+        const userId = await authenticateFirebase(request, env);
+        const plan = await getActivePlan(env, userId);
+
+        if (plan !== "pro") {
+          return respond({ error: "Code Studio is available on the Pro plan only." }, 403);
+        }
+
+        if (!env.DB || !env.AI) {
+          return respond({ error: "Code Studio is temporarily unavailable." }, 503);
+        }
+
+        if (path === "/api/code/access") {
+          return respond({ ok: true, plan: "pro" });
+        }
+
+        let body;
+        try {
+          body = await request.json();
+        } catch {
+          return respond({ error: "Please send valid JSON." }, 400);
+        }
+
+        /* ----- Generate ----- */
+        if (path === "/api/code/generate") {
+          const message = String(body.message || "").trim();
+
+          if (!message) return respond({ error: "Please describe what to build." }, 400);
+          if (message.length > CODE_LIMITS.maxPromptChars) {
+            return respond({ error: "Your project is too large to send. Remove some code and try again." }, 400);
+          }
+
+          const usage = await reserveDailyUsage(env, userId, plan);
+          let reply;
+
+          try {
+            reply = await callAI(env, message, false, null, {
+              system: CODE_SYSTEM,
+              maxTokens: CODE_LIMITS.maxOutputTokens
+            });
+          } catch (error) {
+            await refundDailyUsage(env, userId, usage.date);
+            throw error;
+          }
+
+          return respond({ reply, usage });
+        }
+
+        /* ----- Publish ----- */
+        if (path === "/api/code/publish") {
+          const html = String(body.html || "");
+          const title = String(body.title || "Untitled").slice(0, 80);
+
+          if (!html.trim()) return respond({ error: "There is no page to publish." }, 400);
+          if (html.length > CODE_LIMITS.maxPublishChars) {
+            return respond({ error: "This page is too large to publish." }, 413);
+          }
+
+          await ensurePublishedTable(env);
+
+          // Re-publishing the same page updates its link instead of making a new one.
+          const existingId = String(body.id || "");
+          if (/^[a-z0-9]{6,20}$/.test(existingId)) {
+            const updated = await env.DB.prepare(
+              `UPDATE published_pages
+               SET html = ?, title = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE id = ? AND user_id = ?`
+            ).bind(html, title, existingId, userId).run();
+
+            if (updated?.meta?.changes > 0) {
+              return respond({ ok: true, id: existingId, url: `${url.origin}/p/${existingId}` });
+            }
+          }
+
+          const count = await env.DB.prepare(
+            "SELECT COUNT(*) AS count FROM published_pages WHERE user_id = ?"
+          ).bind(userId).first();
+
+          if ((count?.count || 0) >= CODE_LIMITS.maxPublished) {
+            return respond({
+              error: `You can keep up to ${CODE_LIMITS.maxPublished} published pages. Unpublish one first.`
+            }, 429);
+          }
+
+          const id = randomPageId();
+          await env.DB.prepare(
+            "INSERT INTO published_pages (id, user_id, title, html) VALUES (?, ?, ?, ?)"
+          ).bind(id, userId, title, html).run();
+
+          return respond({ ok: true, id, url: `${url.origin}/p/${id}` });
+        }
+
+        /* ----- Unpublish ----- */
+        if (path === "/api/code/unpublish") {
+          const id = String(body.id || "");
+          if (!/^[a-z0-9]{6,20}$/.test(id)) return respond({ error: "Invalid page." }, 400);
+
+          await ensurePublishedTable(env);
+          await env.DB.prepare(
+            "DELETE FROM published_pages WHERE id = ? AND user_id = ?"
+          ).bind(id, userId).run();
+
+          return respond({ ok: true });
+        }
+      } catch (error) {
+        console.error("Code Studio error:", String(error?.message || error));
+        return respond(
+          { error: error.message || "Code Studio could not process your request." },
+          getErrorStatus(error)
+        );
+      }
+    }
 
     /* ---------------- Health ---------------- */
     if (request.method === "GET" && path === "/api/health") {
@@ -1604,7 +1785,11 @@ export default {
           "/api/drawing",
           "/api/cad/generate",
           "/api/video/access",
-          "/api/video/generate"
+          "/api/video/generate",
+          "/api/code/access",
+          "/api/code/generate",
+          "/api/code/publish",
+          "/api/code/unpublish"
         ]
       });
     }

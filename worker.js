@@ -692,46 +692,71 @@ async function callAI(env, prompt, jsonMode = false, imageDataUrl = null, option
 }
 
 async function callNvidiaAI(env, prompt, jsonMode = true) {
+
+async function callNvidiaAI(env, prompt, jsonMode = true) {
   if (!env.NVIDIA_API_KEY) {
     const error = new Error("NVIDIA API key is not configured.");
     error.status = 500;
     throw error;
   }
 
-  const response = await fetch(
-    "https://integrate.api.nvidia.com/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${env.NVIDIA_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "nvidia/nemotron-3.5-lightning-30b-a3b",
-        messages: [
-          {
-            role: "system",
-            content: jsonMode
-              ? "You are Malie AI's CAD generation assistant. Return only valid JSON matching the user's requested schema. Do not use Markdown fences."
-              : "You are Malie AI's CAD generation assistant."
-          },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.2,
-        max_tokens: 4096
-      })
-    }
-  );
+  let response;
+
+  try {
+    response = await fetch(
+      "https://integrate.api.nvidia.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${env.NVIDIA_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        signal: AbortSignal.timeout(90000),
+        body: JSON.stringify({
+          model: "nvidia/nemotron-3.5-lightning-30b-a3b",
+          messages: [
+            {
+              role: "system",
+              content: jsonMode
+                ? "You are Malie AI's CAD generation assistant. Return only valid JSON matching the user's requested schema. Do not use Markdown fences."
+                : "You are Malie AI's CAD generation assistant."
+            },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.2,
+          max_tokens: 4096
+        })
+      }
+    );
+  } catch (cause) {
+    console.error("NVIDIA fetch failed:", JSON.stringify({
+      name: cause?.name || null,
+      message: String(cause?.message || cause)
+    }));
+
+    const error = new Error(
+      cause?.name === "TimeoutError" || cause?.name === "AbortError"
+        ? "NVIDIA AI request timed out."
+        : "Could not connect to NVIDIA AI."
+    );
+    error.status = 502;
+    throw error;
+  }
 
   if (!response.ok) {
     const details = await response.text();
-    console.error("NVIDIA API error:", response.status, details.slice(0, 500));
+
+    console.error("NVIDIA API error:", JSON.stringify({
+      status: response.status,
+      body: details.slice(0, 1000)
+    }));
 
     const error = new Error(
       response.status === 429
         ? "NVIDIA API rate limit or credit limit reached."
-        : "NVIDIA AI could not complete the CAD request."
+        : `NVIDIA API returned HTTP ${response.status}.`
     );
+
     error.status = response.status === 429 ? 429 : 502;
     throw error;
   }
@@ -740,11 +765,17 @@ async function callNvidiaAI(env, prompt, jsonMode = true) {
   const result = data?.choices?.[0]?.message?.content;
 
   if (typeof result !== "string" || !result.trim()) {
+    console.error("NVIDIA returned no usable content:", JSON.stringify({
+      responseId: data?.id || null,
+      finishReason: data?.choices?.[0]?.finish_reason || null
+    }));
+
     throw new Error("NVIDIA returned no usable CAD response.");
   }
 
   return result;
 }
+
 
 
 /* ------------------------------------------------------------------ */

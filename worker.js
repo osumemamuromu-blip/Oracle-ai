@@ -2122,6 +2122,7 @@ export default {
           "/api/write",
           "/api/quiz",
           "/api/excel",
+          "/api/pptx",
           "/api/subscription/status",
           "/api/payment/request",
           "/api/payment/submit-reference",
@@ -2733,7 +2734,7 @@ Give a clear, useful answer and identify which document supports it.
     /* ---------------- Chat / Write / Quiz / Excel ---------------- */
     if (
       request.method === "POST" &&
-      ["/api/chat", "/api/write", "/api/quiz", "/api/excel"].includes(path)
+      ["/api/chat", "/api/write", "/api/quiz", "/api/excel", "/api/pptx"].includes(path)
     ) {
       let body;
 

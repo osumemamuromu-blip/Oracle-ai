@@ -2,8 +2,15 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#08090a">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="malie.">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="Malie AI by Campus Creative — think, write, and learn better.">
 <title>malie. — by Campus Creative.</title>
 <script>
@@ -26,6 +33,8 @@
 html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
 body{min-height:100dvh}
 [hidden],.hidden{display:none!important}
+.lang-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}
+.lang-btn select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
 button,input,textarea,select{font:inherit}
 button{cursor:pointer}
 button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
@@ -572,23 +581,23 @@ button:disabled{opacity:.55;cursor:not-allowed}
     <div class="brand"><div class="brand-name">malie<span>.</span></div><div class="brand-sub">BY CAMPUS CREATIVE</div></div>
     <button class="new-chat" id="newChat">＋ &nbsp; New chat</button>
     <div>
-      <div class="side-label">Workspace</div>
+      <div class="side-label" data-i18n="workspace">Workspace</div>
       <nav class="side-links">
-        <button class="side-link active" data-view="explore"><span class="ico">⌂</span>Explore</button>
-        <button class="side-link" data-view="writing"><span class="ico">✎</span>Writing Lab</button>
-        <button class="side-link" data-view="quiz"><span class="ico">☷</span>Quiz Mode</button>    
+        <button class="side-link active" data-view="explore"><span class="ico">⌂</span><span data-i18n="nav_explore">Explore</span></button>
+        <button class="side-link" data-view="writing"><span class="ico">✎</span><span data-i18n="nav_writing">Writing Lab</span></button>
+        <button class="side-link" data-view="quiz"><span class="ico">☷</span><span data-i18n="nav_quiz">Quiz Mode</span></button>    
         
 <button class="side-link" data-view="knowledge">
   <span class="ico">▤</span>
-  Knowledge Studio
-  <span class="coming">Premium</span>
+  <span data-i18n="nav_knowledge">Knowledge Studio</span>
+  <span class="coming" data-i18n="premium">Premium</span>
 </button>
 
-<button class="side-link" data-view="code"><span class="ico">‹›</span>Code Studio<span class="coming">Pro</span></button>
-<button class="side-link" data-view="drawing"><span class="ico">◰</span>Engineering Drawing<span class="coming">Pro</span></button>
-<button class="side-link" data-view="advert"><span class="ico">▶</span>Advert Studio<span class="coming">Pro</span></button>
-        <button class="side-link" data-view="video"><span class="ico">✺</span>Malie Video Studio<span class="coming">Pro</span></button>
-        <button class="side-link" data-view="plans"><span class="ico">✦</span>Plans &amp; Upgrade</button>
+<button class="side-link" data-view="code"><span class="ico">‹›</span><span data-i18n="nav_code">Code Studio</span><span class="coming" data-i18n="pro">Pro</span></button>
+<button class="side-link" data-view="drawing"><span class="ico">◰</span><span data-i18n="nav_drawing">Engineering Drawing</span><span class="coming" data-i18n="pro">Pro</span></button>
+<button class="side-link" data-view="advert"><span class="ico">▶</span><span data-i18n="nav_advert">Advert Studio</span><span class="coming" data-i18n="pro">Pro</span></button>
+        <button class="side-link" data-view="video"><span class="ico">✺</span><span data-i18n="nav_video">Malie Video Studio</span><span class="coming" data-i18n="pro">Pro</span></button>
+        <button class="side-link" data-view="plans"><span class="ico">✦</span><span id="plansLinkText">Plans &amp; Upgrade</span></button>
       </nav>
     </div>
     <div class="sidebar-bottom"><div class="side-status"><span class="dot" id="sideDot"></span><span id="sideStatus">2026 Campus Creative </span></div></div>
@@ -603,6 +612,8 @@ button:disabled{opacity:.55;cursor:not-allowed}
         <div class="page-title" id="pageTitle">Explore</div>
       </div>
       <div class="top-actions">
+        <button class="top-btn" id="installBtn" hidden>⤓ Install app</button>
+        <label class="top-btn lang-btn" title="Language" aria-label="Language">🌐<select id="langSelect"></select></label>
         <button class="top-btn" id="upgradeBtn">✦ Upgrade</button>
         <button class="top-btn" id="themeToggle" aria-label="Toggle theme" title="Switch to light theme">☼</button>
         <button class="top-btn" id="authButton">Sign in</button>
@@ -613,14 +624,14 @@ button:disabled{opacity:.55;cursor:not-allowed}
       <!-- Explore (chat) -->
       <section class="view active" id="view-explore">
         <div class="welcome" id="welcome">
-          <div class="eyebrow">Your space to think clearly</div>
-          <h1 class="hello">Hey<span id="helloName"> there</span><span class="highlight">.</span><br>What’s on your mind?</h1>
-          <p class="subtitle">Learn something new, untangle a difficult idea, or turn your rough thoughts into something brilliant.</p>
+          <div class="eyebrow" data-i18n="eyebrow">Your space to think clearly</div>
+          <h1 class="hello"><span data-i18n="hey">Hey</span><span id="helloName"> there</span><span class="highlight">.</span><br><span data-i18n="line2">What’s on your mind?</span></h1>
+          <p class="subtitle" data-i18n="subtitle">Learn something new, untangle a difficult idea, or turn your rough thoughts into something brilliant.</p>
           <div class="suggestions">
-            <button class="suggestion" data-prompt="Explain something I find difficult in simple terms, with examples."><span class="s-icon">✳</span><span><strong>Understand anything</strong><small>Clear explanations, step by step</small></span></button>
-            <button class="suggestion" data-open-view="writing"><span class="s-icon">✎</span><span><strong>Make your writing better</strong><small>Rewrite, correct, and refine your words</small></span></button>
-            <button class="suggestion" data-open-view="quiz"><span class="s-icon">☷</span><span><strong>Test yourself</strong><small>Upload a PDF or photo and take a quiz</small></span></button>
-            <button class="suggestion" data-open-view="plans"><span class="s-icon">✦</span><span><strong>Upgrade your plan</strong><small>Premium and Pro for more power</small></span></button>
+            <button class="suggestion" data-prompt="Explain something I find difficult in simple terms, with examples."><span class="s-icon">✳</span><span><strong data-i18n="s1t">Understand anything</strong><small data-i18n="s1s">Clear explanations, step by step</small></span></button>
+            <button class="suggestion" data-open-view="writing"><span class="s-icon">✎</span><span><strong data-i18n="s2t">Make your writing better</strong><small data-i18n="s2s">Rewrite, correct, and refine your words</small></span></button>
+            <button class="suggestion" data-open-view="quiz"><span class="s-icon">☷</span><span><strong data-i18n="s3t">Test yourself</strong><small data-i18n="s3s">Upload a PDF or photo and take a quiz</small></span></button>
+            <button class="suggestion" id="upgradeSuggestion" data-open-view="plans"><span class="s-icon">✦</span><span><strong data-i18n="s4t">Upgrade your plan</strong><small data-i18n="s4s">Premium and Pro for more power</small></span></button>
           </div>
         </div>
         <div class="chat" id="chat" aria-live="polite"></div>
@@ -1240,10 +1251,14 @@ button:disabled{opacity:.55;cursor:not-allowed}
     <div class="composer-wrap" id="composerWrap">
       <form class="composer" id="chatForm">
         <div class="attach-row" id="attachRow" hidden></div>
-        <textarea id="prompt" rows="1" maxlength="12000" placeholder="Ask Malie anything..." aria-label="Message Malie"></textarea>
+        <textarea id="prompt" rows="1" maxlength="12000" placeholder="Ask Malie anything..." data-i18n-ph="ph_prompt" aria-label="Message Malie"></textarea>
         <div class="excel-mode-row">
           <button type="button" id="excelModeBtn" class="secondary">✦ Premium Excel Assistant</button>
           <span id="excelModeStatus" class="input-hint">Premium feature</span>
+        </div>
+        <div class="excel-mode-row">
+          <button type="button" id="pptModeBtn" class="secondary">✦ Premium PowerPoint Assistant</button>
+          <span id="pptModeStatus" class="input-hint">Premium feature</span>
         </div>
 
         <div class="composer-bottom">
@@ -1278,13 +1293,112 @@ button:disabled{opacity:.55;cursor:not-allowed}
       <p>Longer study material, more requests, the Excel File Builder and the Engineering Drawing Studio.</p>
       <button class="btn" id="premiumBtn">View plans</button>
     </div>
-    <div class="menu-item" style="--i:3"><h4>Recent chats</h4><div id="recentChats"></div></div>
-    <div class="menu-item" style="--i:4"><h4>Recent quizzes</h4><div id="recentQuizzes"></div></div>
-    <div class="menu-item" style="--i:5"><button class="secondary signout" id="signOutButton">Sign out</button></div>
+    <div class="menu-item" style="--i:3"><h4 data-i18n="recent_chats">Recent chats</h4><div id="recentChats"></div></div>
+    <div class="menu-item" style="--i:4"><h4 data-i18n="recent_quizzes">Recent quizzes</h4><div id="recentQuizzes"></div></div>
+    <div class="menu-item" style="--i:5"><button class="secondary signout" id="signOutButton" data-i18n="signout">Sign out</button></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
 
+<script>
+/* ───────── Languages & app install (runs before the main script) ───────── */
+(function () {
+  const STRINGS = {"en": {"workspace": "Workspace", "nav_explore": "Explore", "nav_writing": "Writing Lab", "nav_quiz": "Quiz Mode", "nav_knowledge": "Knowledge Studio", "nav_code": "Code Studio", "nav_drawing": "Engineering Drawing", "nav_advert": "Advert Studio", "nav_video": "Malie Video Studio", "nav_plans": "Plans & Upgrade", "nav_plans_only": "Plans", "premium": "Premium", "pro": "Pro", "upgrade": "✦ Upgrade", "upgrade_pro": "✦ Upgrade to Pro", "signin": "Sign in", "signout": "Sign out", "eyebrow": "Your space to think clearly", "hey": "Hey", "there": " there", "line2": "What’s on your mind?", "subtitle": "Learn something new, untangle a difficult idea, or turn your rough thoughts into something brilliant.", "s1t": "Understand anything", "s1s": "Clear explanations, step by step", "s2t": "Make your writing better", "s2s": "Rewrite, correct, and refine your words", "s3t": "Test yourself", "s3s": "Upload a PDF or photo and take a quiz", "s4t": "Upgrade your plan", "s4s": "Premium and Pro for more power", "ph_prompt": "Ask Malie anything...", "excel_btn": "✦ Premium Excel Assistant", "excel_exit": "✦ Exit Excel Assistant", "ppt_btn": "✦ Premium PowerPoint Assistant", "ppt_exit": "✦ Exit PowerPoint Assistant", "feat_premium": "Premium feature", "excel_on": "Excel mode: send a table or photo and get an .xlsx file", "ppt_on": "PowerPoint mode: give a topic or notes and get a .pptx file", "ph_excel": "Paste a table or attach a photo, then say what you need...", "ph_ppt": "Give a topic or paste notes, e.g. 8 slides on photosynthesis...", "install": "Install app", "recent_chats": "Recent chats", "recent_quizzes": "Recent quizzes"}, "fr": {"workspace": "Espace de travail", "nav_explore": "Explorer", "nav_writing": "Atelier d’écriture", "nav_quiz": "Mode quiz", "nav_knowledge": "Studio de connaissances", "nav_code": "Studio de code", "nav_drawing": "Dessin technique", "nav_advert": "Studio publicitaire", "nav_video": "Studio vidéo Malie", "nav_plans": "Offres et mise à niveau", "nav_plans_only": "Offres", "premium": "Premium", "pro": "Pro", "upgrade": "✦ Passer à l’offre supérieure", "upgrade_pro": "✦ Passer à Pro", "signin": "Se connecter", "signout": "Se déconnecter", "eyebrow": "Votre espace pour réfléchir clairement", "hey": "Salut", "there": " toi", "line2": "À quoi pensez-vous ?", "subtitle": "Apprenez quelque chose de nouveau, démêlez une idée difficile ou transformez vos idées brutes en quelque chose de brillant.", "s1t": "Comprendre n’importe quoi", "s1s": "Des explications claires, étape par étape", "s2t": "Améliorez votre écriture", "s2s": "Réécrivez, corrigez et peaufinez vos mots", "s3t": "Testez-vous", "s3s": "Importez un PDF ou une photo et passez un quiz", "s4t": "Améliorez votre offre", "s4s": "Premium et Pro pour plus de puissance", "ph_prompt": "Demandez n’importe quoi à Malie...", "excel_btn": "✦ Assistant Excel Premium", "excel_exit": "✦ Quitter l’assistant Excel", "ppt_btn": "✦ Assistant PowerPoint Premium", "ppt_exit": "✦ Quitter l’assistant PowerPoint", "feat_premium": "Fonction Premium", "excel_on": "Mode Excel : envoyez un tableau ou une photo et obtenez un fichier .xlsx", "ppt_on": "Mode PowerPoint : donnez un sujet ou des notes et obtenez un fichier .pptx", "ph_excel": "Collez un tableau ou joignez une photo, puis dites ce qu’il vous faut...", "ph_ppt": "Donnez un sujet ou collez des notes, p. ex. 8 diapositives sur la photosynthèse...", "install": "Installer l’application", "recent_chats": "Discussions récentes", "recent_quizzes": "Quiz récents"}, "es": {"workspace": "Espacio de trabajo", "nav_explore": "Explorar", "nav_writing": "Taller de escritura", "nav_quiz": "Modo quiz", "nav_knowledge": "Estudio de conocimiento", "nav_code": "Estudio de código", "nav_drawing": "Dibujo técnico", "nav_advert": "Estudio de anuncios", "nav_video": "Estudio de video Malie", "nav_plans": "Planes y mejora", "nav_plans_only": "Planes", "premium": "Premium", "pro": "Pro", "upgrade": "✦ Mejorar", "upgrade_pro": "✦ Mejorar a Pro", "signin": "Iniciar sesión", "signout": "Cerrar sesión", "eyebrow": "Tu espacio para pensar con claridad", "hey": "Hola", "there": " tú", "line2": "¿Qué tienes en mente?", "subtitle": "Aprende algo nuevo, desenreda una idea difícil o convierte tus ideas sueltas en algo brillante.", "s1t": "Entiende cualquier cosa", "s1s": "Explicaciones claras, paso a paso", "s2t": "Mejora tu escritura", "s2s": "Reescribe, corrige y pule tus palabras", "s3t": "Ponte a prueba", "s3s": "Sube un PDF o una foto y haz un quiz", "s4t": "Mejora tu plan", "s4s": "Premium y Pro para más potencia", "ph_prompt": "Pregúntale lo que quieras a Malie...", "excel_btn": "✦ Asistente de Excel Premium", "excel_exit": "✦ Salir del asistente de Excel", "ppt_btn": "✦ Asistente de PowerPoint Premium", "ppt_exit": "✦ Salir del asistente de PowerPoint", "feat_premium": "Función Premium", "excel_on": "Modo Excel: envía una tabla o una foto y obtén un archivo .xlsx", "ppt_on": "Modo PowerPoint: da un tema o notas y obtén un archivo .pptx", "ph_excel": "Pega una tabla o adjunta una foto y di qué necesitas...", "ph_ppt": "Da un tema o pega notas, p. ej. 8 diapositivas sobre la fotosíntesis...", "install": "Instalar la app", "recent_chats": "Chats recientes", "recent_quizzes": "Quizzes recientes"}, "pt": {"workspace": "Espaço de trabalho", "nav_explore": "Explorar", "nav_writing": "Laboratório de escrita", "nav_quiz": "Modo quiz", "nav_knowledge": "Estúdio de conhecimento", "nav_code": "Estúdio de código", "nav_drawing": "Desenho técnico", "nav_advert": "Estúdio de anúncios", "nav_video": "Estúdio de vídeo Malie", "nav_plans": "Planos e upgrade", "nav_plans_only": "Planos", "premium": "Premium", "pro": "Pro", "upgrade": "✦ Fazer upgrade", "upgrade_pro": "✦ Fazer upgrade para Pro", "signin": "Entrar", "signout": "Sair", "eyebrow": "Seu espaço para pensar com clareza", "hey": "Olá", "there": " você", "line2": "O que você tem em mente?", "subtitle": "Aprenda algo novo, desembaraçe uma ideia difícil ou transforme seus pensamentos soltos em algo brilhante.", "s1t": "Entenda qualquer coisa", "s1s": "Explicações claras, passo a passo", "s2t": "Melhore sua escrita", "s2s": "Reescreva, corrija e aprimore suas palavras", "s3t": "Teste-se", "s3s": "Envie um PDF ou uma foto e faça um quiz", "s4t": "Melhore seu plano", "s4s": "Premium e Pro para mais poder", "ph_prompt": "Pergunte qualquer coisa à Malie...", "excel_btn": "✦ Assistente Excel Premium", "excel_exit": "✦ Sair do assistente Excel", "ppt_btn": "✦ Assistente PowerPoint Premium", "ppt_exit": "✦ Sair do assistente PowerPoint", "feat_premium": "Recurso Premium", "excel_on": "Modo Excel: envie uma tabela ou foto e receba um arquivo .xlsx", "ppt_on": "Modo PowerPoint: informe um tema ou notas e receba um arquivo .pptx", "ph_excel": "Cole uma tabela ou anexe uma foto e diga o que precisa...", "ph_ppt": "Informe um tema ou cole notas, ex.: 8 slides sobre fotossíntese...", "install": "Instalar o app", "recent_chats": "Conversas recentes", "recent_quizzes": "Quizzes recentes"}, "de": {"workspace": "Arbeitsbereich", "nav_explore": "Entdecken", "nav_writing": "Schreibwerkstatt", "nav_quiz": "Quiz-Modus", "nav_knowledge": "Wissensstudio", "nav_code": "Code-Studio", "nav_drawing": "Technisches Zeichnen", "nav_advert": "Werbestudio", "nav_video": "Malie Videostudio", "nav_plans": "Tarife & Upgrade", "nav_plans_only": "Tarife", "premium": "Premium", "pro": "Pro", "upgrade": "✦ Upgrade", "upgrade_pro": "✦ Upgrade auf Pro", "signin": "Anmelden", "signout": "Abmelden", "eyebrow": "Dein Raum zum klaren Denken", "hey": "Hey", "there": " du", "line2": "Was beschäftigt dich?", "subtitle": "Lerne etwas Neues, entwirre eine schwierige Idee oder mach aus rohen Gedanken etwas Brillantes.", "s1t": "Alles verstehen", "s1s": "Klare Erklärungen, Schritt für Schritt", "s2t": "Verbessere dein Schreiben", "s2s": "Umschreiben, korrigieren und feilen", "s3t": "Teste dich", "s3s": "Lade ein PDF oder Foto hoch und mach ein Quiz", "s4t": "Tarif upgraden", "s4s": "Premium und Pro für mehr Leistung", "ph_prompt": "Frag Malie alles...", "excel_btn": "✦ Premium-Excel-Assistent", "excel_exit": "✦ Excel-Assistent beenden", "ppt_btn": "✦ Premium-PowerPoint-Assistent", "ppt_exit": "✦ PowerPoint-Assistent beenden", "feat_premium": "Premium-Funktion", "excel_on": "Excel-Modus: Sende eine Tabelle oder ein Foto und erhalte eine .xlsx-Datei", "ppt_on": "PowerPoint-Modus: Gib ein Thema oder Notizen an und erhalte eine .pptx-Datei", "ph_excel": "Füge eine Tabelle ein oder hänge ein Foto an und sag, was du brauchst...", "ph_ppt": "Nenne ein Thema oder füge Notizen ein, z. B. 8 Folien zur Photosynthese...", "install": "App installieren", "recent_chats": "Letzte Chats", "recent_quizzes": "Letzte Quizze"}, "ar": {"workspace": "مساحة العمل", "nav_explore": "استكشف", "nav_writing": "مختبر الكتابة", "nav_quiz": "وضع الاختبار", "nav_knowledge": "استوديو المعرفة", "nav_code": "استوديو البرمجة", "nav_drawing": "الرسم الهندسي", "nav_advert": "استوديو الإعلانات", "nav_video": "استوديو فيديو مالي", "nav_plans": "الباقات والترقية", "nav_plans_only": "الباقات", "premium": "بريميوم", "pro": "برو", "upgrade": "✦ ترقية", "upgrade_pro": "✦ الترقية إلى برو", "signin": "تسجيل الدخول", "signout": "تسجيل الخروج", "eyebrow": "مساحتك للتفكير بوضوح", "hey": "مرحبًا", "there": "", "line2": "ماذا يدور في ذهنك؟", "subtitle": "تعلّم شيئًا جديدًا، أو فكّك فكرة صعبة، أو حوّل أفكارك الأولية إلى شيء رائع.", "s1t": "افهم أي شيء", "s1s": "شروحات واضحة خطوة بخطوة", "s2t": "حسّن كتابتك", "s2s": "أعد الصياغة وصحّح وهذّب كلماتك", "s3t": "اختبر نفسك", "s3s": "ارفع ملف PDF أو صورة وخض اختبارًا", "s4t": "ارتقِ بباقتك", "s4s": "بريميوم وبرو لقدرات أكبر", "ph_prompt": "اسأل مالي أي شيء...", "excel_btn": "✦ مساعد إكسل بريميوم", "excel_exit": "✦ الخروج من مساعد إكسل", "ppt_btn": "✦ مساعد باوربوينت بريميوم", "ppt_exit": "✦ الخروج من مساعد باوربوينت", "feat_premium": "ميزة بريميوم", "excel_on": "وضع إكسل: أرسل جدولًا أو صورة واحصل على ملف .xlsx", "ppt_on": "وضع باوربوينت: أعطِ موضوعًا أو ملاحظات واحصل على ملف .pptx", "ph_excel": "الصق جدولًا أو أرفق صورة ثم قل ما تحتاجه...", "ph_ppt": "أعطِ موضوعًا أو الصق ملاحظات، مثل 8 شرائح عن البناء الضوئي...", "install": "تثبيت التطبيق", "recent_chats": "المحادثات الأخيرة", "recent_quizzes": "الاختبارات الأخيرة"}, "hi": {"workspace": "कार्यक्षेत्र", "nav_explore": "एक्सप्लोर", "nav_writing": "राइटिंग लैब", "nav_quiz": "क्विज़ मोड", "nav_knowledge": "नॉलेज स्टूडियो", "nav_code": "कोड स्टूडियो", "nav_drawing": "इंजीनियरिंग ड्रॉइंग", "nav_advert": "विज्ञापन स्टूडियो", "nav_video": "मैली वीडियो स्टूडियो", "nav_plans": "प्लान और अपग्रेड", "nav_plans_only": "प्लान", "premium": "प्रीमियम", "pro": "प्रो", "upgrade": "✦ अपग्रेड", "upgrade_pro": "✦ प्रो में अपग्रेड", "signin": "साइन इन", "signout": "साइन आउट", "eyebrow": "साफ़ सोचने की आपकी जगह", "hey": "नमस्ते", "there": " जी", "line2": "आपके मन में क्या है?", "subtitle": "कुछ नया सीखें, कठिन विचार को सुलझाएँ, या अपने कच्चे विचारों को शानदार बनाएँ।", "s1t": "कुछ भी समझें", "s1s": "साफ़ व्याख्या, कदम दर कदम", "s2t": "अपना लेखन बेहतर करें", "s2s": "शब्दों को दोबारा लिखें, सुधारें और निखारें", "s3t": "खुद को परखें", "s3s": "PDF या फ़ोटो अपलोड करें और क्विज़ दें", "s4t": "अपना प्लान अपग्रेड करें", "s4s": "ज़्यादा ताक़त के लिए प्रीमियम और प्रो", "ph_prompt": "मैली से कुछ भी पूछें...", "excel_btn": "✦ प्रीमियम एक्सेल असिस्टेंट", "excel_exit": "✦ एक्सेल असिस्टेंट बंद करें", "ppt_btn": "✦ प्रीमियम पावरपॉइंट असिस्टेंट", "ppt_exit": "✦ पावरपॉइंट असिस्टेंट बंद करें", "feat_premium": "प्रीमियम सुविधा", "excel_on": "एक्सेल मोड: टेबल या फ़ोटो भेजें और .xlsx फ़ाइल पाएँ", "ppt_on": "पावरपॉइंट मोड: विषय या नोट्स दें और .pptx फ़ाइल पाएँ", "ph_excel": "टेबल पेस्ट करें या फ़ोटो जोड़ें, फिर बताएँ क्या चाहिए...", "ph_ppt": "विषय दें या नोट्स पेस्ट करें, जैसे प्रकाश-संश्लेषण पर 8 स्लाइड...", "install": "ऐप इंस्टॉल करें", "recent_chats": "हाल की चैट", "recent_quizzes": "हाल की क्विज़"}, "zh": {"workspace": "工作区", "nav_explore": "探索", "nav_writing": "写作实验室", "nav_quiz": "测验模式", "nav_knowledge": "知识工作室", "nav_code": "代码工作室", "nav_drawing": "工程制图", "nav_advert": "广告工作室", "nav_video": "Malie 视频工作室", "nav_plans": "套餐与升级", "nav_plans_only": "套餐", "premium": "高级版", "pro": "专业版", "upgrade": "✦ 升级", "upgrade_pro": "✦ 升级到专业版", "signin": "登录", "signout": "退出登录", "eyebrow": "让你清晰思考的空间", "hey": "你好", "there": "", "line2": "你在想什么？", "subtitle": "学习新知识，理清难题，或把粗略的想法变成精彩的成果。", "s1t": "理解任何内容", "s1s": "清晰讲解，一步一步", "s2t": "提升你的写作", "s2s": "改写、纠正并润色你的文字", "s3t": "测试自己", "s3s": "上传 PDF 或照片并开始测验", "s4t": "升级你的套餐", "s4s": "高级版和专业版，更强大", "ph_prompt": "向 Malie 提问任何问题...", "excel_btn": "✦ 高级版 Excel 助手", "excel_exit": "✦ 退出 Excel 助手", "ppt_btn": "✦ 高级版 PowerPoint 助手", "ppt_exit": "✦ 退出 PowerPoint 助手", "feat_premium": "高级版功能", "excel_on": "Excel 模式：发送表格或照片，获取 .xlsx 文件", "ppt_on": "PowerPoint 模式：提供主题或笔记，获取 .pptx 文件", "ph_excel": "粘贴表格或附上照片，然后说明你的需求...", "ph_ppt": "提供主题或粘贴笔记，例如：8 页关于光合作用的幻灯片...", "install": "安装应用", "recent_chats": "最近的对话", "recent_quizzes": "最近的测验"}, "ru": {"workspace": "Рабочее пространство", "nav_explore": "Обзор", "nav_writing": "Лаборатория письма", "nav_quiz": "Режим викторины", "nav_knowledge": "Студия знаний", "nav_code": "Студия кода", "nav_drawing": "Инженерная графика", "nav_advert": "Рекламная студия", "nav_video": "Видеостудия Malie", "nav_plans": "Тарифы и обновление", "nav_plans_only": "Тарифы", "premium": "Премиум", "pro": "Про", "upgrade": "✦ Улучшить", "upgrade_pro": "✦ Перейти на Про", "signin": "Войти", "signout": "Выйти", "eyebrow": "Ваше пространство для ясных мыслей", "hey": "Привет", "there": "", "line2": "Что у вас на уме?", "subtitle": "Узнайте что-то новое, разберитесь в сложной идее или превратите черновые мысли в нечто блестящее.", "s1t": "Поймите что угодно", "s1s": "Понятные объяснения шаг за шагом", "s2t": "Улучшите свой текст", "s2s": "Перепишите, исправьте и отшлифуйте слова", "s3t": "Проверьте себя", "s3s": "Загрузите PDF или фото и пройдите тест", "s4t": "Улучшите тариф", "s4s": "Премиум и Про для большей мощности", "ph_prompt": "Спросите Malie о чём угодно...", "excel_btn": "✦ Премиум-помощник Excel", "excel_exit": "✦ Выйти из помощника Excel", "ppt_btn": "✦ Премиум-помощник PowerPoint", "ppt_exit": "✦ Выйти из помощника PowerPoint", "feat_premium": "Премиум-функция", "excel_on": "Режим Excel: отправьте таблицу или фото и получите файл .xlsx", "ppt_on": "Режим PowerPoint: укажите тему или заметки и получите файл .pptx", "ph_excel": "Вставьте таблицу или прикрепите фото и скажите, что нужно...", "ph_ppt": "Укажите тему или вставьте заметки, например 8 слайдов о фотосинтезе...", "install": "Установить приложение", "recent_chats": "Недавние чаты", "recent_quizzes": "Недавние викторины"}, "sw": {"workspace": "Eneo la kazi", "nav_explore": "Gundua", "nav_writing": "Maabara ya Uandishi", "nav_quiz": "Hali ya Maswali", "nav_knowledge": "Studio ya Maarifa", "nav_code": "Studio ya Msimbo", "nav_drawing": "Mchoro wa Uhandisi", "nav_advert": "Studio ya Matangazo", "nav_video": "Studio ya Video ya Malie", "nav_plans": "Mipango na Kuboresha", "nav_plans_only": "Mipango", "premium": "Premium", "pro": "Pro", "upgrade": "✦ Boresha", "upgrade_pro": "✦ Boresha hadi Pro", "signin": "Ingia", "signout": "Toka", "eyebrow": "Nafasi yako ya kufikiri kwa uwazi", "hey": "Hujambo", "there": "", "line2": "Una nini akilini?", "subtitle": "Jifunze kitu kipya, tatua wazo gumu, au geuza mawazo yako ghafi kuwa kitu cha kung’aa.", "s1t": "Elewa chochote", "s1s": "Maelezo wazi, hatua kwa hatua", "s2t": "Boresha uandishi wako", "s2s": "Andika upya, sahihisha na boresha maneno yako", "s3t": "Jipime", "s3s": "Pakia PDF au picha na ufanye jaribio", "s4t": "Boresha mpango wako", "s4s": "Premium na Pro kwa nguvu zaidi", "ph_prompt": "Uliza Malie chochote...", "excel_btn": "✦ Msaidizi wa Excel wa Premium", "excel_exit": "✦ Toka kwa msaidizi wa Excel", "ppt_btn": "✦ Msaidizi wa PowerPoint wa Premium", "ppt_exit": "✦ Toka kwa msaidizi wa PowerPoint", "feat_premium": "Kipengele cha Premium", "excel_on": "Hali ya Excel: tuma jedwali au picha upate faili ya .xlsx", "ppt_on": "Hali ya PowerPoint: toa mada au maelezo upate faili ya .pptx", "ph_excel": "Bandika jedwali au ambatisha picha, kisha sema unachohitaji...", "ph_ppt": "Toa mada au bandika maelezo, mf. slaidi 8 kuhusu usanisinuru...", "install": "Sakinisha programu", "recent_chats": "Mazungumzo ya hivi karibuni", "recent_quizzes": "Majaribio ya hivi karibuni"}, "yo": {"workspace": "Ibi iṣẹ́", "nav_explore": "Ṣàwárí", "nav_writing": "Yàrá Ìkọ̀wé", "nav_quiz": "Ọ̀nà Ìdánwò", "nav_knowledge": "Ilé Ìmọ̀", "nav_code": "Ilé Kóòdù", "nav_drawing": "Àwòrán Ẹ̀rọ", "nav_advert": "Ilé Ìpolówó", "nav_video": "Ilé Fídíò Malie", "nav_plans": "Àwọn Ètò àti Ìgbéga", "nav_plans_only": "Àwọn Ètò", "premium": "Premium", "pro": "Pro", "upgrade": "✦ Gbé ga", "upgrade_pro": "✦ Gbé ga sí Pro", "signin": "Wọlé", "signout": "Jáde", "eyebrow": "Ààyè rẹ láti ronú kedere", "hey": "Báwo", "there": " o", "line2": "Kí ló wà lọ́kàn rẹ?", "subtitle": "Kọ́ nǹkan tuntun, yanjú èrò tó le, tàbí sọ èrò rẹ di ohun tó dára.", "s1t": "Lóye ohunkóhun", "s1s": "Àlàyé tó ṣe kedere, ìgbésẹ̀ lẹ́kùn-ún", "s2t": "Mú ìkọ̀wé rẹ dára síi", "s2s": "Tún kọ, tún ṣe, kí o sì ṣe àtúnṣe ọ̀rọ̀ rẹ", "s3t": "Dán ara rẹ wò", "s3s": "Gbé PDF tàbí fọ́tò sókè kí o ṣe ìdánwò", "s4t": "Gbé ètò rẹ ga", "s4s": "Premium àti Pro fún agbára síi", "ph_prompt": "Béèrè ohunkóhun lọ́wọ́ Malie...", "excel_btn": "✦ Olùrànlọ́wọ́ Excel Premium", "excel_exit": "✦ Jáde nínú olùrànlọ́wọ́ Excel", "ppt_btn": "✦ Olùrànlọ́wọ́ PowerPoint Premium", "ppt_exit": "✦ Jáde nínú olùrànlọ́wọ́ PowerPoint", "feat_premium": "Ẹ̀yà Premium", "excel_on": "Ọ̀nà Excel: fi tábìlì tàbí fọ́tò ránṣẹ́, kí o gba fáìlì .xlsx", "ppt_on": "Ọ̀nà PowerPoint: fún wa ní àkòrí tàbí àkọsílẹ̀, kí o gba fáìlì .pptx", "ph_excel": "Lẹ tábìlì mọ́ ibí tàbí so fọ́tò pọ̀, lẹ́yìn náà sọ ohun tí o nílò...", "ph_ppt": "Fún wa ní àkòrí tàbí lẹ àkọsílẹ̀, bíi ìpín 8 lórí photosynthesis...", "install": "Fi app sórí ẹrọ", "recent_chats": "Àwọn ìjíròrò tuntun", "recent_quizzes": "Àwọn ìdánwò tuntun"}, "ig": {"workspace": "Ebe ọrụ", "nav_explore": "Chọpụta", "nav_writing": "Ụlọ Nnwale Edemede", "nav_quiz": "Ụdị Ajụjụ", "nav_knowledge": "Studio Ihe Ọmụma", "nav_code": "Studio Koodu", "nav_drawing": "Eserese Injinia", "nav_advert": "Studio Mgbasa Ozi", "nav_video": "Studio Vidiyo Malie", "nav_plans": "Atụmatụ na Mmelite", "nav_plans_only": "Atụmatụ", "premium": "Premium", "pro": "Pro", "upgrade": "✦ Melite", "upgrade_pro": "✦ Melite gaa Pro", "signin": "Banye", "signout": "Pụọ", "eyebrow": "Ohere gị iji eche echiche nke ọma", "hey": "Ndewo", "there": " gị", "line2": "Gịnị dị gị n’obi?", "subtitle": "Mụta ihe ọhụrụ, kọwaa echiche siri ike, ma ọ bụ gbanwee echiche gị ka ọ bụrụ ihe magburu onwe ya.", "s1t": "Ghọta ihe ọbụla", "s1s": "Nkọwa doro anya, nzọụkwụ site na nzọụkwụ", "s2t": "Meziwanye ide gị", "s2s": "Dee ọzọ, megharịa, ma melite okwu gị", "s3t": "Nwalee onwe gị", "s3s": "Bugo PDF ma ọ bụ foto ma kwuo ajụjụ", "s4t": "Melite atụmatụ gị", "s4s": "Premium na Pro maka ike karịa", "ph_prompt": "Jụọ Malie ihe ọbụla...", "excel_btn": "✦ Onye enyemaka Excel Premium", "excel_exit": "✦ Pụọ n’onye enyemaka Excel", "ppt_btn": "✦ Onye enyemaka PowerPoint Premium", "ppt_exit": "✦ Pụọ n’onye enyemaka PowerPoint", "feat_premium": "Njirimara Premium", "excel_on": "Ụdị Excel: zipu tebụl ma ọ bụ foto ma nweta faịlụ .xlsx", "ppt_on": "Ụdị PowerPoint: nye isiokwu ma ọ bụ ndetu ma nweta faịlụ .pptx", "ph_excel": "Tinye tebụl ma ọ bụ jikọta foto, wee kwuo ihe ị chọrọ...", "ph_ppt": "Nye isiokwu ma ọ bụ tinye ndetu, dị ka slide 8 gbasara photosynthesis...", "install": "Wụnye ngwa", "recent_chats": "Mkparịta ụka ndị na-adịbeghị anya", "recent_quizzes": "Ajụjụ ndị na-adịbeghị anya"}, "ha": {"workspace": "Wurin aiki", "nav_explore": "Bincika", "nav_writing": "Dakin Rubutu", "nav_quiz": "Yanayin Tambayoyi", "nav_knowledge": "Studio na Ilimi", "nav_code": "Studio na Lamba", "nav_drawing": "Zanen Injiniya", "nav_advert": "Studio na Talla", "nav_video": "Studio na Bidiyo na Malie", "nav_plans": "Tsare-tsare da Haɓakawa", "nav_plans_only": "Tsare-tsare", "premium": "Premium", "pro": "Pro", "upgrade": "✦ Haɓaka", "upgrade_pro": "✦ Haɓaka zuwa Pro", "signin": "Shiga", "signout": "Fita", "eyebrow": "Wurinka na yin tunani sosai", "hey": "Sannu", "there": "", "line2": "Me ke zuciyarka?", "subtitle": "Koyi sabon abu, warware wahalar tunani, ko mayar da tunaninka zuwa abu mai kyau.", "s1t": "Fahimci komai", "s1s": "Bayani a sarari, mataki-mataki", "s2t": "Inganta rubutunka", "s2s": "Sake rubutawa, gyara, da goge kalmominka", "s3t": "Gwada kanka", "s3s": "Ɗora PDF ko hoto sannan ka yi tambayoyi", "s4t": "Haɓaka tsarinka", "s4s": "Premium da Pro don ƙarin ƙarfi", "ph_prompt": "Tambayi Malie komai...", "excel_btn": "✦ Mataimakin Excel na Premium", "excel_exit": "✦ Fita daga mataimakin Excel", "ppt_btn": "✦ Mataimakin PowerPoint na Premium", "ppt_exit": "✦ Fita daga mataimakin PowerPoint", "feat_premium": "Siffar Premium", "excel_on": "Yanayin Excel: aika tebur ko hoto ka samu fayil .xlsx", "ppt_on": "Yanayin PowerPoint: ba da take ko bayanai ka samu fayil .pptx", "ph_excel": "Manna tebur ko haɗa hoto, sannan ka faɗi abin da kake buƙata...", "ph_ppt": "Ba da take ko manna bayanai, misali shafuka 8 kan photosynthesis...", "install": "Shigar da manhaja", "recent_chats": "Tattaunawa na kwanan nan", "recent_quizzes": "Tambayoyi na kwanan nan"}, "pcm": {"workspace": "Work space", "nav_explore": "Explore", "nav_writing": "Writing Lab", "nav_quiz": "Quiz Mode", "nav_knowledge": "Knowledge Studio", "nav_code": "Code Studio", "nav_drawing": "Engineering Drawing", "nav_advert": "Advert Studio", "nav_video": "Malie Video Studio", "nav_plans": "Plans and Upgrade", "nav_plans_only": "Plans", "premium": "Premium", "pro": "Pro", "upgrade": "✦ Upgrade", "upgrade_pro": "✦ Upgrade to Pro", "signin": "Sign in", "signout": "Sign out", "eyebrow": "Your place to think well", "hey": "How far", "there": " o", "line2": "Wetin dey your mind?", "subtitle": "Learn new thing, comot wahala from hard idea, or turn your rough thought to something sweet.", "s1t": "Understand anything", "s1s": "Clear explain, step by step", "s2t": "Make your writing better", "s2s": "Rewrite, correct, and polish your words", "s3t": "Test yourself", "s3s": "Upload PDF or photo make you do quiz", "s4t": "Upgrade your plan", "s4s": "Premium and Pro for more power", "ph_prompt": "Ask Malie anything...", "excel_btn": "✦ Premium Excel Assistant", "excel_exit": "✦ Comot from Excel Assistant", "ppt_btn": "✦ Premium PowerPoint Assistant", "ppt_exit": "✦ Comot from PowerPoint Assistant", "feat_premium": "Premium feature", "excel_on": "Excel mode: send table or photo, collect .xlsx file", "ppt_on": "PowerPoint mode: give topic or notes, collect .pptx file", "ph_excel": "Paste table or attach photo, then talk wetin you need...", "ph_ppt": "Give topic or paste notes, like 8 slides on photosynthesis...", "install": "Install app", "recent_chats": "Recent chats", "recent_quizzes": "Recent quizzes"}};
+  const NAMES = {"en": "English", "fr": "Français", "es": "Español", "pt": "Português", "de": "Deutsch", "ar": "العربية", "hi": "हिन्दी", "zh": "中文", "ru": "Русский", "sw": "Kiswahili", "yo": "Yorùbá", "ig": "Igbo", "ha": "Hausa", "pcm": "Naijá Pidgin"};
+  const RTL = { ar: true };
+
+  function detect() {
+    try {
+      const saved = localStorage.getItem("malie_lang");
+      if (saved && STRINGS[saved]) return saved;
+    } catch (e) {}
+    const nav = (navigator.language || "en").toLowerCase();
+    const short = nav.split("-")[0];
+    if (STRINGS[short]) return short;
+    if (/^(yo|ig|ha)/.test(nav)) return nav.slice(0, 2);
+    return "en";
+  }
+
+  window.malieLang = detect();
+
+  // tr("key", fallback) -> text in the chosen language, English if missing.
+  window.tr = function (key, fallback) {
+    const cur = STRINGS[window.malieLang] || {};
+    if (cur[key] !== undefined) return cur[key];
+    if (STRINGS.en[key] !== undefined) return STRINGS.en[key];
+    return fallback !== undefined ? fallback : key;
+  };
+
+  function applyLang() {
+    const lang = window.malieLang;
+    document.documentElement.lang = lang === "pcm" ? "en" : lang;
+    document.documentElement.dir = RTL[lang] ? "rtl" : "ltr";
+
+    document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = window.tr(el.dataset.i18n, el.textContent); });
+    document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = window.tr(el.dataset.i18nPh, el.placeholder); });
+
+    if (typeof window.malieLangChanged === "function") window.malieLangChanged();
+  }
+
+  function setLang(lang) {
+    if (!STRINGS[lang]) return;
+    window.malieLang = lang;
+    try { localStorage.setItem("malie_lang", lang); } catch (e) {}
+    applyLang();
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const sel = document.getElementById("langSelect");
+    if (sel) {
+      sel.innerHTML = Object.keys(NAMES).map(c => '<option value="' + c + '">' + NAMES[c] + "</option>").join("");
+      sel.value = window.malieLang;
+      sel.addEventListener("change", () => setLang(sel.value));
+    }
+    applyLang();
+  });
+
+  /* ---- Install as an app ---- */
+  let deferredPrompt = null;
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+  window.addEventListener("beforeinstallprompt", e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const b = document.getElementById("installBtn");
+    if (b && !standalone) b.hidden = false;
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredPrompt = null;
+    const b = document.getElementById("installBtn");
+    if (b) b.hidden = true;
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const b = document.getElementById("installBtn");
+    if (!b) return;
+    // iPhone/iPad Safari has no install prompt, so show a short how-to instead.
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone;
+    if (ios) b.hidden = false;
+    b.addEventListener("click", async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice.catch(() => {});
+        deferredPrompt = null;
+        b.hidden = true;
+      } else if (ios) {
+        alert("Tap the Share button, then “Add to Home Screen”.");
+      }
+    });
+  });
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    });
+  }
+})();
+</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
@@ -1295,6 +1409,7 @@ import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, delet
 /* ───────── Config ───────── */
 const API = "https://oracle-ai.osumemamuromu.workers.dev";
 let excelMode = false;
+let pptMode = false;
 
 const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
 const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -1325,22 +1440,31 @@ const firebaseConfig = {
 const $ = id => document.getElementById(id);
 const excelModeBtn = $("excelModeBtn");
 const excelModeStatus = $("excelModeStatus");
+const pptModeBtn = $("pptModeBtn");
+const pptModeStatus = $("pptModeStatus");
+
+function applyModeUI() {
+  excelModeBtn.textContent = excelMode ? tr("excel_exit") : tr("excel_btn");
+  excelModeBtn.classList.toggle("on", excelMode);
+  excelModeStatus.textContent = excelMode ? tr("excel_on") : tr("feat_premium");
+
+  pptModeBtn.textContent = pptMode ? tr("ppt_exit") : tr("ppt_btn");
+  pptModeBtn.classList.toggle("on", pptMode);
+  pptModeStatus.textContent = pptMode ? tr("ppt_on") : tr("feat_premium");
+
+  $("prompt").placeholder = excelMode ? tr("ph_excel") : pptMode ? tr("ph_ppt") : tr("ph_prompt");
+}
 
 excelModeBtn.addEventListener("click", () => {
   excelMode = !excelMode;
+  if (excelMode) pptMode = false;
+  applyModeUI();
+});
 
-  excelModeBtn.textContent = excelMode
-    ? "✦ Exit Excel Assistant"
-    : "✦ Premium Excel Assistant";
-  excelModeBtn.classList.toggle("on", excelMode);
-
-  excelModeStatus.textContent = excelMode
-    ? "Excel mode: send a table or photo and get an .xlsx file"
-    : "Premium feature";
-
-  $("prompt").placeholder = excelMode
-    ? "Paste a table or attach a photo, then say what you need..."
-    : "Ask Malie anything...";
+pptModeBtn.addEventListener("click", () => {
+  pptMode = !pptMode;
+  if (pptMode) excelMode = false;
+  applyModeUI();
 });
 
 function esc(s) {
@@ -1557,7 +1681,7 @@ async function api(path, body) {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(Object.assign({}, body, { language: window.malieLang || "en" }))
   });
 
   const raw = await res.text();
@@ -1619,6 +1743,20 @@ function downloadXlsx(base64, filename) {
   const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
   const blob = new Blob([bytes], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+function downloadPptx(base64, filename) {
+  const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+  const blob = new Blob([bytes], {
+    type: "application/vnd.openxmlformats-officedocument.presentationml.presentation"
   });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -1860,7 +1998,6 @@ async function extractAny(file, onStatus = () => {}) {
   }
   throw new Error("Unsupported file. Use a PDF, a photo or a text file.");
 }
-
 /* ───────── Navigation ───────── */
 
   
@@ -1887,7 +2024,7 @@ function switchView(name) {
   if (name !== "explore") stopVoice();
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === "view-" + name));
   document.querySelectorAll(".side-link[data-view]").forEach(b => b.classList.toggle("active", b.dataset.view === name));
-  $("pageTitle").textContent = titles[name];
+  $("pageTitle").textContent = tr(name === "plans" ? "nav_plans_only" : "nav_" + name, titles[name]);
   composerWrap.classList.toggle("hidden", name !== "explore");
   closeSidebar();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1903,6 +2040,7 @@ $("overlay").onclick = closeSidebar;
 /* ───────── Saved conversations (stored on this device, separately for each account) ───────── */
 const CHATS_PREFIX = "malie-conversations-v2-";
 let currentUid = null;
+let currentPlan = "free";
 let conversations = [];
 let activeId = null;
 
@@ -2400,6 +2538,99 @@ async function sendExcel(shown, ready) {
   }
 }
 
+/* ───────── PowerPoint Builder (Premium / Pro) ───────── */
+async function sendPowerPoint(shown, ready) {
+  let message = shown || "";
+  ready.filter(a => a.text).forEach(a => {
+    message += `\n\n--- Attached file: ${a.name} ---\n${a.text.slice(0, CHAT_FILE_CHARS)}`;
+  });
+  message = message.trim();
+
+  if (!message) return toast("Add a topic or some notes first.", true);
+
+  const ownerUid = currentUid;
+  const isNew = !getActiveConversation();
+  const conv = getActiveConversation() || newConversation(shown || (ready[0] && ready[0].name) || "PowerPoint");
+
+  const userMsg = {
+    role: "user",
+    text: shown,
+    files: ready.map(a => ({ name: a.name, kind: a.kind }))
+  };
+  conv.messages.push(userMsg);
+  conv.ts = Date.now();
+  persistConversations();
+
+  chatBusy = true;
+  promptBox.disabled = true;
+  welcome.style.display = "none";
+
+  fillUserBubble(addMessage("user").bubble, shown, ready);
+  promptBox.value = "";
+  resizeInput();
+  attachments = [];
+  renderAttachments();
+
+  const { body, bubble } = addMessage("assistant");
+  bubble.innerHTML = typingDots();
+  side("Building your presentation…");
+
+  try {
+    const data = await api("/api/pptx", { message });
+
+    if (currentUid !== ownerUid) return;
+    if (!data.fileBase64) throw new Error("No presentation was returned. Please try again.");
+
+    downloadPptx(data.fileBase64, data.filename);
+
+    const left = data.usage && Number.isFinite(data.usage.remaining)
+      ? ` You have ${data.usage.remaining} request(s) left today.`
+      : "";
+    const outline = (data.preview || []).map((t, i) => `${i + 2}. ${t}`).join("\n");
+    const text =
+      `Your presentation **${data.filename}** is ready and downloading now.${left}\n\n` +
+      (outline ? `Slide outline:\n\n1. ${data.title || "Title slide"}\n${outline}\n\nOpen it in PowerPoint, Google Slides or Keynote to edit and add images.` : "");
+
+    bubble.innerHTML = markdown(text);
+    typeset(bubble);
+
+    const actions = document.createElement("div");
+    actions.className = "message-actions";
+    const dl = document.createElement("button");
+    dl.type = "button";
+    dl.className = "mini-btn";
+    dl.textContent = "Download again";
+    dl.onclick = () => downloadPptx(data.fileBase64, data.filename);
+    actions.append(dl);
+    body.append(actions);
+    addCopyButton(body, text);
+
+    conv.messages.push({ role: "assistant", text });
+    conv.ts = Date.now();
+    persistConversations();
+    side("Presentation ready", "online");
+  } catch (e) {
+    if (currentUid !== ownerUid) return;
+
+    bubble.classList.add("error");
+    bubble.textContent = e.message;
+    side("Connection needs attention", "error");
+
+    const idx = conv.messages.indexOf(userMsg);
+    if (idx >= 0) conv.messages.splice(idx, 1);
+    if (!conv.messages.length) {
+      conversations = conversations.filter(c => c.id !== conv.id);
+      if (isNew) activeId = null;
+    }
+    persistConversations();
+  } finally {
+    chatBusy = false;
+    promptBox.disabled = false;
+    updateSendState();
+    if (currentUid === ownerUid) promptBox.focus();
+  }
+}
+
 async function sendChat(typed) {
   if (chatBusy) return;
   stopVoice();
@@ -2413,6 +2644,7 @@ async function sendChat(typed) {
 
   // Excel mode builds a real .xlsx file instead of sending a normal chat message
   if (excelMode) return sendExcel(shown, ready);
+  if (pptMode) return sendPowerPoint(shown, ready);
 
   let message = shown || "Please go through the attached file(s) and summarize the key points.";
   ready.forEach(a => {
@@ -2575,7 +2807,7 @@ function historyCollection() {
   return collection(db, "users", auth.currentUser.uid, "quizHistory");
 }
 function setGreeting(name) {
-  $("helloName").textContent = name ? ", " + name : " there";
+  $("helloName").textContent = name ? ", " + name : tr("there");
 }
 function showAvatar(user) {
   const btn = $("authButton");
@@ -2595,7 +2827,7 @@ function showAvatar(user) {
 }
 function showSignInButton() {
   const btn = $("authButton");
-  btn.textContent = "Sign in";
+  btn.textContent = tr("signin");
   btn.classList.remove("acct");
   btn.removeAttribute("title");
   btn.removeAttribute("aria-label");
@@ -2709,11 +2941,14 @@ try {
       // Always start hidden, then ask the server who this account is
       setAdminVisible(false);
       detectAdmin(user.uid);
+      refreshPlan();
       await loadHistory();
     } else {
       closeMenu();
       currentUid = null;
       window.malieUid = null;
+      currentPlan = "free";
+      applyPlanUI();
       clearWorkspace();
       showSignInButton();
       switchView("explore");
@@ -2771,6 +3006,49 @@ function resetPlans() {
 }
 function openPlans() { switchView("plans"); loadSubscription(); }
 
+// Shows the right top-right button for the signed-in plan:
+// Free -> "Upgrade", Premium -> "Upgrade to Pro", Pro -> hidden.
+function applyPlanUI() {
+  const btn = $("upgradeBtn");
+  if (btn) {
+    btn.hidden = currentPlan === "pro";
+    btn.textContent = currentPlan === "premium" ? tr("upgrade_pro") : tr("upgrade");
+  }
+  const link = $("plansLinkText");
+  if (link) link.textContent = currentPlan === "free" ? tr("nav_plans") : tr("nav_plans_only");
+  const tile = $("upgradeSuggestion");
+  if (tile) tile.hidden = currentPlan === "pro";
+}
+
+// Re-draws every piece of text that JavaScript (not data-i18n) controls.
+window.malieLangChanged = function () {
+  applyPlanUI();
+  applyModeUI();
+  const active = document.querySelector(".side-link.active[data-view]");
+  if (active) $("pageTitle").textContent = tr(active.dataset.view === "plans" ? "nav_plans_only" : "nav_" + active.dataset.view, titles[active.dataset.view] || "");
+  if (!currentUid) {
+    $("helloName").textContent = tr("there");
+    $("authButton").textContent = tr("signin");
+  }
+  const ib = $("installBtn");
+  if (ib) ib.textContent = "⤓ " + tr("install");
+};
+
+// Quietly asks the server for the plan (used right after sign-in).
+async function refreshPlan() {
+  const uid = currentUid;
+  if (!uid) return;
+  try {
+    const d = await api("/api/subscription/status", {});
+    if (currentUid !== uid) return;
+    const s = d.subscription;
+    currentPlan = s && s.active && (s.plan === "premium" || s.plan === "pro") ? s.plan : "free";
+  } catch (e) {
+    return; // keep the current button if the check fails
+  }
+  applyPlanUI();
+}
+
 async function loadSubscription() {
   const box = $("subStatus");
   if (!currentUid) { resetPlans(); return; }
@@ -2778,6 +3056,8 @@ async function loadSubscription() {
   try {
     const d = await api("/api/subscription/status", {});
     const s = d.subscription, r = d.latestRequest;
+    currentPlan = s && s.active && (s.plan === "premium" || s.plan === "pro") ? s.plan : "free";
+    applyPlanUI();
     let html;
     if (s.active) {
       html = `<h3>Current plan: ${esc(PLAN_NAMES[s.plan] || s.plan)} ✓</h3><p class="sub">Active until ${esc(new Date(s.expiresAt).toLocaleDateString())}.</p>`;
@@ -5603,5 +5883,4 @@ document.getElementById("knowledgeAsk")?.addEventListener(
 
 </script>
 </body>
-</html>
-  
+</html> 

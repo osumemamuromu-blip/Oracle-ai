@@ -691,6 +691,62 @@ async function callAI(env, prompt, jsonMode = false, imageDataUrl = null, option
   return text;
 }
 
+async function callNvidiaAI(env, prompt, jsonMode = true) {
+  if (!env.NVIDIA_API_KEY) {
+    const error = new Error("NVIDIA API key is not configured.");
+    error.status = 500;
+    throw error;
+  }
+
+  const response = await fetch(
+    "https://integrate.api.nvidia.com/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${env.NVIDIA_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "nvidia/nemotron-3.5-30b-a3b",
+        messages: [
+          {
+            role: "system",
+            content: jsonMode
+              ? "You are Malie AI's CAD generation assistant. Return only valid JSON matching the user's requested schema. Do not use Markdown fences."
+              : "You are Malie AI's CAD generation assistant."
+          },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.2,
+        max_tokens: 4096
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const details = await response.text();
+    console.error("NVIDIA API error:", response.status, details.slice(0, 500));
+
+    const error = new Error(
+      response.status === 429
+        ? "NVIDIA API rate limit or credit limit reached."
+        : "NVIDIA AI could not complete the CAD request."
+    );
+    error.status = response.status === 429 ? 429 : 502;
+    throw error;
+  }
+
+  const data = await response.json();
+  const result = data?.choices?.[0]?.message?.content;
+
+  if (typeof result !== "string" || !result.trim()) {
+    throw new Error("NVIDIA returned no usable CAD response.");
+  }
+
+  return result;
+}
+
+
 /* ------------------------------------------------------------------ */
 /* Auth, plans, usage                                                  */
 /* ------------------------------------------------------------------ */

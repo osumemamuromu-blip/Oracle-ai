@@ -363,6 +363,78 @@ button:disabled{opacity:.55;cursor:not-allowed}
   .input-hint{display:none}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Knowledge Studio UI */
+#view-knowledge{gap:0}
+.kn-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:20px}
+.kn-hello{font-size:26px;font-weight:800;letter-spacing:-.8px;margin:0}
+.kn-sub{color:var(--muted);font-size:12px;margin:5px 0 0}
+.kn-icon{width:38px;height:38px;border-radius:11px;border:1px solid var(--border);background:var(--panel);color:var(--text);display:grid;place-items:center;cursor:pointer}
+.kn-icon svg,.kn-add svg,.kn-send svg,.kn-drop-ic svg,.kn-title-ic svg,.kn-avatar svg,.kn-mini svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.kn-focus-label{font-size:13px;font-weight:700;margin-bottom:10px}
+.kn-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px;scrollbar-width:none}
+.kn-chips::-webkit-scrollbar{display:none}
+.kn-chip{flex:none;border:1px solid var(--border);background:var(--panel);color:var(--muted);border-radius:999px;padding:8px 14px;font-size:12px;font-weight:650;cursor:pointer;white-space:nowrap}
+.kn-chip.active{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.kn-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:16px;align-items:start}
+.kn-col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.kn-panel{border:1px solid var(--border);background:var(--panel);border-radius:18px;padding:18px;min-width:0}
+.kn-title{font-size:13px;font-weight:800;margin-bottom:14px}
+.kn-title-ic{display:flex;align-items:center;gap:8px;color:var(--text)}
+.kn-drop{display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;border:1.5px dashed var(--border);background:var(--panel2);border-radius:14px;padding:26px 14px;cursor:pointer;transition:border-color .2s,background .2s}
+.kn-drop:hover,.kn-drop.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel2))}
+.kn-drop-ic{width:40px;height:40px;border-radius:50%;background:var(--panel);border:1px solid var(--border);display:grid;place-items:center;color:var(--accent)}
+.kn-drop-t{font-size:12px;font-weight:700;overflow-wrap:anywhere}
+.kn-drop-s{font-size:10px;color:var(--muted)}
+.kn-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0 12px}
+.kn-crumb{font-size:11px;color:var(--muted)}
+.kn-crumb i{font-style:normal;margin:0 4px}
+.kn-crumb b{color:var(--text)}
+.kn-add{display:flex;align-items:center;gap:6px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:12px;padding:9px 13px;cursor:pointer;box-shadow:0 6px 20px color-mix(in srgb,var(--accent) 25%,transparent)}
+.kn-add svg{width:13px;height:13px}
+.kn-table-head,.kn-doc{display:grid;grid-template-columns:minmax(0,2.2fr) .9fr .5fr .7fr;gap:8px;align-items:center}
+.kn-table-head{font-size:9.5px;letter-spacing:.06em;color:var(--muted);font-weight:700;padding:0 10px 8px}
+.kn-docs{display:flex;flex-direction:column;gap:8px}
+.kn-doc{border:1px solid var(--border);background:var(--panel2);border-radius:12px;padding:11px 10px;font-size:11px;cursor:pointer;transition:border-color .2s}
+.kn-doc.sel{border-color:var(--accent)}
+.kn-file{display:flex;align-items:center;gap:9px;min-width:0}
+.kn-file input{accent-color:var(--accent);flex:none}
+.kn-fic{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);font-size:9px;font-weight:800}
+.kn-fname{font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kn-badge{justify-self:start;font-size:9px;font-weight:800;color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent);border:1px solid color-mix(in srgb,var(--good) 30%,transparent);padding:3px 8px;border-radius:999px}
+.kn-del{border:0;background:transparent;color:var(--danger);font-size:10px;font-weight:700;cursor:pointer;padding:0;justify-self:start}
+.kn-muted{color:var(--muted);font-size:11px}
+.kn-ghost{margin-top:12px;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:10px;font-size:11px;font-weight:700;padding:8px 12px;cursor:pointer}
+.kn-recent-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:9px;font-size:11.5px}
+.kn-recent-list li{cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kn-recent-list li.kn-muted{cursor:default;list-style:none;margin-left:-18px}
+.kn-chat{display:flex;flex-direction:column;min-height:520px;padding:0;overflow:hidden}
+.kn-chat-head{display:flex;align-items:center;gap:11px;padding:16px 18px;border-bottom:1px solid var(--border)}
+.kn-avatar{width:38px;height:38px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.kn-name{font-size:13px;font-weight:800}
+.kn-live{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px;margin-top:2px}
+.kn-live i{width:6px;height:6px;border-radius:50%;background:var(--good)}
+.kn-msgs{flex:1;padding:18px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;max-height:60vh}
+.kn-row{display:flex;gap:10px;align-items:flex-start;max-width:100%}
+.kn-row.me{justify-content:flex-end}
+.kn-mini{flex:none;width:24px;height:24px;border-radius:50%;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);display:grid;place-items:center}
+.kn-mini svg{width:12px;height:12px}
+.kn-bubble{background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;font-size:12.5px;line-height:1.7;overflow-wrap:anywhere;white-space:pre-wrap;min-width:0}
+.kn-row.me .kn-bubble{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:650;border-bottom-right-radius:4px}
+.kn-hidden{display:none}
+.kn-input{display:flex;align-items:flex-end;gap:8px;margin:0 16px;border:1px solid var(--border);background:var(--panel2);border-radius:14px;padding:8px 8px 8px 14px}
+.kn-input textarea{flex:1;background:transparent;border:0;outline:0;color:var(--text);font:inherit;font-size:13px;resize:none;max-height:120px;padding:6px 0}
+.kn-send{flex:none;width:34px;height:34px;border:0;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;cursor:pointer}
+.kn-foot{text-align:center;font-size:10px;color:var(--muted);padding:10px 0 14px}
+@media(max-width:860px){
+  .kn-grid{grid-template-columns:1fr}
+  .kn-chat{min-height:440px}
+}
+@media(max-width:480px){
+  .kn-table-head span:nth-child(3),.kn-doc>.kn-type{display:none}
+  .kn-table-head,.kn-doc{grid-template-columns:minmax(0,2fr) .9fr .7fr}
+  .kn-hello{font-size:22px}
+}
 </style>
 </head>
 <body>
@@ -529,54 +601,91 @@ button:disabled{opacity:.55;cursor:not-allowed}
       </section>
       
 <section class="view" id="view-knowledge">
-  <div class="work-card">
-    <h3>Knowledge Studio</h3>
-    <p class="sub">
-      Your private document library and AI study assistant.
-      Available on Premium and Pro.
-    </p>
-
-    <label class="field-label" for="knowledgeFile">
-      Upload a PDF or TXT document
-    </label>
-    <input id="knowledgeFile" type="file"
-      accept=".pdf,.txt,application/pdf,text/plain">
-
-    <button class="btn" id="knowledgeUpload" type="button">
-      Add document
-    </button>
-
-    <p class="status" id="knowledgeStatus" aria-live="polite"></p>
+  <div class="kn-head">
+    <div>
+      <h2 class="kn-hello" id="knHello">Good evening!</h2>
+      <p class="kn-sub">What would you like to explore today?</p>
+    </div>
+    <div class="kn-head-actions">
+      <button class="kn-icon" id="knRefreshTop" type="button" aria-label="Refresh library" title="Refresh library">
+        <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+      </button>
+    </div>
   </div>
 
-  <div class="work-card">
-    <h3>Your documents</h3>
-    <div id="knowledgeDocuments"></div>
-    <button class="btn" id="knowledgeRefresh" type="button">
-      Refresh library
-    </button>
+  <div class="kn-focus-label">Choose your focus</div>
+  <div class="kn-chips" id="knChips">
+    <button type="button" class="kn-chip active" data-p="Summarize the selected document in a clear one-page summary.">Summarize reports</button>
+    <button type="button" class="kn-chip" data-p="Extract the key insights from the selected document.">Extract key insights</button>
+    <button type="button" class="kn-chip" data-p="Compare the selected documents and list the main differences.">Compare projects</button>
+    <button type="button" class="kn-chip" data-p="Answer this question using the selected document: ">Answer questions</button>
+    <button type="button" class="kn-chip" data-p="Draft a short document based on the selected material.">Draft documents</button>
   </div>
 
-  <div class="work-card">
-    <h3>Ask your documents</h3>
-    <label class="field-label" for="knowledgeQuestion">
-      Your question
-    </label>
-    <textarea class="work-textarea short"
-      id="knowledgeQuestion"
-      maxlength="4000"
-      placeholder="Ask a question about your selected document..."></textarea>
+  <div class="kn-grid">
+    <!-- Left: upload + library -->
+    <div class="kn-col">
+      <div class="kn-panel">
+        <div class="kn-title">Upload Knowledge</div>
+        <label class="kn-drop" id="knDrop" for="knowledgeFile">
+          <span class="kn-drop-ic"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></svg></span>
+          <span class="kn-drop-t" id="knDropText">Click to upload or drag and drop</span>
+          <span class="kn-drop-s">PDF or TXT document</span>
+        </label>
+        <input id="knowledgeFile" type="file" accept=".pdf,.txt,application/pdf,text/plain" hidden>
+        <p class="status" id="knowledgeStatus" aria-live="polite"></p>
 
-    <button class="btn" id="knowledgeAsk" type="button">
-      Ask Malie
-    </button>
+        <div class="kn-bar">
+          <div class="kn-crumb">Home <i>›</i> <b>Knowledge Base</b></div>
+          <button class="kn-add" id="knowledgeUpload" type="button">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Add New
+          </button>
+        </div>
 
-    <div class="result-box" id="knowledgeAnswer"></div>
+        <div class="kn-table-head"><span>FILE NAME</span><span>STATUS</span><span>TYPE</span><span>SIZE</span></div>
+        <div id="knowledgeDocuments" class="kn-docs"></div>
+        <button class="kn-ghost" id="knowledgeRefresh" type="button">Refresh library</button>
+      </div>
+
+      <div class="kn-panel kn-recent">
+        <div class="kn-title kn-title-ic">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Recent questions
+        </div>
+        <ol id="knRecent" class="kn-recent-list"><li class="kn-muted">Nothing asked yet.</li></ol>
+      </div>
+    </div>
+
+    <!-- Right: assistant -->
+    <div class="kn-panel kn-chat">
+      <div class="kn-chat-head">
+        <div class="kn-avatar"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
+        <div>
+          <div class="kn-name">AI Assistant</div>
+          <div class="kn-live"><i></i> Library Active</div>
+        </div>
+      </div>
+
+      <div class="kn-msgs" id="knMsgs">
+        <div class="kn-row">
+          <span class="kn-mini"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/></svg></span>
+          <div class="kn-bubble" id="knIntro">Hello! I'm ready to answer questions about your knowledge base. Tick a document on the left to begin.</div>
+        </div>
+      </div>
+      <div class="result-box kn-hidden" id="knowledgeAnswer"></div>
+
+      <div class="kn-input">
+        <textarea id="knowledgeQuestion" rows="1" maxlength="4000" placeholder="Ask a question about your documents..."></textarea>
+        <button class="kn-send" id="knowledgeAsk" type="button" aria-label="Ask Malie">
+          <svg viewBox="0 0 24 24"><path d="m22 2-11 11"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+        </button>
+      </div>
+      <div class="kn-foot">AI can make mistakes. Verify important information.</div>
+    </div>
   </div>
 </section>
 
-
-      <!-- Engineering Drawing Studio (Pro) -->
+<!-- Engineering Drawing Studio (Pro) -->
       <section class="view" id="view-drawing">
         <div class="section-head"><h1>Engineering Drawing<span style="color:var(--accent)">.</span></h1><p>Upload a picture of a part in any single view and Malie generates the other views. Or type the dimensions of a stepped flanged bush. Pro plan.</p></div>
 
@@ -1535,7 +1644,7 @@ document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click"
 document.querySelectorAll("[data-open-view]").forEach(b => b.addEventListener("click", () => switchView(b.dataset.openView)));
 $("menuToggle").onclick = () => { $("sidebar").classList.toggle("open"); $("overlay").classList.toggle("show"); };
 $("overlay").onclick = closeSidebar;
-
+ 
 /* ───────── Saved conversations (stored on this device, separately for each account) ───────── */
 const CHATS_PREFIX = "malie-conversations-v2-";
 let currentUid = null;
@@ -4158,9 +4267,11 @@ function renderQuiz(questions) {
     }
   });
 })();
-    
+       
 /* ---------------- Knowledge Studio ---------------- */
 let knowledgeDocs = [];
+const knSelected = new Set();
+const knAsked = [];
 
 function knowledgeStatus(message, error = false) {
   const el = document.getElementById("knowledgeStatus");
@@ -4174,6 +4285,63 @@ async function knowledgeRequest(path, body) {
   return window.malieApi(path, body);
 }
 
+function knSize(chars) {
+  const n = Number(chars) || 0;
+  return n >= 1e6 ? (n / 1e6).toFixed(1) + " MB" : n >= 1e3 ? Math.round(n / 1e3) + " KB" : n + " B";
+}
+
+function knGreeting() {
+  const h = new Date().getHours();
+  const g = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  let name = (document.getElementById("menuName")?.textContent || "").trim();
+  if (!name || /^signed in$/i.test(name)) name = "";
+  name = name.split("@")[0].split(/\s+/)[0];
+  const el = document.getElementById("knHello");
+  if (el) el.textContent = g + (name ? ", " + name : "") + "!";
+}
+knGreeting();
+document.querySelector('[data-view="knowledge"]')?.addEventListener("click", knGreeting);
+
+function knAddMsg(text, me) {
+  const box = document.getElementById("knMsgs");
+  const row = document.createElement("div");
+  row.className = "kn-row" + (me ? " me" : "");
+  if (!me) {
+    const ic = document.createElement("span");
+    ic.className = "kn-mini";
+    ic.innerHTML = '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/></svg>';
+    row.append(ic);
+  }
+  const b = document.createElement("div");
+  b.className = "kn-bubble";
+  b.textContent = text;
+  row.append(b);
+  box.append(row);
+  box.scrollTop = box.scrollHeight;
+  return b;
+}
+
+function knRenderRecent() {
+  const ol = document.getElementById("knRecent");
+  ol.replaceChildren();
+  if (!knAsked.length) {
+    const li = document.createElement("li");
+    li.className = "kn-muted";
+    li.textContent = "Nothing asked yet.";
+    ol.append(li);
+    return;
+  }
+  for (const q of knAsked.slice(0, 6)) {
+    const li = document.createElement("li");
+    li.textContent = q;
+    li.addEventListener("click", () => {
+      const t = document.getElementById("knowledgeQuestion");
+      t.value = q; t.focus();
+    });
+    ol.append(li);
+  }
+}
+
 async function knowledgeRefresh() {
   try {
     const result = await knowledgeRequest("/api/knowledge/list", {});
@@ -4182,36 +4350,65 @@ async function knowledgeRefresh() {
     const container = document.getElementById("knowledgeDocuments");
     container.replaceChildren();
 
+    const intro = document.getElementById("knIntro");
+    if (knowledgeDocs.length && intro) {
+      intro.textContent = `Hello! I'm ready to answer questions about your knowledge base. I have indexed ${knowledgeDocs.length} document${knowledgeDocs.length > 1 ? "s" : ""}. Tick one to begin.`;
+    }
+
     if (!knowledgeDocs.length) {
-      container.textContent = "No documents uploaded yet.";
+      const p = document.createElement("p");
+      p.className = "kn-muted";
+      p.textContent = "No documents uploaded yet.";
+      container.append(p);
       return;
     }
 
     for (const doc of knowledgeDocs) {
       const row = document.createElement("div");
-      row.className = "history-card";
+      row.className = "kn-doc" + (knSelected.has(doc.id) ? " sel" : "");
 
-      const label = document.createElement("label");
+      const file = document.createElement("label");
+      file.className = "kn-file";
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.value = doc.id;
       checkbox.className = "knowledge-select";
+      checkbox.checked = knSelected.has(doc.id);
+      checkbox.addEventListener("change", () => {
+        checkbox.checked ? knSelected.add(doc.id) : knSelected.delete(doc.id);
+        row.classList.toggle("sel", checkbox.checked);
+      });
+      const ic = document.createElement("span");
+      ic.className = "kn-fic";
+      ic.textContent = String(doc.file_type || "").toUpperCase();
+      const name = document.createElement("span");
+      name.className = "kn-fname";
+      name.textContent = doc.name;
+      name.title = doc.name;
+      file.append(checkbox, ic, name);
 
-      const title = document.createElement("strong");
-      title.textContent = " " + doc.name;
+      const badge = document.createElement("span");
+      badge.className = "kn-badge";
+      badge.textContent = "Indexed";
 
-      const details = document.createElement("p");
-      details.textContent =
-        `${doc.file_type.toUpperCase()} · ${doc.characters} characters`;
+      const type = document.createElement("span");
+      type.className = "kn-type kn-muted";
+      type.textContent = String(doc.file_type || "").toUpperCase();
+
+      const side = document.createElement("span");
+      side.className = "kn-muted";
+      side.textContent = knSize(doc.characters);
 
       const remove = document.createElement("button");
       remove.type = "button";
-      remove.className = "btn";
+      remove.className = "kn-del";
       remove.textContent = "Delete";
-      remove.addEventListener("click", async () => {
+      remove.addEventListener("click", async (e) => {
+        e.stopPropagation();
         if (!confirm(`Delete "${doc.name}"?`)) return;
         try {
           await knowledgeRequest("/api/knowledge/delete", { id: doc.id });
+          knSelected.delete(doc.id);
           await knowledgeRefresh();
           knowledgeStatus("Document deleted.");
         } catch (error) {
@@ -4219,24 +4416,72 @@ async function knowledgeRefresh() {
         }
       });
 
-      label.append(checkbox, title);
-      row.append(label, details, remove);
-      container.append(row);
+      row.append(file, badge, type, side);
+      row.addEventListener("dblclick", () => remove.click());
+      // delete control sits under the row's details
+      const wrap = document.createElement("div");
+      wrap.append(row);
+      wrap.style.display = "flex";
+      wrap.style.flexDirection = "column";
+      wrap.style.gap = "2px";
+      remove.style.marginLeft = "10px";
+      wrap.append(remove);
+      container.append(wrap);
     }
   } catch (error) {
     knowledgeStatus(error.message || "Could not load documents.", true);
   }
 }
 
-document.getElementById("knowledgeRefresh")?.addEventListener(
-  "click", knowledgeRefresh
-);
+document.getElementById("knowledgeRefresh")?.addEventListener("click", knowledgeRefresh);
+document.getElementById("knRefreshTop")?.addEventListener("click", knowledgeRefresh);
+
+/* Focus chips fill the question box */
+document.querySelectorAll("#knChips .kn-chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    document.querySelectorAll("#knChips .kn-chip").forEach(c => c.classList.remove("active"));
+    chip.classList.add("active");
+    const t = document.getElementById("knowledgeQuestion");
+    t.value = chip.dataset.p || "";
+    t.focus();
+  });
+});
+
+/* Auto-grow input, Enter to send */
+const knQ = document.getElementById("knowledgeQuestion");
+knQ?.addEventListener("input", () => {
+  knQ.style.height = "auto";
+  knQ.style.height = Math.min(knQ.scrollHeight, 120) + "px";
+});
+knQ?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    document.getElementById("knowledgeAsk").click();
+  }
+});
+
+/* Drop zone */
+const knDrop = document.getElementById("knDrop");
+const knFile = document.getElementById("knowledgeFile");
+function knShowPicked() {
+  const f = knFile.files?.[0];
+  document.getElementById("knDropText").textContent = f ? f.name : "Click to upload or drag and drop";
+}
+knFile?.addEventListener("change", knShowPicked);
+["dragenter", "dragover"].forEach(ev => knDrop?.addEventListener(ev, e => { e.preventDefault(); knDrop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => knDrop?.addEventListener(ev, e => { e.preventDefault(); knDrop.classList.remove("over"); }));
+knDrop?.addEventListener("drop", e => {
+  if (e.dataTransfer?.files?.length) {
+    knFile.files = e.dataTransfer.files;
+    knShowPicked();
+  }
+});
 
 document.getElementById("knowledgeUpload")?.addEventListener(
   "click", async () => {
-    const file = document.getElementById("knowledgeFile").files?.[0];
+    const file = knFile.files?.[0];
     if (!file) {
-      knowledgeStatus("Choose a PDF or TXT file first.", true);
+      knFile.click();
       return;
     }
 
@@ -4274,7 +4519,8 @@ document.getElementById("knowledgeUpload")?.addEventListener(
       });
 
       knowledgeStatus(`Saved ${result.document.name}.`);
-      document.getElementById("knowledgeFile").value = "";
+      knFile.value = "";
+      knShowPicked();
       await knowledgeRefresh();
     } catch (error) {
       knowledgeStatus(error.message || "Upload failed.", true);
@@ -4284,7 +4530,8 @@ document.getElementById("knowledgeUpload")?.addEventListener(
 
 document.getElementById("knowledgeAsk")?.addEventListener(
   "click", async () => {
-    const question = document.getElementById("knowledgeQuestion").value.trim();
+    const input = document.getElementById("knowledgeQuestion");
+    const question = input.value.trim();
     const ids = [...document.querySelectorAll(".knowledge-select:checked")]
       .map(el => el.value);
 
@@ -4297,18 +4544,27 @@ document.getElementById("knowledgeAsk")?.addEventListener(
       return;
     }
 
-    const answer = document.getElementById("knowledgeAnswer");
-    answer.textContent = "Malie is reading your documents...";
+    knowledgeStatus("");
+    knAddMsg(question, true);
+    knAsked.unshift(question);
+    knRenderRecent();
+    input.value = "";
+    input.style.height = "auto";
+
+    const bubble = knAddMsg("Malie is reading your documents...", false);
+    const hidden = document.getElementById("knowledgeAnswer");
 
     try {
       const result = await knowledgeRequest("/api/knowledge/ask", {
         question,
         documentIds: ids
       });
-      answer.textContent = result.answer || "No answer was returned.";
-      knowledgeStatus("Answer ready.");
+      const text = result.answer || "No answer was returned.";
+      bubble.textContent = text;
+      hidden.textContent = text;
+      document.getElementById("knMsgs").scrollTop = 1e9;
     } catch (error) {
-      answer.textContent = "";
+      bubble.textContent = error.message || "Question failed.";
       knowledgeStatus(error.message || "Question failed.", true);
     }
   }

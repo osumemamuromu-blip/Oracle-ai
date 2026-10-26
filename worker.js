@@ -699,7 +699,7 @@ async function callNvidiaAI(env, prompt, jsonMode = true) {
   }
 
   const model = env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b";
-  const maxAttempts = 2;
+  const maxAttempts = 1;
   let lastError;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {

@@ -3569,7 +3569,7 @@ const prompt = [
           String(result.code || "")
         ].join("\n");
 
-        const repairedRaw = await callAI(env, repairPrompt, true);
+        const repairedRaw = await callNvidiaAI(env, repairPrompt, true);
 
         const repairedResult = parseJsonObject(
           repairedRaw,

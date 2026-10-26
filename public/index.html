@@ -515,6 +515,54 @@ button:disabled{opacity:.55;cursor:not-allowed}
   .cs-shell[data-pane="code"] [data-p="code"]{display:flex}
   .cs-code{height:calc(100vh - 230px)}
 }
+
+/* Code Studio v2 + voice */
+.cs-wrap{position:relative}
+.cs-lock{position:absolute;inset:0;z-index:20;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:grid;place-items:center;border-radius:16px;padding:16px}
+.cs-lock-box{max-width:360px;text-align:center;border:1px solid var(--border);background:var(--panel);border-radius:18px;padding:26px 22px}
+.cs-lock-box h3{margin:10px 0 6px;font-size:16px}
+.cs-lock-box p{margin:0 0 16px;font-size:12.5px;color:var(--muted);line-height:1.7}
+.cs-lock-ic{width:44px;height:44px;margin:0 auto;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.cs-lock-ic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cs-lock-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.cs-lock-actions .primary{padding:10px 16px;font-size:12px}
+.cs-agent{position:relative}
+.cs-pill{margin-left:auto;display:flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:99px;padding:5px 10px;font-size:10.5px;font-weight:700;max-width:140px;cursor:pointer}
+.cs-pill span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs-pill svg{width:12px;height:12px}
+.cs-projects{position:absolute;left:10px;right:10px;top:54px;z-index:10;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:8px;box-shadow:var(--shadow);max-height:60%;overflow-y:auto}
+.cs-newproj{width:100%;display:flex;align-items:center;gap:8px;border:1px dashed var(--border);background:transparent;color:var(--accent);border-radius:10px;padding:10px;font-size:12px;font-weight:750;cursor:pointer;margin-bottom:6px}
+.cs-proj-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:10px;cursor:pointer;font-size:12px}
+.cs-proj-item:hover,.cs-proj-item.cur{background:var(--panel2)}
+.cs-proj-item b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs-proj-item small{color:var(--muted);font-size:10px;flex:none}
+.cs-proj-item button{border:0;background:transparent;color:var(--danger);font-size:10.5px;font-weight:700;cursor:pointer;padding:2px 4px}
+.cs-msgwrap{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.cs-spk,.kn-spk{display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;color:var(--muted);font-size:10.5px;font-weight:700;cursor:pointer;padding:2px 2px}
+.cs-spk svg,.kn-spk svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cs-spk.on,.kn-spk.on{color:var(--accent)}
+.kn-msgcol{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+.cs-ib.on,.kn-icon.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.cs-ib.on#csMic,.kn-mic.on{animation:csPulse 1s ease-in-out infinite}
+.kn-input .kn-icon{width:34px;height:34px;border-radius:9px;flex:none}
+.kn-chat-head .kn-auto{margin-left:auto;width:34px;height:34px}
+.cs-codepane{flex:1;min-height:0;display:flex;flex-direction:column}
+.cs-codepane.kn-hidden{display:none}
+.cs-filetabs{display:flex;gap:6px;overflow-x:auto;padding:10px 12px 6px;scrollbar-width:none}
+.cs-filetabs::-webkit-scrollbar{display:none}
+.cs-ftab{flex:none;display:flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--panel2);color:var(--muted);border-radius:9px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer}
+.cs-ftab.active{color:var(--text);border-color:var(--accent)}
+.cs-ftab i{font-style:normal;opacity:.6;padding-left:2px}
+.cs-ftab i:hover{color:var(--danger);opacity:1}
+.cs-ftab.add{color:var(--accent);padding:6px 11px}
+.cs-actions{display:flex;flex-wrap:wrap;gap:6px;padding:4px 12px 10px}
+.cs-pubbtn{background:var(--accent)!important;color:var(--accent-ink)!important;border-color:transparent!important}
+.cs-actions .cs-mini:first-of-type{background:var(--panel2);color:var(--text);border-color:var(--border)}
+.cs-pub{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 12px 10px;padding:8px;border:1px solid color-mix(in srgb,var(--good) 40%,var(--border));border-radius:11px;background:color-mix(in srgb,var(--good) 8%,var(--panel2))}
+.cs-pub input{flex:1;min-width:120px;background:transparent;border:0;outline:0;color:var(--text);font-size:11px}
+.cs-pub .cs-mini{background:var(--panel2);color:var(--text);border-color:var(--border)}
+.cs-danger{color:var(--danger)!important}
+.cs-mini:disabled{opacity:.5}
 </style>
 </head>
 <body>
@@ -745,6 +793,9 @@ button:disabled{opacity:.55;cursor:not-allowed}
           <div class="kn-name">AI Assistant</div>
           <div class="kn-live"><i></i> Library Active</div>
         </div>
+        <button class="kn-icon kn-auto" id="knAuto" type="button" aria-pressed="false" aria-label="Read answers aloud" title="Read answers aloud">
+          <svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+        </button>
       </div>
 
       <div class="kn-msgs" id="knMsgs">
@@ -757,6 +808,9 @@ button:disabled{opacity:.55;cursor:not-allowed}
 
       <div class="kn-input">
         <textarea id="knowledgeQuestion" rows="1" maxlength="4000" placeholder="Ask a question about your documents..."></textarea>
+        <button class="kn-icon kn-mic" id="knMic" type="button" aria-label="Speak your question" title="Speak your question">
+          <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        </button>
         <button class="kn-send" id="knowledgeAsk" type="button" aria-label="Ask Malie">
           <svg viewBox="0 0 24 24"><path d="m22 2-11 11"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
         </button>
@@ -773,88 +827,115 @@ button:disabled{opacity:.55;cursor:not-allowed}
     <button type="button" data-pane="code">Code</button>
   </div>
 
-  <div class="cs-shell" id="csShell" data-pane="agent">
-    <!-- Agent -->
-    <aside class="cs-panel cs-agent" data-p="agent">
-      <div class="cs-brand">
-        <span class="cs-logo"><svg viewBox="0 0 24 24"><path d="m8 8-5 4 5 4M16 8l5 4-5 4M14 5l-4 14"/></svg></span>
-        <b>Malie Code</b><span class="cs-proj" id="csProj">New project</span>
-      </div>
-
-      <div class="cs-scroll" id="csFeed">
-        <div class="cs-msg ai">Describe the website or app you want and I'll build it. You can keep asking for changes afterwards.</div>
-      </div>
-
-      <div class="cs-todos kn-hidden" id="csTodosWrap">
-        <div class="cs-todos-h">Todos <span id="csTodoCount">0</span></div>
-        <ul id="csTodos"></ul>
-      </div>
-
-      <div class="cs-composer" id="csComposer">
-        <div class="cs-gen kn-hidden" id="csGen"><i></i><span>Agent is generating…</span><button type="button" id="csStop">Stop</button></div>
-        <textarea id="csPrompt" rows="2" placeholder="Describe what to build, or what to change…"></textarea>
-        <div class="cs-composer-foot">
-          <span class="cs-model"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg>Malie AI</span>
-          <button type="button" class="cs-send" id="csSend" aria-label="Send">
-            <svg viewBox="0 0 24 24"><path d="m22 2-11 11"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
-          </button>
+  <div class="cs-wrap">
+    <div class="cs-lock kn-hidden" id="csLock">
+      <div class="cs-lock-box">
+        <div class="cs-lock-ic"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+        <h3 id="csLockT">Code Studio is a Pro feature</h3>
+        <p id="csLockP">Upgrade to Pro to build, save and publish websites with Malie AI.</p>
+        <div class="cs-lock-actions">
+          <button type="button" class="primary" id="csLockUp" data-open-view="plans">See Pro plan</button>
+          <button type="button" class="cs-mini" id="csLockRetry">Try again</button>
         </div>
       </div>
-    </aside>
+    </div>
 
-    <!-- Preview -->
-    <section class="cs-panel cs-preview" data-p="preview">
-      <div class="cs-bar">
-        <button type="button" class="cs-ib" id="csReload" aria-label="Reload preview" title="Reload"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></button>
-        <select id="csDevice" aria-label="Device size">
-          <option value="phone">Phone</option>
-          <option value="tablet" selected>Tablet</option>
-          <option value="desktop">Desktop</option>
-        </select>
-        <input id="csW" type="number" value="768" min="240" max="2400" aria-label="Width"><span class="cs-x">W</span>
-        <input id="csH" type="number" value="840" min="240" max="3000" aria-label="Height"><span class="cs-x">H</span>
-        <span class="cs-spacer"></span>
-        <button type="button" class="cs-ib" id="csOpen" aria-label="Open in new tab" title="Open in new tab"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
-      </div>
-      <div class="cs-stage" id="csStage">
-        <div class="cs-empty" id="csEmpty">
-          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
-          <p>Your live preview will appear here.</p>
+    <div class="cs-shell" id="csShell" data-pane="agent">
+      <!-- Agent -->
+      <aside class="cs-panel cs-agent" data-p="agent">
+        <div class="cs-brand">
+          <span class="cs-logo"><svg viewBox="0 0 24 24"><path d="m8 8-5 4 5 4M16 8l5 4-5 4M14 5l-4 14"/></svg></span>
+          <b>Malie Code</b>
+          <button type="button" class="cs-pill" id="csProjBtn" aria-haspopup="true"><span id="csProj">New project</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
         </div>
-        <div class="cs-frame-wrap kn-hidden" id="csFrameWrap"><iframe id="csFrame" title="Live preview" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe></div>
-      </div>
-    </section>
 
-    <!-- Code -->
-    <section class="cs-panel cs-code" data-p="code">
-      <div class="cs-seg">
-        <button type="button" class="active" data-mode="design">Design</button>
-        <button type="button" data-mode="code">&lt;/&gt; Code</button>
-      </div>
-      <div class="cs-filebar">
-        <span class="cs-file"><svg viewBox="0 0 24 24"><path d="m8 8-5 4 5 4M16 8l5 4-5 4"/></svg>index.html</span>
-        <span class="cs-spacer"></span>
-        <button type="button" class="cs-mini" id="csRun">Run</button>
-        <button type="button" class="cs-mini" id="csCopy">Copy</button>
-        <button type="button" class="cs-mini" id="csDownload">Download</button>
-      </div>
-      <div class="cs-editor" id="csEditor">
-        <pre class="cs-gutter" id="csGutter" aria-hidden="true">1</pre>
-        <textarea id="csCode" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off" placeholder="Generated code will appear here. You can also write or paste your own HTML and press Run."></textarea>
-      </div>
-      <div class="cs-design kn-hidden" id="csDesign">
-        <p class="cs-muted">Quick tweaks</p>
-        <div class="cs-quick" id="csQuick">
-          <button type="button" data-q="Make the layout fully responsive on phones.">Make responsive</button>
-          <button type="button" data-q="Switch to a dark theme with green accents.">Dark theme</button>
-          <button type="button" data-q="Add smooth hover and scroll animations.">Add animations</button>
-          <button type="button" data-q="Improve spacing, typography and visual hierarchy.">Polish design</button>
-          <button type="button" data-q="Add a contact form section.">Add contact form</button>
-          <button type="button" data-q="Clean up and comment the code.">Clean code</button>
+        <div class="cs-projects kn-hidden" id="csProjects">
+          <button type="button" class="cs-newproj" id="csNew"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New project</button>
+          <div id="csProjList"></div>
         </div>
-      </div>
-      <p class="status" id="csStatus" aria-live="polite"></p>
-    </section>
+
+        <div class="cs-scroll" id="csFeed"></div>
+
+        <div class="cs-todos kn-hidden" id="csTodosWrap">
+          <div class="cs-todos-h">Todos <span id="csTodoCount">0</span></div>
+          <ul id="csTodos"></ul>
+        </div>
+
+        <div class="cs-composer" id="csComposer">
+          <div class="cs-gen kn-hidden" id="csGen"><i></i><span>Agent is generating…</span><button type="button" id="csStop">Stop</button></div>
+          <textarea id="csPrompt" rows="2" placeholder="Describe what to build, or what to change…"></textarea>
+          <div class="cs-composer-foot">
+            <span class="cs-model"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg>Malie AI</span>
+            <span class="cs-spacer"></span>
+            <button type="button" class="cs-ib" id="csAuto" aria-pressed="false" aria-label="Read replies aloud" title="Read replies aloud"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></button>
+            <button type="button" class="cs-ib" id="csMic" aria-label="Speak your request" title="Speak your request"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+            <button type="button" class="cs-send" id="csSend" aria-label="Send"><svg viewBox="0 0 24 24"><path d="m22 2-11 11"/><path d="M22 2 15 22l-4-9-9-4z"/></svg></button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Preview -->
+      <section class="cs-panel cs-preview" data-p="preview">
+        <div class="cs-bar">
+          <button type="button" class="cs-ib" id="csReload" aria-label="Reload preview" title="Reload"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></button>
+          <select id="csDevice" aria-label="Device size">
+            <option value="phone">Phone</option>
+            <option value="tablet" selected>Tablet</option>
+            <option value="desktop">Desktop</option>
+          </select>
+          <input id="csW" type="number" value="768" min="240" max="2400" aria-label="Width"><span class="cs-x">W</span>
+          <input id="csH" type="number" value="840" min="240" max="3000" aria-label="Height"><span class="cs-x">H</span>
+          <span class="cs-spacer"></span>
+          <button type="button" class="cs-ib" id="csOpen" aria-label="Open in new tab" title="Open in new tab"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
+        </div>
+        <div class="cs-stage" id="csStage">
+          <div class="cs-empty" id="csEmpty">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+            <p>Your live preview will appear here.</p>
+          </div>
+          <div class="cs-frame-wrap kn-hidden" id="csFrameWrap"><iframe id="csFrame" title="Live preview" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe></div>
+        </div>
+      </section>
+
+      <!-- Code -->
+      <section class="cs-panel cs-code" data-p="code">
+        <div class="cs-seg">
+          <button type="button" class="active" data-mode="design">Design</button>
+          <button type="button" data-mode="code">&lt;/&gt; Code</button>
+        </div>
+        <div class="cs-codepane" id="csCodePane">
+          <div class="cs-filetabs" id="csFiles"></div>
+          <div class="cs-actions">
+            <button type="button" class="cs-mini" id="csRun">Run</button>
+            <button type="button" class="cs-mini" id="csCopy">Copy</button>
+            <button type="button" class="cs-mini" id="csZip">Download .zip</button>
+            <button type="button" class="cs-mini cs-pubbtn" id="csPublish">Publish</button>
+          </div>
+          <div class="cs-pub kn-hidden" id="csPub">
+            <input id="csPubUrl" readonly aria-label="Published link">
+            <button type="button" class="cs-mini" id="csPubCopy">Copy</button>
+            <button type="button" class="cs-mini" id="csPubOpen">Open</button>
+            <button type="button" class="cs-mini cs-danger" id="csUnpub">Unpublish</button>
+          </div>
+          <div class="cs-editor" id="csEditor">
+            <pre class="cs-gutter" id="csGutter" aria-hidden="true">1</pre>
+            <textarea id="csCode" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off" placeholder="Generated code will appear here. You can also write or paste your own HTML and press Run."></textarea>
+          </div>
+        </div>
+        <div class="cs-design kn-hidden" id="csDesign">
+          <p class="cs-muted">Quick tweaks</p>
+          <div class="cs-quick" id="csQuick">
+            <button type="button" data-q="Make the layout fully responsive on phones.">Make responsive</button>
+            <button type="button" data-q="Switch to a dark theme with green accents.">Dark theme</button>
+            <button type="button" data-q="Add smooth hover and scroll animations.">Add animations</button>
+            <button type="button" data-q="Improve spacing, typography and visual hierarchy.">Polish design</button>
+            <button type="button" data-q="Add a contact form section.">Add contact form</button>
+            <button type="button" data-q="Clean up and comment the code.">Clean code</button>
+          </div>
+        </div>
+        <p class="status" id="csStatus" aria-live="polite"></p>
+      </section>
+    </div>
   </div>
 </section>
 
@@ -1139,7 +1220,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
         <div class="plan-grid">
           <div class="plan"><h3>Free</h3><div class="price">₦0</div><ul><li>8 AI requests per day</li><li>Chat, Writing Lab, Quiz</li></ul></div>
           <div class="plan featured"><h3>Premium</h3><div class="price" data-price="premium"></div><ul><li>100 requests per day</li><li>Excel File Builder: photo or table to .xlsx</li></ul><button class="primary" data-choose="premium">Choose Premium</button></div>
-          <div class="plan"><h3>Pro</h3><div class="price" data-price="pro"></div><ul><li>300 requests per day</li><li>Everything in Premium</li><li>Engineering Drawing Studio</li><li>Malie Video Studio: 15 seconds of video per day</li></ul><button class="primary" data-choose="pro">Choose Pro</button></div>
+          <div class="plan"><h3>Pro</h3><div class="price" data-price="pro"></div><ul><li>300 requests per day</li><li>Everything in Premium</li><li>Engineering Drawing Studio</li><li>Malie Video Studio: 15 seconds of video per day</li><li>Code Studio: build, save and publish websites</li></ul><button class="primary" data-choose="pro">Choose Pro</button></div>
         </div>
         <div class="work-card" id="payPanel" hidden></div>
 
@@ -1891,7 +1972,7 @@ function buildHistoryContext(conv) {
   }
   return parts.join("\n\n");
 }
-
+  
 /* ───────── Account menu ───────── */
 let quizCache = [];
 const menu = $("accountMenu"), blob = $("menuBlob");
@@ -2619,6 +2700,7 @@ try {
       if (user.uid !== currentUid) {
         clearWorkspace();
         currentUid = user.uid;
+        window.malieUid = user.uid;
         conversations = loadConversations();
         activeId = null;
         switchView("explore");
@@ -2631,6 +2713,7 @@ try {
     } else {
       closeMenu();
       currentUid = null;
+      window.malieUid = null;
       clearWorkspace();
       showSignInButton();
       switchView("explore");
@@ -2668,9 +2751,9 @@ $("clearQuizHistory").onclick = async () => {
     setStatus("quizStatus", "Could not clear history: " + e.message, true);
   }
 };
-  
+
   /* ───────── Plans & payments ───────── */
-const PRICES = { premium: { monthly: 2500, annual: 25000 }, pro: { monthly: 10000, annual: 110000 } };
+const PRICES = { premium: { monthly: 2500, annual: 25000 }, pro: { monthly: 7500, annual: 82500 } };
 const naira = n => "₦" + Number(n).toLocaleString("en-NG");
 const PLAN_NAMES = { premium: "Premium", pro: "Pro" };
 let billing = "monthly", chosenPlan = null, activeRequest = null;
@@ -4442,8 +4525,105 @@ function renderQuiz(questions) {
   });
 })();
     
+/* ---------------- Shared voice helper ---------------- */
+const MALIE_SPK_ICON = '<svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>';
+window.MalieVoice = (() => {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const synth = window.speechSynthesis;
+  let rec = null, recBtn = null, speakingBtn = null;
+
+  function clean(t) {
+    return String(t || "")
+      .replace(/```[\s\S]*?```/g, " (code omitted) ")
+      .replace(/`([^`]*)`/g, "$1")
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/[*_#>~|]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 4000);
+  }
+  function chunks(t) {
+    // Long utterances get cut off by some browsers, so speak sentence by sentence.
+    const sentences = t.match(/[^.!?]+[.!?]*\s*/g) || [t];
+    const out = [];
+    let cur = "";
+    for (const s of sentences) {
+      if ((cur + s).length > 180 && cur) { out.push(cur.trim()); cur = s; }
+      else cur += s;
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out.flatMap(c => c.length > 220 ? (c.match(/.{1,200}(\s|$)/g) || [c]) : [c]);
+  }
+  function stopSpeak() {
+    try { synth && synth.cancel(); } catch {}
+    if (speakingBtn) { speakingBtn.classList.remove("on"); speakingBtn = null; }
+  }
+  function speak(text, btn) {
+    if (!synth || typeof SpeechSynthesisUtterance === "undefined") return false;
+    const sameButton = btn && speakingBtn === btn;
+    stopSpeak();
+    if (sameButton) return true; // tapping again stops it
+    const parts = chunks(clean(text));
+    if (!parts.length) return false;
+    if (rec) { try { rec.stop(); } catch {} }
+    if (btn) { btn.classList.add("on"); speakingBtn = btn; }
+    parts.forEach((p, i) => {
+      const u = new SpeechSynthesisUtterance(p);
+      u.lang = navigator.language || "en-US";
+      if (i === parts.length - 1) {
+        u.onend = u.onerror = () => {
+          if (btn && speakingBtn === btn) { btn.classList.remove("on"); speakingBtn = null; }
+        };
+      }
+      synth.speak(u);
+    });
+    return true;
+  }
+  function listen(target, btn, hint) {
+    const say = (m, e = true) => { if (m && hint) hint(m, e); };
+    if (!SR) { say("Voice input isn't supported in this browser. Try Chrome, Edge or Safari."); return false; }
+    if (rec) { try { rec.stop(); } catch {} return true; }
+    stopSpeak();
+    const r = new SR();
+    r.lang = navigator.language || "en-US";
+    r.continuous = true;
+    r.interimResults = true;
+    const base = target.value ? target.value.replace(/\s+$/, "") + " " : "";
+    let fin = "";
+    r.onresult = e => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) fin += t; else interim += t;
+      }
+      target.value = base + fin + interim;
+      target.dispatchEvent(new Event("input"));
+    };
+    r.onerror = e => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") say("Microphone access was blocked. Allow it in your browser settings.");
+      else if (e.error === "no-speech") say("I didn't hear anything. Try again.");
+      else if (e.error !== "aborted") say("Voice error: " + e.error);
+    };
+    r.onend = () => {
+      btn.classList.remove("on");
+      if (rec === r) { rec = null; recBtn = null; }
+      target.value = target.value.trim();
+      target.dispatchEvent(new Event("input"));
+      target.focus();
+    };
+    try { r.start(); rec = r; recBtn = btn; btn.classList.add("on"); }
+    catch { rec = null; say("Could not start the microphone."); }
+    return true;
+  }
+  function stopAll() { stopSpeak(); if (rec) { try { rec.stop(); } catch {} } }
+  document.addEventListener("click", e => { if (e.target.closest("[data-view]")) stopAll(); });
+  window.addEventListener("pagehide", stopAll);
+  return { speak, listen, stopSpeak, stopAll, canListen: !!SR, canSpeak: !!synth };
+})();
+
 /* ---------------- Knowledge Studio ---------------- */
 let knowledgeDocs = [];
+let knAutoRead = false;
 const knSelected = new Set();
 const knAsked = [];
 
@@ -4489,7 +4669,26 @@ function knAddMsg(text, me) {
   const b = document.createElement("div");
   b.className = "kn-bubble";
   b.textContent = text;
-  row.append(b);
+  if (me) {
+    row.append(b);
+  } else {
+    const col = document.createElement("div");
+    col.className = "kn-msgcol";
+    const spk = document.createElement("button");
+    spk.type = "button";
+    spk.className = "kn-spk";
+    spk.title = "Read aloud";
+    spk.setAttribute("aria-label", "Read this answer aloud");
+    spk.innerHTML = MALIE_SPK_ICON + "<span>Listen</span>";
+    spk.addEventListener("click", () => {
+      if (!window.MalieVoice?.speak(b.textContent, spk)) {
+        knowledgeStatus("Read-aloud isn't supported in this browser.", true);
+      }
+    });
+    b._spk = spk;
+    col.append(b, spk);
+    row.append(col);
+  }
   box.append(row);
   box.scrollTop = box.scrollHeight;
   return b;
@@ -4608,6 +4807,20 @@ async function knowledgeRefresh() {
 }
 
 document.getElementById("knowledgeRefresh")?.addEventListener("click", knowledgeRefresh);
+
+/* Voice: speak a question, hear the answer */
+document.getElementById("knMic")?.addEventListener("click", () => {
+  MalieVoice.listen(document.getElementById("knowledgeQuestion"), document.getElementById("knMic"), knowledgeStatus);
+});
+document.getElementById("knAuto")?.addEventListener("click", () => {
+  if (!MalieVoice.canSpeak) return knowledgeStatus("Read-aloud isn't supported in this browser.", true);
+  knAutoRead = !knAutoRead;
+  const b = document.getElementById("knAuto");
+  b.classList.toggle("on", knAutoRead);
+  b.setAttribute("aria-pressed", String(knAutoRead));
+  knowledgeStatus(knAutoRead ? "Answers will be read aloud." : "Auto read-aloud is off.");
+  if (!knAutoRead) MalieVoice.stopSpeak();
+});
 document.getElementById("knRefreshTop")?.addEventListener("click", knowledgeRefresh);
 
 /* Focus chips fill the question box */
@@ -4736,6 +4949,7 @@ document.getElementById("knowledgeAsk")?.addEventListener(
       const text = result.answer || "No answer was returned.";
       bubble.textContent = text;
       hidden.textContent = text;
+      if (knAutoRead && bubble._spk) window.MalieVoice?.speak(text, bubble._spk);
       document.getElementById("knMsgs").scrollTop = 1e9;
     } catch (error) {
       bubble.textContent = error.message || "Question failed.";
@@ -4750,10 +4964,16 @@ document.getElementById("knowledgeAsk")?.addEventListener(
   const $ = id => document.getElementById(id);
   const shell = $("csShell");
   if (!shell) return;
+  const api = (p, b) => window.malieApi(p, b);
+  const mobile = () => window.matchMedia("(max-width:860px)").matches;
 
   const DEVICES = { phone: [390, 844], tablet: [768, 840], desktop: [1280, 800] };
   const STEPS = ["Understand the request", "Plan the structure", "Write markup & content", "Style the layout", "Add interactivity", "Review & finish"];
-  let busy = false, runId = 0, stepTimer = null, lastHtml = "";
+  const MAX_CONTEXT = 70000;
+  const OK_NAME = /^[\w\-./]{1,60}\.(html?|css|js|json|txt|md|svg)$/i;
+
+  let projects = [], proj = null, busy = false, runId = 0, stepTimer = null;
+  let loadedUid = undefined, autoRead = false;
 
   const status = (msg, err = false) => {
     const el = $("csStatus");
@@ -4761,7 +4981,30 @@ document.getElementById("knowledgeAsk")?.addEventListener(
     el.classList.toggle("error", err);
   };
 
-  /* mobile pane tabs */
+  /* ---------- storage (per signed-in user, in this browser) ---------- */
+  const key = () => "malie-code-projects-v1:" + (window.malieUid || "anon");
+  function loadProjects() {
+    try { projects = JSON.parse(localStorage.getItem(key()) || "[]"); } catch { projects = []; }
+    if (!Array.isArray(projects)) projects = [];
+  }
+  function saveProjects() {
+    if (!proj) return;
+    proj.updated = Date.now();
+    if (!projects.includes(proj) && hasContent(proj)) projects.unshift(proj);
+    projects.sort((a, b) => b.updated - a.updated);
+    projects = projects.slice(0, 30);
+    try { localStorage.setItem(key(), JSON.stringify(projects)); }
+    catch { status("Couldn't save this project: browser storage is full. Delete an old project.", true); }
+    renderProjects();
+  }
+  const hasContent = p => Object.values(p.files).some(v => String(v).trim()) || p.feed.length > 0;
+  const blankProject = () => ({
+    id: "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    name: "New project", files: {}, active: "index.html", feed: [],
+    publishId: "", publishUrl: "", updated: Date.now()
+  });
+
+  /* ---------- mobile pane tabs ---------- */
   function setPane(p) {
     shell.dataset.pane = p;
     document.querySelectorAll("#csTabs button").forEach(b => b.classList.toggle("active", b.dataset.pane === p));
@@ -4769,35 +5012,55 @@ document.getElementById("knowledgeAsk")?.addEventListener(
   }
   document.querySelectorAll("#csTabs button").forEach(b => b.addEventListener("click", () => setPane(b.dataset.pane)));
 
-  /* Design / Code toggle */
+  /* ---------- Design / Code toggle ---------- */
   document.querySelectorAll(".cs-seg button").forEach(b => b.addEventListener("click", () => {
     document.querySelectorAll(".cs-seg button").forEach(x => x.classList.toggle("active", x === b));
     const design = b.dataset.mode === "design";
     $("csDesign").classList.toggle("kn-hidden", !design);
-    $("csEditor").classList.toggle("kn-hidden", design);
-    document.querySelector(".cs-filebar").classList.toggle("kn-hidden", design);
+    $("csCodePane").classList.toggle("kn-hidden", design);
   }));
-  // Start on the Code view like the reference design
   document.querySelector('.cs-seg [data-mode="code"]').click();
 
-  /* feed */
-  function addMsg(text, cls = "") {
+  /* ---------- feed ---------- */
+  function feedEl(kind, text) {
+    const wrap = document.createElement("div");
+    if (kind === "note") {
+      wrap.className = "cs-note";
+      wrap.textContent = text;
+      return wrap;
+    }
     const d = document.createElement("div");
-    d.className = "cs-msg " + cls;
+    d.className = "cs-msg " + (kind === "me" ? "me" : kind === "err" ? "err" : "ai");
     d.textContent = text;
-    $("csFeed").append(d);
-    $("csFeed").scrollTop = 1e9;
+    if (kind === "ai" || kind === "err") {
+      wrap.className = "cs-msgwrap";
+      const spk = document.createElement("button");
+      spk.type = "button";
+      spk.className = "cs-spk";
+      spk.innerHTML = MALIE_SPK_ICON + "<span>Listen</span>";
+      spk.addEventListener("click", () => {
+        if (!MalieVoice.speak(text, spk)) status("Read-aloud isn't supported in this browser.", true);
+      });
+      wrap.append(d, spk);
+      wrap._spk = spk;
+      return wrap;
+    }
     return d;
   }
-  function addNote(text) {
-    const d = document.createElement("div");
-    d.className = "cs-note";
-    d.textContent = text;
-    $("csFeed").append(d);
+  function addFeed(kind, text, persist = true) {
+    const el = feedEl(kind, text);
+    $("csFeed").append(el);
     $("csFeed").scrollTop = 1e9;
+    if (persist && proj) proj.feed.push({ k: kind, t: text });
+    return el;
+  }
+  function renderFeed() {
+    $("csFeed").replaceChildren();
+    addFeed("ai", "Describe the website or app you want and I'll build it. You can keep asking for changes, and your projects are saved automatically.", false);
+    for (const m of proj.feed) addFeed(m.k, m.t, false);
   }
 
-  /* todos */
+  /* ---------- todos ---------- */
   function showTodos() {
     $("csTodosWrap").classList.remove("kn-hidden");
     $("csTodoCount").textContent = STEPS.length;
@@ -4811,16 +5074,14 @@ document.getElementById("knowledgeAsk")?.addEventListener(
     });
   }
   function setStep(n) {
-    [...$("csTodos").children].forEach((li, i) => {
-      li.className = i < n ? "done" : i === n ? "now" : "";
-    });
+    [...$("csTodos").children].forEach((li, i) => { li.className = i < n ? "done" : i === n ? "now" : ""; });
   }
   function startSteps() {
     showTodos();
     let n = 0;
     setStep(0);
     clearInterval(stepTimer);
-    stepTimer = setInterval(() => { if (n < STEPS.length - 2) setStep(++n); }, 2500);
+    stepTimer = setInterval(() => { if (n < STEPS.length - 2) setStep(++n); }, 3000);
   }
   function endSteps(ok) {
     clearInterval(stepTimer);
@@ -4828,32 +5089,109 @@ document.getElementById("knowledgeAsk")?.addEventListener(
     else [...$("csTodos").children].forEach(li => { if (li.classList.contains("now")) li.className = ""; });
   }
 
-  /* line numbers */
+  /* ---------- editor ---------- */
   const code = $("csCode"), gutter = $("csGutter");
   function gutterUpdate() {
     const n = code.value.split("\n").length;
     gutter.textContent = Array.from({ length: n }, (_, i) => i + 1).join("\n");
     gutter.scrollTop = code.scrollTop;
   }
-  code.addEventListener("input", gutterUpdate);
+  let saveTimer = null;
+  code.addEventListener("input", () => {
+    gutterUpdate();
+    if (!proj) return;
+    proj.files[proj.active] = code.value;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveProjects, 700);
+  });
   code.addEventListener("scroll", () => { gutter.scrollTop = code.scrollTop; });
   code.addEventListener("keydown", e => {
     if (e.key === "Tab") {
       e.preventDefault();
-      const s = code.selectionStart;
-      code.setRangeText("  ", s, code.selectionEnd, "end");
-      gutterUpdate();
+      code.setRangeText("  ", code.selectionStart, code.selectionEnd, "end");
+      code.dispatchEvent(new Event("input"));
     }
   });
 
-  /* preview sizing */
+  /* ---------- files ---------- */
+  function renderFiles() {
+    const box = $("csFiles");
+    box.replaceChildren();
+    const names = Object.keys(proj.files);
+    if (!names.includes("index.html")) names.unshift("index.html");
+    for (const n of names) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "cs-ftab" + (n === proj.active ? " active" : "");
+      b.append(document.createTextNode(n));
+      if (n !== "index.html") {
+        const x = document.createElement("i");
+        x.textContent = "×";
+        x.title = "Delete file";
+        x.addEventListener("click", ev => {
+          ev.stopPropagation();
+          if (!confirm(`Delete ${n}?`)) return;
+          delete proj.files[n];
+          if (proj.active === n) proj.active = "index.html";
+          setActive(proj.active);
+          saveProjects();
+        });
+        b.append(x);
+      }
+      b.addEventListener("click", () => setActive(n));
+      box.append(b);
+    }
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "cs-ftab add";
+    add.textContent = "+";
+    add.title = "Add file";
+    add.addEventListener("click", () => {
+      const name = (prompt("New file name (for example about.html, theme.css, app.js):") || "").trim();
+      if (!name) return;
+      if (!OK_NAME.test(name) || name.includes("..")) return status("Use a simple file name ending in .html, .css, .js, .json, .txt, .md or .svg.", true);
+      if (name in proj.files) return status("That file already exists.", true);
+      proj.files[name] = "";
+      setActive(name);
+      saveProjects();
+    });
+    box.append(add);
+  }
+  function setActive(name) {
+    proj.active = name;
+    code.value = proj.files[name] || "";
+    gutterUpdate();
+    renderFiles();
+  }
+
+  /* ---------- preview ---------- */
+  function buildPage(files) {
+    const names = Object.keys(files);
+    let main = files["index.html"] ?? files[names.find(n => /\.html?$/i.test(n))];
+    if (!main || !main.trim()) return "";
+    const clean = n => n.replace(/^\.?\//, "");
+    main = main.replace(/<link\b[^>]*>/gi, tag => {
+      const m = tag.match(/href=["']([^"']+)["']/i);
+      if (!m) return tag;
+      const n = clean(m[1]);
+      return /\.css$/i.test(n) && files[n] != null
+        ? "<style>\n" + files[n].replace(/<\/style/gi, "<\\/style") + "\n</style>"
+        : tag;
+    });
+    main = main.replace(/<script\b([^>]*?)\bsrc=["']([^"']+)["']([^>]*)>\s*<\/script>/gi, (tag, a, src, b) => {
+      const n = clean(src);
+      return files[n] != null
+        ? "<script" + a + b + ">\n" + files[n].replace(/<\/script/gi, "<\\/script") + "\n<\/script>"
+        : tag;
+    });
+    return main;
+  }
   function fit() {
     const wrap = $("csFrameWrap"), stage = $("csStage");
     if (wrap.classList.contains("kn-hidden")) return;
     const w = Math.max(240, +$("csW").value || 768);
     const h = Math.max(240, +$("csH").value || 840);
-    const avail = Math.max(200, stage.clientWidth - 28);
-    const scale = Math.min(1, avail / w);
+    const scale = Math.min(1, Math.max(200, stage.clientWidth - 28) / w);
     wrap.style.width = w + "px";
     wrap.style.height = h + "px";
     wrap.style.transform = `scale(${scale})`;
@@ -4870,85 +5208,280 @@ document.getElementById("knowledgeAsk")?.addEventListener(
   $("csH").addEventListener("input", fit);
   window.addEventListener("resize", fit);
 
-  function render(html) {
-    lastHtml = html;
+  function render() {
+    const html = buildPage(proj.files);
+    if (!html) {
+      $("csEmpty").classList.remove("kn-hidden");
+      $("csFrameWrap").classList.add("kn-hidden");
+      $("csFrame").srcdoc = "";
+      return false;
+    }
     $("csEmpty").classList.add("kn-hidden");
     $("csFrameWrap").classList.remove("kn-hidden");
     $("csFrame").srcdoc = html;
     fit();
+    return true;
   }
-  $("csReload").addEventListener("click", () => { if (code.value.trim()) render(code.value); });
+  $("csReload").addEventListener("click", render);
   $("csRun").addEventListener("click", () => {
-    if (!code.value.trim()) return status("Nothing to run yet.", true);
-    render(code.value);
+    if (!render()) return status("Nothing to run yet. Add an index.html first.", true);
+    saveProjects();
     status("Preview updated.");
-    if (window.matchMedia("(max-width:860px)").matches) setPane("preview");
+    if (mobile()) setPane("preview");
   });
   $("csOpen").addEventListener("click", () => {
-    if (!code.value.trim()) return status("Nothing to open yet.", true);
-    const url = URL.createObjectURL(new Blob([code.value], { type: "text/html" }));
+    const html = buildPage(proj.files);
+    if (!html) return status("Nothing to open yet.", true);
+    const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
     window.open(url, "_blank", "noopener");
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   });
   $("csCopy").addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText(code.value); status("Code copied."); }
-    catch { code.select(); status("Press copy on your keyboard.", true); }
+    try { await navigator.clipboard.writeText(code.value); status(`Copied ${proj.active}.`); }
+    catch { code.select(); status("Couldn't copy automatically. Copy the selected text.", true); }
   });
-  $("csDownload").addEventListener("click", () => {
-    if (!code.value.trim()) return status("Nothing to download yet.", true);
+
+  /* ---------- zip download (no libraries) ---------- */
+  const CRC_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  const crc32 = bytes => {
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 255] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  };
+  function makeZip(files) {
+    const enc = new TextEncoder();
+    const parts = [], central = [];
+    let offset = 0, count = 0;
+    const d = new Date();
+    const dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+    const dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    for (const [name, content] of Object.entries(files)) {
+      const nameB = enc.encode(name), data = enc.encode(content), crc = crc32(data);
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+      lh.setUint16(8, 0, true); lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true);
+      lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+      lh.setUint16(26, nameB.length, true); lh.setUint16(28, 0, true);
+      parts.push(new Uint8Array(lh.buffer), nameB, data);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+      ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true); ch.setUint16(12, dosTime, true);
+      ch.setUint16(14, dosDate, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true);
+      ch.setUint32(24, data.length, true); ch.setUint16(28, nameB.length, true);
+      ch.setUint32(42, offset, true);
+      central.push(new Uint8Array(ch.buffer), nameB);
+      offset += 30 + nameB.length + data.length;
+      count++;
+    }
+    const cdSize = central.reduce((n, c) => n + c.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, count, true); end.setUint16(10, count, true);
+    end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+    return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: "application/zip" });
+  }
+  window.__malieMakeZip = makeZip;
+  $("csZip").addEventListener("click", () => {
+    const files = Object.fromEntries(Object.entries(proj.files).filter(([, v]) => String(v).trim()));
+    if (!Object.keys(files).length) return status("Nothing to download yet.", true);
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([code.value], { type: "text/html" }));
-    a.download = "index.html";
+    a.href = URL.createObjectURL(makeZip(files));
+    a.download = (proj.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "website") + ".zip";
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    status("Zip downloaded.");
   });
 
-  /* quick tweaks */
-  $("csQuick").addEventListener("click", e => {
-    const b = e.target.closest("button[data-q]");
-    if (!b) return;
-    $("csPrompt").value = b.dataset.q;
-    send();
+  /* ---------- publish ---------- */
+  function showPub() {
+    const on = !!(proj && proj.publishUrl);
+    $("csPub").classList.toggle("kn-hidden", !on);
+    $("csPubUrl").value = on ? proj.publishUrl : "";
+    $("csPublish").textContent = on ? "Update published page" : "Publish";
+  }
+  $("csPublish").addEventListener("click", async () => {
+    const html = buildPage(proj.files);
+    if (!html) return status("Build something first, then publish it.", true);
+    const btn = $("csPublish");
+    btn.disabled = true;
+    status("Publishing…");
+    try {
+      const d = await api("/api/code/publish", { html, title: proj.name, id: proj.publishId });
+      proj.publishId = d.id;
+      proj.publishUrl = d.url;
+      saveProjects();
+      showPub();
+      status("Published. Anyone with the link can view it.");
+    } catch (e) {
+      if (e.status === 403) showLock(e);
+      status(e.message || "Could not publish.", true);
+    } finally { btn.disabled = false; }
+  });
+  $("csPubCopy").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(proj.publishUrl); status("Link copied."); }
+    catch { $("csPubUrl").select(); status("Copy the selected link.", true); }
+  });
+  $("csPubOpen").addEventListener("click", () => window.open(proj.publishUrl, "_blank", "noopener"));
+  $("csUnpub").addEventListener("click", async () => {
+    if (!confirm("Unpublish this page? Its link will stop working.")) return;
+    try {
+      await api("/api/code/unpublish", { id: proj.publishId });
+      proj.publishId = ""; proj.publishUrl = "";
+      saveProjects(); showPub();
+      status("Page unpublished.");
+    } catch (e) { status(e.message || "Could not unpublish.", true); }
   });
 
-  /* parse model reply */
-  function extract(reply) {
-    let html = "", text = reply;
-    const fenced = reply.match(/```(?:html)?\s*\n([\s\S]*?)```/i);
-    if (fenced) {
-      html = fenced[1].trim();
-      text = reply.replace(fenced[0], "").trim();
-    } else {
-      const i = reply.search(/<!DOCTYPE html|<html[\s>]/i);
-      if (i >= 0) {
-        html = reply.slice(i).trim();
-        text = reply.slice(0, i).trim();
-        const end = html.toLowerCase().lastIndexOf("</html>");
-        if (end >= 0) html = html.slice(0, end + 7);
-      } else {
-        // unterminated fence
-        const open = reply.match(/```(?:html)?\s*\n([\s\S]+)$/i);
-        if (open) { html = open[1].trim(); text = reply.slice(0, open.index).trim(); }
-      }
+  /* ---------- projects ---------- */
+  function renderProjects() {
+    const list = $("csProjList");
+    list.replaceChildren();
+    for (const p of projects) {
+      const row = document.createElement("div");
+      row.className = "cs-proj-item" + (p === proj ? " cur" : "");
+      const name = document.createElement("b");
+      name.textContent = p.name;
+      const when = document.createElement("small");
+      when.textContent = new Date(p.updated).toLocaleDateString();
+      const del = document.createElement("button");
+      del.type = "button";
+      del.textContent = "Delete";
+      del.addEventListener("click", ev => {
+        ev.stopPropagation();
+        if (!confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
+        projects = projects.filter(x => x !== p);
+        try { localStorage.setItem(key(), JSON.stringify(projects)); } catch {}
+        if (p === proj) openProject(projects[0] || blankProject());
+        else renderProjects();
+      });
+      row.append(name, when, del);
+      row.addEventListener("click", () => { openProject(p); $("csProjects").classList.add("kn-hidden"); });
+      list.append(row);
     }
-    return { html, text };
+  }
+  function openProject(p) {
+    if (busy) { runId++; setBusy(false); endSteps(false); }
+    MalieVoice.stopSpeak();
+    proj = p;
+    if (!(proj.active in proj.files)) proj.active = Object.keys(proj.files)[0] || "index.html";
+    $("csProj").textContent = proj.name;
+    $("csTodosWrap").classList.add("kn-hidden");
+    renderFeed();
+    setActive(proj.active);
+    render();
+    showPub();
+    renderProjects();
+    status("");
+  }
+  $("csProjBtn").addEventListener("click", () => $("csProjects").classList.toggle("kn-hidden"));
+  $("csNew").addEventListener("click", () => {
+    $("csProjects").classList.add("kn-hidden");
+    openProject(blankProject());
+  });
+  document.addEventListener("click", e => {
+    if (!e.target.closest("#csProjects, #csProjBtn")) $("csProjects").classList.add("kn-hidden");
+  });
+
+  /* ---------- Pro gate ---------- */
+  function showLock(e) {
+    const upgrade = e && e.status === 403;
+    $("csLock").classList.remove("kn-hidden");
+    $("csLockT").textContent = upgrade ? "Code Studio is a Pro feature" : "Couldn't open Code Studio";
+    $("csLockP").textContent = upgrade
+      ? "Upgrade to Pro to build, save and publish websites with Malie AI."
+      : ((e && e.message) || "Please sign in and try again.");
+    $("csLockUp").classList.toggle("kn-hidden", !upgrade);
+    $("csLockRetry").classList.toggle("kn-hidden", upgrade && false);
+  }
+  async function checkAccess() {
+    try {
+      await api("/api/code/access", {});
+      $("csLock").classList.add("kn-hidden");
+      return true;
+    } catch (e) { showLock(e); return false; }
+  }
+  $("csLockRetry").addEventListener("click", checkAccess);
+
+  /* ---------- AI request ---------- */
+  function parseReply(reply) {
+    const files = {};
+    let truncated = false, first = -1;
+    const re = /(?:^|\n)[ \t]*(?:\*\*)?FILE:[ \t]*`?([\w\-./]+)`?(?:\*\*)?[ \t]*\r?\n[ \t]*```[\w-]*[ \t]*\r?\n([\s\S]*?)```/g;
+    let m, lastEnd = 0;
+    while ((m = re.exec(reply))) {
+      lastEnd = re.lastIndex;
+      if (first < 0) first = m.index;
+      files[m[1].replace(/^\.?\//, "")] = m[2].replace(/\s+$/, "");
+    }
+    const rest = reply.slice(lastEnd);
+    const t = rest.match(/FILE:[ \t]*`?([\w\-./]+)`?\**[ \t]*\r?\n[ \t]*```[\w-]*[ \t]*\r?\n([\s\S]+)$/);
+    if (t) {
+      files[t[1].replace(/^\.?\//, "")] = t[2].replace(/\s+$/, "");
+      truncated = true;
+      if (first < 0) first = rest.indexOf("FILE:");
+    }
+    let text = first >= 0 ? reply.slice(0, first) : "";
+
+    if (!Object.keys(files).length) {
+      const f = reply.match(/```(?:html)?[ \t]*\r?\n([\s\S]*?)```/i);
+      const u = reply.match(/```(?:html)?[ \t]*\r?\n([\s\S]+)$/i);
+      const raw = reply.search(/<!DOCTYPE html|<html[\s>]/i);
+      if (f) { files["index.html"] = f[1].trim(); text = reply.slice(0, f.index); }
+      else if (u) { files["index.html"] = u[1].trim(); text = reply.slice(0, u.index); truncated = true; }
+      else if (raw >= 0) { files["index.html"] = reply.slice(raw).trim(); text = reply.slice(0, raw); }
+      else text = reply;
+    }
+    if (files["index.html"] && !/<\/html>\s*$/i.test(files["index.html"])) truncated = true;
+    text = text.replace(/```[\s\S]*$/g, "").replace(/\*\*/g, "").trim();
+    return { files, text, truncated };
   }
 
   function buildPrompt(request) {
-    const current = code.value.trim();
-    let p =
-      "You are Malie Code, an expert front-end developer. Build or edit a single self-contained web page.\n" +
-      "Rules:\n" +
-      "- Return ONE complete HTML document (<!DOCTYPE html> to </html>) inside a single ```html code block.\n" +
-      "- Put all CSS in a <style> tag and all JavaScript in a <script> tag. No build tools.\n" +
-      "- Do not use external images or libraries that need an API key. Fonts from Google Fonts are fine. Use CSS, SVG or emoji for visuals.\n" +
-      "- Make it responsive, accessible and visually polished.\n" +
-      "- Before the code block, write at most two short sentences describing what you did. Do not add text after the code block.\n\n";
-    if (current) {
-      p += "Here is the current page. Apply the requested change and return the full updated document:\n```html\n" +
-        current.slice(0, 40000) + "\n```\n\n";
+    const names = Object.keys(proj.files).filter(n => String(proj.files[n]).trim());
+    const lines = [
+      "Build or edit a small website made of separate files.",
+      "",
+      "OUTPUT FORMAT (follow exactly):",
+      "1) First, one or two short sentences saying what you did.",
+      "2) Then EVERY file in full. Introduce each file with a line `FILE: <name>` followed by a fenced code block, like this:",
+      "FILE: index.html",
+      "```html",
+      "<!DOCTYPE html>",
+      "...",
+      "```",
+      "FILE: styles.css",
+      "```css",
+      "...",
+      "```",
+      "FILE: script.js",
+      "```js",
+      "...",
+      "```",
+      "",
+      "RULES:",
+      "- Use index.html, styles.css and script.js. index.html must load them with <link rel=\"stylesheet\" href=\"styles.css\"> and <script src=\"script.js\"><\/script>. Add other files only when truly needed.",
+      "- Return every file completely, even unchanged ones. Never write '...' or 'rest unchanged' inside a file.",
+      "- Keep the code compact so nothing is cut off. Write nothing after the last code block.",
+      "- Make it responsive, accessible and polished. Use no external images and no libraries that need an API key."
+    ];
+    if (names.length) {
+      let ctx = "";
+      for (const n of names) {
+        const lang = n.endsWith(".css") ? "css" : n.endsWith(".js") ? "js" : "html";
+        ctx += "FILE: " + n + "\n```" + lang + "\n" + proj.files[n] + "\n```\n";
+      }
+      if (ctx.length > MAX_CONTEXT) throw new Error("This project is too large to edit with AI. Remove some code or start a new project.");
+      lines.push("", "CURRENT PROJECT FILES (apply the request to these and return all files):", ctx);
     }
-    return p + "Request:\n" + request;
+    lines.push("", "REQUEST:", request);
+    return lines.join("\n");
   }
 
   function setBusy(on) {
@@ -4957,13 +5490,13 @@ document.getElementById("knowledgeAsk")?.addEventListener(
     $("csGen").classList.toggle("kn-hidden", !on);
     $("csSend").disabled = on;
   }
-
   $("csStop").addEventListener("click", () => {
     if (!busy) return;
     runId++;
     setBusy(false);
     endSteps(false);
-    addNote("Stopped.");
+    addFeed("note", "Stopped.");
+    saveProjects();
   });
 
   async function send() {
@@ -4972,52 +5505,100 @@ document.getElementById("knowledgeAsk")?.addEventListener(
     const request = input.value.trim();
     if (!request) return status("Describe what you want to build first.", true);
     if (typeof window.malieApi !== "function") return status("Sign in first.", true);
+    if (!proj) openProject(blankProject());
 
+    let prompt;
+    try { prompt = buildPrompt(request); }
+    catch (e) { return status(e.message, true); }
+
+    MalieVoice.stopAll();
     status("");
     input.value = "";
-    addMsg(request, "me");
-    if ($("csProj").textContent === "New project") $("csProj").textContent = request.slice(0, 24);
+    addFeed("me", request);
+    if (proj.name === "New project") {
+      proj.name = request.replace(/\s+/g, " ").slice(0, 28);
+      $("csProj").textContent = proj.name;
+    }
+    saveProjects();
 
     const my = ++runId;
     const t0 = Date.now();
     setBusy(true);
     startSteps();
-    if (window.matchMedia("(max-width:860px)").matches) setPane("agent");
+    if (mobile()) setPane("agent");
 
     try {
-      const data = await window.malieApi("/api/chat", { message: buildPrompt(request) });
+      const data = await api("/api/code/generate", { message: prompt });
       if (my !== runId) return;
       const reply = data.reply ?? data.result ?? data.output;
       if (!reply) throw new Error("No response returned.");
-      const { html, text } = extract(typeof reply === "string" ? reply : JSON.stringify(reply));
-      if (!html) {
+      const { files, text, truncated } = parseReply(typeof reply === "string" ? reply : JSON.stringify(reply));
+      const names = Object.keys(files).filter(n => OK_NAME.test(n) && !n.includes("..")).slice(0, 12);
+      if (!names.length) {
         endSteps(false);
-        addMsg(text || "I couldn't produce code for that. Try describing it differently.", "err");
+        addFeed("err", text || "I couldn't produce code for that. Try describing it differently.");
+        saveProjects();
         return;
       }
-      code.value = html;
-      gutterUpdate();
-      render(html);
+      for (const n of names) proj.files[n] = files[n];
+      setActive(names.includes("index.html") ? "index.html" : names[0]);
+      render();
       endSteps(true);
-      addNote(`Thought for ${Math.max(1, Math.round((Date.now() - t0) / 1000))}s`);
-      addMsg(text || "Done. Your page is ready in the preview.");
-      if (window.matchMedia("(max-width:860px)").matches) setPane("preview");
+      addFeed("note", `Thought for ${Math.max(1, Math.round((Date.now() - t0) / 1000))}s · ${names.length} file${names.length > 1 ? "s" : ""}`);
+      const el = addFeed("ai", text || "Done. Your page is ready in the preview.");
+      if (truncated) addFeed("err", "The reply was cut off, so the code may be incomplete. Ask me to \"continue\" or to make it simpler.");
+      saveProjects();
+      if (autoRead && el._spk) MalieVoice.speak(text || "Done. Your page is ready in the preview.", el._spk);
+      if (mobile()) setPane("preview");
     } catch (e) {
       if (my !== runId) return;
       endSteps(false);
-      addMsg("Error: " + (e.message || "Something went wrong."), "err");
+      if (e.status === 403) showLock(e);
+      addFeed("err", "Error: " + (e.message || "Something went wrong."));
+      saveProjects();
     } finally {
       if (my === runId) setBusy(false);
     }
   }
-
   $("csSend").addEventListener("click", send);
   $("csPrompt").addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   });
+  $("csQuick").addEventListener("click", e => {
+    const b = e.target.closest("button[data-q]");
+    if (!b) return;
+    $("csPrompt").value = b.dataset.q;
+    send();
+  });
 
-  // refit when the view becomes visible
-  document.querySelector('[data-view="code"]')?.addEventListener("click", () => setTimeout(fit, 80));
+  /* ---------- voice ---------- */
+  $("csMic").addEventListener("click", () => MalieVoice.listen($("csPrompt"), $("csMic"), status));
+  $("csAuto").addEventListener("click", () => {
+    if (!MalieVoice.canSpeak) return status("Read-aloud isn't supported in this browser.", true);
+    autoRead = !autoRead;
+    $("csAuto").classList.toggle("on", autoRead);
+    $("csAuto").setAttribute("aria-pressed", String(autoRead));
+    status(autoRead ? "Replies will be read aloud." : "Auto read-aloud is off.");
+    if (!autoRead) MalieVoice.stopSpeak();
+  });
+
+  /* ---------- entering the view ---------- */
+  async function onEnter() {
+    const uid = window.malieUid || null;
+    if (loadedUid !== uid) {
+      loadedUid = uid;
+      loadProjects();
+      openProject(projects[0] || blankProject());
+    } else if (!proj) {
+      openProject(blankProject());
+    }
+    setTimeout(fit, 80);
+    checkAccess();
+  }
+  new MutationObserver(() => {
+    if ($("view-code").classList.contains("active")) onEnter();
+  }).observe($("view-code"), { attributes: true, attributeFilter: ["class"] });
+  if ($("view-code").classList.contains("active")) onEnter();
 })();
 
 </script>

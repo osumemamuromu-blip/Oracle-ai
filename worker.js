@@ -771,7 +771,8 @@ messages: [
           ],
           temperature: 0.2,
           max_tokens: 6000,
-          stream: true
+...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+stream: true
         })
       }
     );

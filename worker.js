@@ -3841,10 +3841,24 @@ try {
 
         const repairedRaw = await callNvidiaAI(env, repairPrompt, true);
 
-        const repairedResult = parseJsonObject(
-          repairedRaw,
-          "Malie could not repair the CAD script. Please generate the model again."
-        );
+let repairedResult;
+
+try {
+  repairedResult = parseJsonObject(
+    repairedRaw,
+    "Repair response was not valid JSON."
+  );
+} catch (error) {
+  console.error("CAD repair returned invalid JSON", JSON.stringify({
+    message: String(error?.message || error),
+    responseLength: String(repairedRaw || "").length,
+    responsePreview: String(repairedRaw || "").slice(0, 1200)
+  }));
+
+  throw new Error(
+    "The CAD repair model returned an invalid response. Please try a simpler model description."
+  );
+}
 
         title = String(
           repairedResult.title || title

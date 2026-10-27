@@ -1964,6 +1964,55 @@ function buildAllViews(model, projection) {
 /* CAD code validation                                                 */
 /* ------------------------------------------------------------------ */
 
+const CAD_API = Object.freeze({
+  primitives: Object.freeze({
+    Box: "Box(x,y,z)",
+    Sphere: "Sphere(r)",
+    Cylinder: "Cylinder(r,h)",
+    Cone: "Cone(r1,r2,h)",
+    Circle: "Circle(r,wire?)",
+    Polygon: "Polygon(points,wire?)",
+    BSpline: "BSpline(points,closed?)",
+    Text3D: "Text3D(text,size,height,font?)",
+    Sketch: "new Sketch([x,y],plane?)"
+  }),
+
+  operations: Object.freeze({
+    Translate: "Translate([x,y,z],shape)",
+    Rotate: "Rotate([ax,ay,az],degrees,shape)",
+    Scale: "Scale(factor,shape)",
+    Mirror: "Mirror([x,y,z],shape)",
+    Union: "Union(shapes)",
+    Difference: "Difference(body,tools)",
+    Intersection: "Intersection(shapes)",
+    Extrude: "Extrude(face,[dx,dy,dz])",
+    Revolve: "Revolve(shape,degrees)",
+    Loft: "Loft(wires)",
+    Pipe: "Pipe(shape,path)",
+    Offset: "Offset(shape,distance)",
+    FilletEdges: "FilletEdges(shape,radius,indices)",
+    ChamferEdges: "ChamferEdges(shape,distance,indices)"
+  }),
+
+  methods: Object.freeze([
+    "LineTo", "Fillet", "ArcTo", "BSplineTo", "End", "Face", "Wire",
+    "ofType", "parallel", "max", "min", "indices"
+  ]),
+
+  measurements: Object.freeze([
+    "Edges", "Volume", "SurfaceArea", "CenterOfMass"
+  ]),
+
+  math: Object.freeze([
+    "PI", "abs", "min", "max", "sqrt", "sin", "cos", "tan",
+    "round", "floor", "ceil", "pow"
+  ]),
+
+  keywords: Object.freeze([
+    "const", "let", "var", "new", "true", "false", "null", "undefined"
+  ])
+});
+
 
 function validateCadCode(rawCode) {
   let code = String(rawCode || "").trim();

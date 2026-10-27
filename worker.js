@@ -3770,7 +3770,32 @@ const prompt = [
 
 
      
-      const raw = await callNvidiaAI(env, prompt, true);
+      const cadGenerationStartedAt = Date.now();
+
+console.log("CAD generation started", JSON.stringify({
+  promptLength: description.length,
+  timestamp: new Date().toISOString()
+}));
+
+let raw;
+
+try {
+  raw = await callNvidiaAI(env, prompt, true);
+
+  console.log("CAD generation completed", JSON.stringify({
+    durationMs: Date.now() - cadGenerationStartedAt,
+    responseLength: raw.length
+  }));
+} catch (error) {
+  console.error("CAD generation failed", JSON.stringify({
+    durationMs: Date.now() - cadGenerationStartedAt,
+    message: String(error?.message || error),
+    name: error?.name || null,
+    status: error?.status || null
+  }));
+
+  throw error;
+}
 
       const result = parseJsonObject(
         raw,

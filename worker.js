@@ -3796,7 +3796,7 @@ const prompt = [
   "Assign the completed requested model to a variable named finalModel. Preserve the result of every Boolean operation.",
 
   "Use const or let declarations and numeric coordinates. Use positive dimensions and sensible proportions. Negative coordinates are allowed in point arrays and translations.",
-  "Do not use imports, custom functions, loops, conditions, browser APIs, arbitrary JavaScript, or markdown fences. Do not invent unsupported CAD functions.",
+  "Do not use imports, custom functions, loops, conditions, browser APIs, arbitrary JavaScript, or markdown fences. Use only the exact supported function names listed in this prompt. Cube is not supported; use Box(side,side,side) for a cube. Never invent aliases, functions, or overloads.",
   
   "CRITICAL CODE RESTRICTIONS:",
   "Never use for, while, or do loops.",

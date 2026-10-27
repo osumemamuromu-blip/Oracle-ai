@@ -3774,9 +3774,13 @@ const prompt = [
   "Generate reliable 3D CAD JavaScript for Cascade Studio.",
   "Return ONLY a JSON object with exactly two fields: title (short string) and code (string). No markdown fences.",
   "The code must use only the documented CascadeStudio standard library.",
-  "Supported primitives: Box(x,y,z), Sphere(r), Cylinder(r,h), Cone(r1,r2,h), Circle(r,wire?), Polygon(points,wire?), Text3D(text,size,height,font?), BSpline(points,closed?).",
+
+"Supported primitives: " + Object.values(CAD_API.primitives).filter(item => !item.startsWith("new Sketch")).join(", ") + ".",
+
   "Supported sketch API: new Sketch([x,y], plane?).LineTo([x,y]).Fillet(r).ArcTo([midX,midY],[endX,endY]).BSplineTo(points).End(true).Face(). The plane may be XY, XZ, or YZ.",
-  "Supported operations: Translate([x,y,z],shape), Rotate([ax,ay,az],degrees,shape), Scale(factor,shape), Mirror([x,y,z],shape), Union(shapes), Difference(body,[tools]), Intersection(shapes), Extrude(face,[dx,dy,dz]), Revolve(shape,degrees), Loft(wires), Pipe(shape,path), Offset(shape,distance), FilletEdges(shape,radius,indices), ChamferEdges(shape,distance,indices).",
+
+"Supported operations: " + Object.values(CAD_API.operations).join(", ") + ".",
+
 "Use Pipe(shape, path) with exactly two arguments. The path must be a valid wire of the type expected by the installed Cascade Studio engine. Never assume extra arguments or pass a Sketch object, face, or general shape as the path.",
 "Use only documented CascadeStudio operations with their correct argument order and compatible geometry types.",
 "For swept parts, construct a valid path and ensure the profile is correctly oriented to the path at its start.",
@@ -3787,7 +3791,9 @@ const prompt = [
 "Create hollow swept parts only using the exact Pipe signature and geometry types supported by the installed Cascade Studio engine. Reuse a centerline path only when the API supports it. Subtract the inner solid from the outer solid using Difference(outerPipe, [innerPipe]) when both solids are valid.",
 "Subtract the inner pipe from the outer pipe using Difference(outerPipe, [innerPipe]) and assign the result to finalModel.",
 "Never use return finalModel; at the end of the generated script.",
-  "Supported selectors and measurements: Edges(shape).ofType(type).parallel(axis).max(axis).min(axis).indices(), Volume(shape), SurfaceArea(shape), CenterOfMass(shape).",
+
+"Supported selectors and measurements: Edges(shape).ofType(type).parallel(axis).max(axis).min(axis).indices(), " + CAD_API.measurements.filter(name => name !== "Edges").map(name => name + "(shape)").join(", ") + ".",
+
   "For square or rectangular profiles, prefer Sketch with 2D points followed by End(true).Face() and Extrude(face,[0,0,height]).",
   "Example rectangular block: const face = new Sketch([-20,-20]).LineTo([20,-20]).LineTo([20,20]).LineTo([-20,20]).End(true).Face(); const finalModel = Extrude(face,[0,0,20]);",
   "Polygon requires an array of 3D points. Correct example: const face = Polygon([[0,0,0],[40,0,0],[40,40,0],[0,40,0]]); const finalModel = Extrude(face,[0,0,20]); Never pass a flat list of coordinates to Polygon.",
@@ -3882,7 +3888,11 @@ try {
 "Do not call GetWire unless it is confirmed to be a supported function and its required input type is known.",
 "Before using Pipe, ensure the profile and path are the exact geometry types required by Cascade Studio. Do not pass a Sketch, face, or general shape where a wire is required.",
 "For a hollow swept part, create compatible outer and inner profiles and use the documented sweep operation. Subtract the inner swept volume from the outer volume only when both operations return valid compatible shapes.",
-"Do not invent function names, overloads, argument types, or extra arguments. Return one complete script with unique variable names and assign the final result to finalModel.",
+
+"Supported primitives: " + Object.values(CAD_API.primitives).filter(item => !item.startsWith("new Sketch")).join(", ") + ".",
+"Supported operations: " + Object.values(CAD_API.operations).join(", ") + ".",
+"Do not invent function names, overloads, argument types, or extra arguments. Cube is unsupported; use Box(side,side,side) for a cube. Return one complete script with unique variable names and assign the final result to finalModel.",
+
 "For hollow sweeps, use compatible outer and inner profiles and subtract the inner sweep from the outer sweep.",
 "Preserve every requested component, dimension, hole, cavity, connection, and geometric feature while repairing the script.",
 "Make the smallest necessary correction to fix the validation error.",

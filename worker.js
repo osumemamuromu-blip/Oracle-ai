@@ -2124,7 +2124,7 @@ if (forbiddenMatch) {
   const allowedMethods = new Set(CAD_API.methods);
 
   const allowedKeywords = new Set(CAD_API.keywords);
-
+const allowedOutputVariables = new Set(["finalModel"]);
 
   const declared = new Set();
 
@@ -2193,8 +2193,11 @@ for (const match of masked.matchAll(
       continue;
     }
 
-    // Math is allowed only with the approved properties listed above.
-    if (identifier === "Math") continue;
+   // Allow the required final CAD output variable.
+if (allowedOutputVariables.has(identifier)) continue;
+
+// Math is allowed only with the approved properties listed above.
+if (identifier === "Math") continue;
 
     throw new Error(
       "The CAD script uses an unsupported identifier: " + identifier

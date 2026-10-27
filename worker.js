@@ -3797,10 +3797,24 @@ try {
   throw error;
 }
 
-      const result = parseJsonObject(
-        raw,
-        "Malie could not generate CAD code from that description. Please try again."
-      );
+      let result;
+
+try {
+  result = parseJsonObject(
+    raw,
+    "Initial CAD response was not valid JSON."
+  );
+} catch (error) {
+  console.error("CAD initial response invalid JSON", JSON.stringify({
+    message: String(error?.message || error),
+    responseLength: String(raw || "").length,
+    responsePreview: String(raw || "").slice(0, 1200)
+  }));
+
+  throw new Error(
+    "Malie received an invalid CAD response. Please try again."
+  );
+}
 
       let title = String(
         result.title || "Generated CAD Model"

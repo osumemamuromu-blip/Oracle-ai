@@ -4768,8 +4768,98 @@ function renderQuiz(questions) {
 }
 </script>
   <script>
+
 (() => {
+  "use strict";
+
   const CASCADE_ORIGIN = "https://cascadestudio.pages.dev";
+  const MAX_PROMPT_LENGTH = 2000;
+  const pendingRequests = new Set();
+
+  window.addEventListener("message", async (event) => {
+    if (event.origin !== CASCADE_ORIGIN) return;
+
+    const frame = document.getElementById("cascadeStudioFrame");
+    if (!frame || event.source !== frame.contentWindow) return;
+
+    const message = event.data;
+
+    if (
+      !message ||
+      message.type !== "MALIE_CAD_GENERATE" ||
+      typeof message.requestId !== "string" ||
+      typeof message.prompt !== "string"
+    ) {
+      return;
+    }
+
+    const requestId = message.requestId;
+    const prompt = message.prompt.trim();
+
+    if (
+      !requestId ||
+      requestId.length > 100 ||
+      !prompt ||
+      prompt.length > MAX_PROMPT_LENGTH ||
+      pendingRequests.has(requestId)
+    ) {
+      frame.contentWindow.postMessage({
+        type: "MALIE_CAD_RESULT",
+        requestId,
+        error: "Please provide a valid CAD description under 2,000 characters."
+      }, CASCADE_ORIGIN);
+      return;
+    }
+
+    // Prevent simultaneous requests from the same embedded editor.
+    if (pendingRequests.size >= 1) {
+      frame.contentWindow.postMessage({
+        type: "MALIE_CAD_RESULT",
+        requestId,
+        error: "A CAD request is already running. Please wait."
+      }, CASCADE_ORIGIN);
+      return;
+    }
+
+    pendingRequests.add(requestId);
+
+    try {
+      if (typeof window.malieApi !== "function") {
+        throw new Error("Malie API is unavailable. Refresh the page and try again.");
+      }
+
+      const result = await window.malieApi("/api/cad/generate", {
+        prompt
+      });
+
+      if (!result || result.ok !== true || typeof result.code !== "string") {
+        throw new Error(
+          result?.error || "Malie could not generate an executable CAD model."
+        );
+      }
+
+      frame.contentWindow.postMessage({
+        type: "MALIE_CAD_RESULT",
+        requestId,
+        result: {
+          ok: true,
+          title: String(result.title || "Generated CAD Model").slice(0, 80),
+          code: result.code,
+          usage: result.usage
+        }
+      }, CASCADE_ORIGIN);
+    } catch (error) {
+      frame.contentWindow.postMessage({
+        type: "MALIE_CAD_RESULT",
+        requestId,
+        error: error?.message || "CAD generation failed. Please try again."
+      }, CASCADE_ORIGIN);
+    } finally {
+      pendingRequests.delete(requestId);
+    }
+  });
+})();
+
 
   window.addEventListener("message", async (event) => {
     if (event.origin !== CASCADE_ORIGIN) return;

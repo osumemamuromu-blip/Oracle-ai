@@ -800,97 +800,291 @@ async function nvidiaStreamOnce(env, model, prompt, jsonMode) {
 
   // Read the server-sent-event stream and assemble the answer text.
   // Reasoning tokens (reasoning_content) are ignored; only final content is kept.
+
+async function callNvidiaAI(env, prompt, jsonMode = true) {
+  if (!env.NVIDIA_API_KEY) {
+    const error = new Error("NVIDIA API key is not configured.");
+    error.status = 500;
+    throw error;
+  }
+
+  const model =
+    env.NVIDIA_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b";
+
+  // At most two attempts, and only for temporary upstream failures.
+  // Empty reasoning-only responses and invalid output are not retried here.
+  const maxAttempts = 2;
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await nvidiaStreamOnce(env, model, prompt, jsonMode);
+    } catch (error) {
+      lastError = error;
+
+      if (!error.retryable || attempt >= maxAttempts) {
+        break;
+      }
+
+      console.warn("Retrying temporary NVIDIA failure:", JSON.stringify({
+        attempt,
+        message: String(error.message || error),
+        status: error.status || null
+      }));
+
+      await new Promise(resolve => setTimeout(resolve, 1200));
+    }
+  }
+
+  throw lastError || new Error("NVIDIA CAD generation failed.");
+}
+
+async function nvidiaStreamOnce(env, model, prompt, jsonMode) {
+  const fail = (message, status = 502, retryable = false) => {
+    const error = new Error(message);
+    error.status = status;
+    error.retryable = retryable;
+    return error;
+  };
+
+  let response;
+
+  try {
+    response = await fetch(
+      "https://integrate.api.nvidia.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${env.NVIDIA_API_KEY}`,
+          "Content-Type": "application/json",
+          "Accept": "text/event-stream"
+        },
+        signal: AbortSignal.timeout(100000),
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: "system",
+              content: jsonMode
+                ? "You are Malie AI's CAD code generator. Return only a valid JSON object matching the requested schema. Do not use Markdown fences or explanations. Prioritize complete, executable code."
+                : "You are Malie AI's CAD code generator. Return the requested result directly."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: 6000,
+          stream: true
+        })
+      }
+    );
+  } catch (cause) {
+    const timedOut =
+      cause?.name === "TimeoutError" ||
+      cause?.name === "AbortError";
+
+    console.error("NVIDIA fetch failed:", JSON.stringify({
+      name: cause?.name || null,
+      message: String(cause?.message || cause)
+    }));
+
+    throw fail(
+      timedOut
+        ? "NVIDIA AI request timed out. Try a simpler CAD description."
+        : "Could not connect to NVIDIA AI. Please try again.",
+      502,
+      true
+    );
+  }
+
+  if (!response.ok) {
+    const details = await response.text().catch(() => "");
+
+    console.error("NVIDIA API error:", JSON.stringify({
+      status: response.status,
+      body: details.slice(0, 1000)
+    }));
+
+    if (response.status === 429) {
+      throw fail(
+        "NVIDIA rejected the request because of a rate limit or account limit. Check your NVIDIA API usage and account status.",
+        429,
+        false
+      );
+    }
+
+    const retryable =
+      response.status === 408 ||
+      response.status === 425 ||
+      response.status >= 500;
+
+    throw fail(
+      `NVIDIA API returned HTTP ${response.status}. Check the Worker logs for details.`,
+      502,
+      retryable
+    );
+  }
+
+  if (!response.body) {
+    throw fail(
+      "NVIDIA returned no response stream.",
+      502,
+      true
+    );
+  }
+
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
+
   let buffer = "";
   let result = "";
   let finishReason = null;
   let sawReasoning = false;
   let streamError = null;
+  let receivedEvents = 0;
 
-  const handleLine = (line) => {
+  function handleLine(line) {
     const trimmed = line.trim();
-    if (!trimmed.startsWith("data:")) return;
 
-    const payload = trimmed.slice(5).trim();
-    if (!payload || payload === "[DONE]") return;
-
-    let json;
-    try {
-      json = JSON.parse(payload);
-    } catch {
+    if (!trimmed.startsWith("data:")) {
       return;
     }
 
+    const payload = trimmed.slice(5).trim();
+
+    if (!payload || payload === "[DONE]") {
+      return;
+    }
+
+    let json;
+
+    try {
+      json = JSON.parse(payload);
+    } catch {
+      // Ignore incomplete or non-JSON SSE lines.
+      return;
+    }
+
+    receivedEvents++;
+
     if (json?.error) {
-      streamError = json.error?.message || "NVIDIA stream error.";
+      const detail =
+        json.error?.message ||
+        json.error?.detail ||
+        "NVIDIA reported a streaming error.";
+
+      streamError = String(detail).slice(0, 250);
       return;
     }
 
     const choice = json?.choices?.[0];
     const delta = choice?.delta;
 
-    if (typeof delta?.content === "string") result += delta.content;
-    if (delta?.reasoning_content || delta?.reasoning) sawReasoning = true;
-    if (choice?.finish_reason) finishReason = choice.finish_reason;
-  };
+    if (typeof delta?.content === "string") {
+      result += delta.content;
+    }
+
+    if (delta?.reasoning_content || delta?.reasoning) {
+      sawReasoning = true;
+    }
+
+    if (choice?.finish_reason) {
+      finishReason = choice.finish_reason;
+    }
+  }
 
   try {
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
+
+      if (done) {
+        break;
+      }
 
       buffer += decoder.decode(value, { stream: true });
 
-      let newline;
-      while ((newline = buffer.indexOf("\n")) >= 0) {
-        handleLine(buffer.slice(0, newline));
-        buffer = buffer.slice(newline + 1);
+      let newlineIndex;
+
+      while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+        const line = buffer.slice(0, newlineIndex);
+        buffer = buffer.slice(newlineIndex + 1);
+        handleLine(line);
       }
     }
 
     buffer += decoder.decode();
-    if (buffer) handleLine(buffer);
+
+    if (buffer.trim()) {
+      handleLine(buffer);
+    }
   } catch (cause) {
     console.error("NVIDIA stream interrupted:", JSON.stringify({
       name: cause?.name || null,
       message: String(cause?.message || cause),
-      receivedChars: result.length
+      receivedChars: result.length,
+      receivedEvents
     }));
 
+    const timedOut =
+      cause?.name === "TimeoutError" ||
+      cause?.name === "AbortError";
+
     throw fail(
-      cause?.name === "TimeoutError" || cause?.name === "AbortError"
-        ? "NVIDIA AI request timed out. Try a simpler description or try again."
+      timedOut
+        ? "NVIDIA AI request timed out before generation completed."
         : "The connection to NVIDIA AI was interrupted.",
       502,
       true
     );
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      // The stream may already have released its reader.
+    }
   }
 
   console.log("NVIDIA CAD response diagnostic:", JSON.stringify({
+    model,
     finishReason,
     contentLength: result.length,
     sawReasoning,
+    receivedEvents,
     hasStreamError: Boolean(streamError)
   }));
 
   if (streamError) {
-    throw fail(`NVIDIA AI error: ${String(streamError).slice(0, 200)}`, 502, true);
+    // Do not automatically retry arbitrary model or account errors.
+    throw fail(
+      `NVIDIA streaming error: ${streamError}`,
+      502,
+      false
+    );
   }
 
   if (!result.trim()) {
+    if (sawReasoning) {
+      throw fail(
+        "NVIDIA produced reasoning but no final code. Try a simpler request or check the selected model's generation settings.",
+        502,
+        false
+      );
+    }
+
     throw fail(
-      sawReasoning
-        ? "NVIDIA used its whole budget thinking and returned no code. Try again or simplify the request."
-        : "NVIDIA returned an empty or unexpected response.",
+      receivedEvents === 0
+        ? "NVIDIA returned an empty stream. Please try again."
+        : "NVIDIA returned no final code. Please simplify the request.",
       502,
-      true
+      false
     );
   }
 
   if (finishReason === "length") {
     throw fail(
-      "The generated CAD code was cut off because it was too long. Try a simpler description.",
+      "NVIDIA stopped because the output reached its token limit. Simplify the model or reduce the requested details.",
       502,
       false
     );
@@ -898,6 +1092,7 @@ async function nvidiaStreamOnce(env, model, prompt, jsonMode) {
 
   return result;
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Auth, plans, usage                                                  */

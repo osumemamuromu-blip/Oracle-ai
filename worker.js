@@ -751,8 +751,13 @@ async function nvidiaStreamOnce(env, model, prompt, jsonMode) {
         },
         signal: AbortSignal.timeout(100000),
         body: JSON.stringify({
-          model,
-          messages: [
+          
+model,
+chat_template_kwargs: {
+  enable_thinking: false
+},
+messages: [
+
             {
               role: "system",
               content: jsonMode

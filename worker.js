@@ -3727,7 +3727,7 @@ const prompt = [
   "Supported primitives: Box(x,y,z), Sphere(r), Cylinder(r,h), Cone(r1,r2,h), Circle(r,wire?), Polygon(points,wire?), Text3D(text,size,height,font?), BSpline(points,closed?).",
   "Supported sketch API: new Sketch([x,y], plane?).LineTo([x,y]).Fillet(r).ArcTo([midX,midY],[endX,endY]).BSplineTo(points).End(true).Face(). The plane may be XY, XZ, or YZ.",
   "Supported operations: Translate([x,y,z],shape), Rotate([ax,ay,az],degrees,shape), Scale(factor,shape), Mirror([x,y,z],shape), Union(shapes), Difference(body,[tools]), Intersection(shapes), Extrude(face,[dx,dy,dz]), Revolve(shape,degrees), Loft(wires), Pipe(shape,path), Offset(shape,distance), FilletEdges(shape,radius,indices), ChamferEdges(shape,distance,indices).",
-"For Pipe(shape, wirePath, keepInputs) requires a valid TopoDS_Wire as its second argument. Never pass a Sketch object, face, or general shape as the path.",
+"Use Pipe(shape, path) with exactly two arguments. The path must be a valid wire of the type expected by the installed Cascade Studio engine. Never assume extra arguments or pass a Sketch object, face, or general shape as the path.",
 "Use only documented CascadeStudio operations with their correct argument order and compatible geometry types.",
 "For swept parts, construct a valid path and ensure the profile is correctly oriented to the path at its start.",
 "Avoid duplicate path points, sharp unintended kinks, self-intersections, pinched ends, and invalid or incomplete solids.",

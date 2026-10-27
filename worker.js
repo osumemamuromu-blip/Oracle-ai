@@ -2113,23 +2113,18 @@ if (forbiddenMatch) {
 }
 
   // Only allow documented CAD operations and their supported methods.
+  
+  // Derive validator allowlists from the shared CAD API registry.
   const allowedFunctions = new Set([
-    "Box", "Sphere", "Cylinder", "Cone", "Circle", "Polygon",
-    "BSpline", "Text3D", "Sketch", "Translate", "Rotate", "Scale",
-    "Mirror", "Union", "Difference", "Intersection", "Extrude",
-    "Revolve", "Loft", "Pipe", "Offset", "FilletEdges",
-    "ChamferEdges", "Edges", "Volume", "SurfaceArea", "CenterOfMass"
+    ...Object.keys(CAD_API.primitives),
+    ...Object.keys(CAD_API.operations),
+    ...CAD_API.measurements
   ]);
 
-  const allowedMethods = new Set([
-    "LineTo", "Fillet", "ArcTo", "BSplineTo", "End", "Face", "Wire",
-    "ofType", "parallel", "max", "min", "indices"
-  ]);
+  const allowedMethods = new Set(CAD_API.methods);
 
-  const allowedKeywords = new Set([
-    "const", "let", "var", "new",,
-    "true", "false", "null", "undefined"
-  ]);
+  const allowedKeywords = new Set(CAD_API.keywords);
+
 
   const declared = new Set();
 

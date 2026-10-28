@@ -1380,25 +1380,31 @@ async function runVideoModel(env, { prompt, duration, aspectRatio }) {
 //              y = height (up), z = depth (toward the viewer in the front view).
 
 
+
 const DRAWING_PROMPT = [
-  "You are an engineering part reconstruction system, not an illustration generator.",
-  "Inspect the uploaded image carefully before creating the model. The image may show a detailed mechanical component, assembly, sketch, technical drawing, photograph, or isometric view.",
-  "Reconstruct the specific object visible in the image. Do not replace it with a generic block, cylinder, or simplified object if additional features are visible.",
-  "First identify the major body and EACH visibly distinct feature: stepped levels, bases, platforms, uprights, brackets, jaws, shafts, bosses, flanges, collars, holes, slots, recesses, grooves, ribs, handles, and cylindrical parts. Include only features supported by visible evidence.",
-  "Represent a stepped or irregular body using multiple appropriately sized and positioned boxes rather than one oversized box. Represent visible round shafts, bosses, and holes with cylinders. Use op=cut only for holes, bores, or slots that are actually visible or strongly supported by the drawing. Do not invent hidden features.",
-  "The renderer supports boxes and cylinders only. Use combinations of these primitives to approximate the actual visible geometry as closely as possible. Do not describe details in prose instead of encoding them in parts.",
-  "Coordinates: x = width (left to right in the front view), y = height (up), z = depth. Keep all dimensions positive and place the complete object near x=0, y=0, z=0.",
-  "Use the printed unit and dimensions exactly when legible. Otherwise estimate relative proportions from the image, set estimated=true, and do not pretend estimates are measured dimensions.",
-  "Use these exact primitive formats:",
-  '{"type":"box","op":"add","x":0,"y":0,"z":0,"w":40,"h":20,"d":30}',
-  '{"type":"cyl","op":"add","axis":"x","cx":20,"cy":10,"cz":15,"r":5,"len":20}',
-  "For cylinders, axis must be x, y, or z; cx, cy, cz are the cylinder centre coordinates; r is radius; len is length along the axis.",
-  "For holes, bores, or slots use op=cut and place cuts after the add solids. Do not use cut to represent a protruding part.",
-  "Use as many as 24 solids when needed to preserve visible shape details. Prefer a faithful multi-part reconstruction over a minimal primitive count. Avoid duplicate, irrelevant, or overlapping solids unless the physical object requires them.",
-  "Before returning JSON, check that the parts collectively resemble the image, that the major components have not been omitted, and that dimensions and positions are internally consistent. If the image is too unclear to identify the shape, return an empty parts array and a short title indicating uncertainty rather than guessing a completely different object.",
-  "Return ONLY valid JSON with no Markdown or commentary, using this exact structure:",
-  '{"title":"short part name","unit":"mm","estimated":true,"parts":[{"type":"box","op":"add","x":0,"y":0,"z":0,"w":40,"h":20,"d":30}]}'
+  "You are Malie AI Engineering Drawing Studio, a mechanical engineering drawing interpretation system.",
+  "Analyze the actual uploaded image. It may be a photograph, hand sketch, orthographic drawing, dimensioned drawing, or isometric engineering drawing.",
+  "Reconstruct the specific physical object shown. Never substitute a generic object merely because its geometry is easier to represent.",
+  "First identify the main body, its orientation, overall proportions, stepped levels, platforms, supports, shafts, bosses, flanges, collars, holes, slots, recesses, grooves, and other clearly visible features.",
+  "Use multiple boxes for stepped or irregular prismatic bodies. Use cylinders for round features. Choose primitive dimensions and positions that preserve the relative proportions of the original object.",
+  "Coordinates: x is width from left to right in the front view; y is height; z is depth. All box dimensions and cylinder radii and lengths must be positive.",
+  "For a box use {type:'box',op:'add',x:0,y:0,z:0,w:40,h:20,d:30}. The actual response must use valid JSON with double quotes.",
+  "For a cylinder use {type:'cyl',op:'add',axis:'x',cx:20,cy:10,cz:15,r:5,len:20}. cx, cy, cz are its centre coordinates.",
+  "Use op:'cut' only for a visible or strongly supported hole, bore, slot, or recess. Do not invent hidden holes. Put additive parts before cuts.",
+  "Do not represent a hole as an additive cylinder. Do not use a cut to represent a protrusion.",
+  "For a dimensioned drawing, use readable printed dimensions when they can be interpreted reliably. If dimensions are missing, estimate proportions and set estimated=true.",
+  "Do not claim estimated measurements are exact. Do not invent dimensions that are not supported by the image.",
+  "When the uploaded image contains several views of the same object, use all views together to infer a consistent three-dimensional object. Do not treat each view as a separate object.",
+  "When only one view is available, infer depth conservatively from visible evidence. Do not invent complex hidden geometry.",
+  "If a line or feature is ambiguous, prefer a simple conservative approximation rather than adding unsupported features.",
+  "Use up to 24 primitives when necessary to represent the visible shape. Avoid duplicate solids and unnecessary overlapping parts.",
+  "Before returning the result, check that the overall proportions, feature locations, axes, and dimensions agree with the source image.",
+  "If the object cannot be identified confidently, return a short uncertain title and an empty parts array instead of inventing an unrelated object.",
+  "Return ONLY valid JSON. Do not include Markdown, explanations, comments, or text outside the JSON.",
+  "Use exactly this schema: {\"title\":\"short part name\",\"unit\":\"mm\",\"estimated\":true,\"parts\":[{\"type\":\"box\",\"op\":\"add\",\"x\":0,\"y\":0,\"z\":0,\"w\":40,\"h\":20,\"d\":30}]}",
+  "Allowed part types are box and cyl. Allowed operations are add and cut. Allowed cylinder axes are x, y, and z."
 ].join("\n");
+
 
 
 const DRAW = {
@@ -1694,49 +1700,69 @@ function frameSvg(model, projection, label, body) {
 
 // Draws a set of flat shapes (front/top/side/section) with outlines,
 // holes, centre lines and dimensions.
+
 function drawFlat(shapes, opts) {
   const adds = shapes.filter(s => s.op === "add");
   const cuts = shapes.filter(s => s.op === "cut");
+
+  if (!adds.length) {
+    return svgText(
+      DRAW.W / 2,
+      DRAW.H / 2,
+      "No reliable geometry could be reconstructed",
+      'text-anchor="middle"'
+    );
+  }
+
   const b = bounds2D(adds);
   const f = fitTo(b);
 
-  const el = (s, attrs) =>
-    s.kind === "circ"
-      ? `<circle cx="${rnd(f.X(s.cu))}" cy="${rnd(f.Y(s.cv))}" r="${rnd(s.r * f.s)}" ${attrs}/>`
-      : `<rect x="${rnd(f.X(s.u0))}" y="${rnd(f.Y(s.v1))}" width="${rnd((s.u1 - s.u0) * f.s)}" height="${rnd((s.v1 - s.v0) * f.s)}" ${attrs}/>`;
+  const el = (s, attrs) => {
+    if (s.kind === "circ") {
+      return `<circle cx="${rnd(f.X(s.cu))}" cy="${rnd(f.Y(s.cv))}" r="${rnd(Math.max(0.1, s.r * f.s))}" ${attrs}/>`;
+    }
+
+    return `<rect x="${rnd(f.X(s.u0))}" y="${rnd(f.Y(s.v1))}" width="${rnd(Math.max(0.1, (s.u1 - s.u0) * f.s))}" height="${rnd(Math.max(0.1, (s.v1 - s.v0) * f.s))}" ${attrs}/>`;
+  };
 
   let out = "";
 
- 
-  // Draw solid material, then apply section hatching when requested.
-  out += adds.map(s =>
-    el(s, `fill="${DRAW.bg}" stroke="${DRAW.line}" stroke-width="1.6"`)
-  ).join("");
-
+  // Build the hatch clip from the projected additive material.
+  // This prevents hatch strokes from extending beyond the projected parts.
   if (opts.hatch) {
+    const clipId = "sectionMaterialClip";
+
+    out += `<defs><clipPath id="${clipId}">`;
+    out += adds.map(s => el(s, 'fill="#fff" stroke="none"')).join("");
+    out += `</clipPath></defs>`;
+
     out += adds.map(s =>
-      el(s, `fill="url(#hatch)" stroke="none"`)
+      el(s, `fill="${DRAW.bg}" stroke="${DRAW.line}" stroke-width="1.6"`)
     ).join("");
 
-    // Restore the material boundaries over the hatch pattern.
+    out += `<g clip-path="url(#${clipId})">`;
+    out += `<rect x="${DRAW.area.x}" y="${DRAW.area.y}" width="${DRAW.area.w}" height="${DRAW.area.h}" fill="url(#hatch)"/>`;
+    out += `</g>`;
+
     out += adds.map(s =>
       el(s, `fill="none" stroke="${DRAW.line}" stroke-width="1.6"`)
     ).join("");
   } else {
-    // Keep ordinary orthographic outlines clean.
+    // Ordinary orthographic view outlines.
     out += adds.map(s =>
-      el(s, `fill="none" stroke="${DRAW.line}" stroke-width="1.2"`)
+      el(s, `fill="none" stroke="${DRAW.line}" stroke-width="1.4"`)
     ).join("");
   }
 
-  // Holes: solid if they go all the way through, dashed (hidden) otherwise
+  // Display cut features distinctly.
+  // This is a visual approximation, not a true 3D Boolean subtraction.
   for (const s of cuts) {
     out += s.through
-      ? el(s, `fill="${DRAW.bg}" stroke="${DRAW.line}" stroke-width="1.6"`)
+      ? el(s, `fill="${DRAW.bg}" stroke="${DRAW.line}" stroke-width="1.5"`)
       : el(s, `fill="none" stroke="${DRAW.line}" stroke-width="1" stroke-dasharray="5 3.5"`);
   }
 
-  // Centre lines
+  // Centre lines for visible circles and cylindrical features.
   if (opts.centre) {
     const dash = 'stroke-dasharray="14 3 2 3"';
 
@@ -1745,21 +1771,25 @@ function drawFlat(shapes, opts) {
         const cx = f.X(s.cu);
         const cy = f.Y(s.cv);
         const R = s.r * f.s + 10;
-        out += svgLine(cx - R, cy, cx + R, cy, dash) + svgLine(cx, cy - R, cx, cy + R, dash);
+
+        out += svgLine(cx - R, cy, cx + R, cy, dash);
+        out += svgLine(cx, cy - R, cx, cy + R, dash);
       } else if (s.cyl) {
         const x0 = f.X(s.u0);
         const x1 = f.X(s.u1);
         const y0 = f.Y(s.v1);
         const y1 = f.Y(s.v0);
 
-        out += s.horiz
-          ? svgLine(x0 - 8, (y0 + y1) / 2, x1 + 8, (y0 + y1) / 2, dash)
-          : svgLine((x0 + x1) / 2, y0 - 8, (x0 + x1) / 2, y1 + 8, dash);
+        if (s.horiz) {
+          out += svgLine(x0 - 8, (y0 + y1) / 2, x1 + 8, (y0 + y1) / 2, dash);
+        } else {
+          out += svgLine((x0 + x1) / 2, y0 - 8, (x0 + x1) / 2, y1 + 8, dash);
+        }
       }
     }
   }
 
-  // Overall dimensions
+  // Overall dimensions.
   const X0 = f.X(b.u0);
   const X1 = f.X(b.u1);
   const Yt = f.Y(b.v1);
@@ -1768,34 +1798,49 @@ function drawFlat(shapes, opts) {
   out += hDim(X0, X1, Yb + 30, fmtN(b.u1 - b.u0), Yb);
   out += vDim(X1 + 34, Yt, Yb, fmtN(b.v1 - b.v0), X1);
 
-  // Diameters of visible circles
+  // Diameter labels for visible circular features.
   const seen = new Set();
-  const dirs = [[0.707, -0.707], [-0.707, -0.707], [0.707, 0.707], [-0.707, 0.707]];
+  const dirs = [
+    [0.707, -0.707],
+    [-0.707, -0.707],
+    [0.707, 0.707],
+    [-0.707, 0.707]
+  ];
+
   let n = 0;
 
   for (const s of shapes) {
     if (s.kind !== "circ" || n >= 4) continue;
+
     const key = fmtN(s.r);
     if (seen.has(key)) continue;
     seen.add(key);
 
-    const [dx, dy] = dirs[n % 4];
+    const [dx, dy] = dirs[n % dirs.length];
     const cx = f.X(s.cu);
     const cy = f.Y(s.cv);
     const R = s.r * f.s;
 
-    out += svgLine(cx + dx * R, cy + dy * R, cx + dx * (R + 22), cy + dy * (R + 22));
+    out += svgLine(
+      cx + dx * R,
+      cy + dy * R,
+      cx + dx * (R + 22),
+      cy + dy * (R + 22)
+    );
+
     out += svgText(
       cx + dx * (R + 26),
       cy + dy * (R + 26) + 4,
-      "\u00D8" + fmtN(s.r * 2),
+      "Ø" + fmtN(s.r * 2),
       `text-anchor="${dx > 0 ? "start" : "end"}"`
     );
+
     n++;
   }
 
   return out;
 }
+
 
 function flatViewSvg(model, key, projection) {
   const V = VIEWS[key];

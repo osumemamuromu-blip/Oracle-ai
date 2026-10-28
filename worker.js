@@ -1494,7 +1494,7 @@ const DRAWING_PROMPT = [
   "{\"title\":\"short part name\",\"unit\":\"mm\",\"estimated\":true,\"parts\":[{\"type\":\"box\",\"op\":\"add\",\"x\":0,\"y\":0,\"z\":0,\"w\":40,\"h\":20,\"d\":30}]}",
   "The unit must be mm or in.",
   "If the image is unclear, return the best conservative approximation of the identifiable main body rather than inventing an elaborate object."
-].join(\"\\n\");
+].join("\n");
 
 
 

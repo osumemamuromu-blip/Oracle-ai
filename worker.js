@@ -79,26 +79,85 @@ function stripCodeFences(text) {
     .replace(/\s*```$/, "");
 }
 
+
 function parseJsonObject(text, failMessage) {
-  const cleaned = stripCodeFences(text);
+  const cleaned = stripCodeFences(String(text || ""))
+    .replace(/,\s*([}\]])/g, "$1")
+    .trim();
 
   try {
-    return JSON.parse(cleaned);
-  } catch {
+    const parsed = JSON.parse(cleaned);
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("Expected a JSON object");
+    }
+
+    return parsed;
+  } catch (originalError) {
+    // Find a complete JSON object while respecting quoted strings.
     const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
 
-    if (start < 0 || end <= start) {
+    if (start === -1) {
       throw new Error(failMessage);
     }
 
-    try {
-      return JSON.parse(cleaned.slice(start, end + 1));
-    } catch {
-      throw new Error(failMessage);
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = start; i < cleaned.length; i++) {
+      const ch = cleaned[i];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (ch === "\\") {
+          escaped = true;
+        } else if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = true;
+      } else if (ch === "{") {
+        depth++;
+      } else if (ch === "}") {
+        depth--;
+
+        if (depth === 0) {
+          try {
+            const parsed = JSON.parse(
+              cleaned.slice(start, i + 1)
+                .replace(/,\s*([}\]])/g, "$1")
+            );
+
+            if (
+              !parsed ||
+              typeof parsed !== "object" ||
+              Array.isArray(parsed)
+            ) {
+              throw new Error("Expected a JSON object");
+            }
+
+            return parsed;
+          } catch {
+            break;
+          }
+        }
+      }
     }
+
+    console.error(
+      "Malie AI drawing JSON parse failed:",
+      cleaned.slice(0, 500)
+    );
+
+    throw new Error(failMessage);
   }
 }
+
 
 function getErrorStatus(error) {
   if ([400, 401, 403, 429, 503].includes(error.status)) {

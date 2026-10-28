@@ -1701,7 +1701,9 @@ function frameSvg(model, projection, label, body) {
 // Draws a set of flat shapes (front/top/side/section) with outlines,
 // holes, centre lines and dimensions.
 
-function drawFlat(shapes, opts) {
+
+  
+function drawFlat(shapes, opts = {}) {
   const adds = shapes.filter(s => s.op === "add");
   const cuts = shapes.filter(s => s.op === "cut");
 
@@ -1716,19 +1718,123 @@ function drawFlat(shapes, opts) {
 
   const b = bounds2D(adds);
   const f = fitTo(b);
+  const EPS = 1e-6;
+
+  const num = n => rnd(Number.isFinite(n) ? n : 0);
+
+  const rectBounds = s => ({
+    x0: Math.min(s.u0, s.u1),
+    x1: Math.max(s.u0, s.u1),
+    y0: Math.min(s.v0, s.v1),
+    y1: Math.max(s.v0, s.v1)
+  });
 
   const el = (s, attrs) => {
     if (s.kind === "circ") {
-      return `<circle cx="${rnd(f.X(s.cu))}" cy="${rnd(f.Y(s.cv))}" r="${rnd(Math.max(0.1, s.r * f.s))}" ${attrs}/>`;
+      return `<circle cx="${num(f.X(s.cu))}" cy="${num(f.Y(s.cv))}" r="${num(Math.max(0.1, s.r * f.s))}" ${attrs}/>`;
     }
 
-    return `<rect x="${rnd(f.X(s.u0))}" y="${rnd(f.Y(s.v1))}" width="${rnd(Math.max(0.1, (s.u1 - s.u0) * f.s))}" height="${rnd(Math.max(0.1, (s.v1 - s.v0) * f.s))}" ${attrs}/>`;
+    const r = rectBounds(s);
+    return `<rect x="${num(f.X(r.x0))}" y="${num(f.Y(r.y1))}" width="${num(Math.max(0.1, (r.x1 - r.x0) * f.s))}" height="${num(Math.max(0.1, (r.y1 - r.y0) * f.s))}" ${attrs}/>`;
   };
+
+  // Find portions of a rectangle edge covered by another additive
+  // rectangle. This prevents false internal seams between touching
+  // or overlapping box primitives.
+  function coveredIntervals(s, edge) {
+    if (s.kind === "circ") return [];
+
+    const a = rectBounds(s);
+    const horizontal = edge === "top" || edge === "bottom";
+    const fixed = edge === "top" ? a.y1
+      : edge === "bottom" ? a.y0
+      : edge === "left" ? a.x0
+      : a.x1;
+
+    const start = horizontal ? a.x0 : a.y0;
+    const end = horizontal ? a.x1 : a.y1;
+    const intervals = [];
+
+    for (const other of adds) {
+      if (other === s || other.kind === "circ") continue;
+
+      const q = rectBounds(other);
+      const qStart = horizontal ? q.x0 : q.y0;
+      const qEnd = horizontal ? q.x1 : q.y1;
+      const qMin = horizontal ? q.y0 : q.x0;
+      const qMax = horizontal ? q.y1 : q.x1;
+
+      // Only hide an edge if the other rectangle covers the edge
+      // from the material's interior side.
+      const coversInterior = fixed > qMin + EPS && fixed < qMax - EPS;
+
+      if (!coversInterior) continue;
+
+      const lo = Math.max(start, qStart);
+      const hi = Math.min(end, qEnd);
+
+      if (hi - lo > EPS) intervals.push([lo, hi]);
+    }
+
+    intervals.sort((x, y) => x[0] - y[0]);
+
+    const merged = [];
+
+    for (const interval of intervals) {
+      const last = merged[merged.length - 1];
+
+      if (last && interval[0] <= last[1] + EPS) {
+        last[1] = Math.max(last[1], interval[1]);
+      } else {
+        merged.push(interval.slice());
+      }
+    }
+
+    return merged;
+  }
+
+  function exposedEdge(s, edge) {
+    if (s.kind === "circ") return "";
+
+    const a = rectBounds(s);
+    const horizontal = edge === "top" || edge === "bottom";
+    const fixed = edge === "top" ? a.y1
+      : edge === "bottom" ? a.y0
+      : edge === "left" ? a.x0
+      : a.x1;
+
+    const start = horizontal ? a.x0 : a.y0;
+    const end = horizontal ? a.x1 : a.y1;
+    const hidden = coveredIntervals(s, edge);
+    const visible = [];
+    let cursor = start;
+
+    for (const interval of hidden) {
+      if (interval[0] > cursor + EPS) {
+        visible.push([cursor, interval[0]]);
+      }
+      cursor = Math.max(cursor, interval[1]);
+    }
+
+    if (cursor < end - EPS) visible.push([cursor, end]);
+
+    return visible.map(([lo, hi]) => {
+      const p1 = horizontal
+        ? [f.X(lo), f.Y(fixed)]
+        : [f.X(fixed), f.Y(lo)];
+
+      const p2 = horizontal
+        ? [f.X(hi), f.Y(fixed)]
+        : [f.X(fixed), f.Y(hi)];
+
+      return svgLine(p1[0], p1[1], p2[0], p2[1]);
+    }).join("");
+  }
 
   let out = "";
 
-  // Build the hatch clip from the projected additive material.
-  // This prevents hatch strokes from extending beyond the projected parts.
+  // Establish a clean background and draw the projected material.
+  // Section hatching is clipped to the projected material boundaries.
   if (opts.hatch) {
     const clipId = "sectionMaterialClip";
 
@@ -1737,32 +1843,50 @@ function drawFlat(shapes, opts) {
     out += `</clipPath></defs>`;
 
     out += adds.map(s =>
-      el(s, `fill="${DRAW.bg}" stroke="${DRAW.line}" stroke-width="1.6"`)
+      el(s, `fill="${DRAW.bg}" stroke="none"`)
     ).join("");
 
     out += `<g clip-path="url(#${clipId})">`;
     out += `<rect x="${DRAW.area.x}" y="${DRAW.area.y}" width="${DRAW.area.w}" height="${DRAW.area.h}" fill="url(#hatch)"/>`;
     out += `</g>`;
-
-    out += adds.map(s =>
-      el(s, `fill="none" stroke="${DRAW.line}" stroke-width="1.6"`)
-    ).join("");
   } else {
-    // Ordinary orthographic view outlines.
     out += adds.map(s =>
-      el(s, `fill="none" stroke="${DRAW.line}" stroke-width="1.4"`)
+      el(s, `fill="${DRAW.bg}" stroke="none"`)
     ).join("");
   }
 
-  // Display cut features distinctly.
-  // This is a visual approximation, not a true 3D Boolean subtraction.
-  for (const s of cuts) {
-    out += s.through
-      ? el(s, `fill="${DRAW.bg}" stroke="${DRAW.line}" stroke-width="1.5"`)
-      : el(s, `fill="none" stroke="${DRAW.line}" stroke-width="1" stroke-dasharray="5 3.5"`);
+  // Draw only exposed rectangle edges. Circles retain their outlines.
+  for (const s of adds) {
+    if (s.kind === "circ") {
+      out += el(
+        s,
+        `fill="none" stroke="${DRAW.line}" stroke-width="1.6"`
+      );
+      continue;
+    }
+
+    for (const edge of ["top", "bottom", "left", "right"]) {
+      out += exposedEdge(s, edge);
+    }
   }
 
-  // Centre lines for visible circles and cylindrical features.
+  // Display cut features. A cut is a drawing convention here, not a
+  // true 3D Boolean operation; see the implementation note below.
+  for (const s of cuts) {
+    if (s.kind === "circ") {
+      out += el(
+        s,
+        `fill="${DRAW.bg}" stroke="${DRAW.line}" stroke-width="1.5"`
+      );
+    } else {
+      out += el(
+        s,
+        `fill="none" stroke="${DRAW.line}" stroke-width="1.2" stroke-dasharray="5 3"`
+      );
+    }
+  }
+
+  // Centre lines for circles and cylindrical features.
   if (opts.centre) {
     const dash = 'stroke-dasharray="14 3 2 3"';
 
@@ -1770,7 +1894,7 @@ function drawFlat(shapes, opts) {
       if (s.kind === "circ") {
         const cx = f.X(s.cu);
         const cy = f.Y(s.cv);
-        const R = s.r * f.s + 10;
+        const R = Math.max(5, s.r * f.s + 8);
 
         out += svgLine(cx - R, cy, cx + R, cy, dash);
         out += svgLine(cx, cy - R, cx, cy + R, dash);
@@ -1781,24 +1905,39 @@ function drawFlat(shapes, opts) {
         const y1 = f.Y(s.v0);
 
         if (s.horiz) {
-          out += svgLine(x0 - 8, (y0 + y1) / 2, x1 + 8, (y0 + y1) / 2, dash);
+          out += svgLine(
+            x0 - 8, (y0 + y1) / 2,
+            x1 + 8, (y0 + y1) / 2,
+            dash
+          );
         } else {
-          out += svgLine((x0 + x1) / 2, y0 - 8, (x0 + x1) / 2, y1 + 8, dash);
+          out += svgLine(
+            (x0 + x1) / 2, y0 - 8,
+            (x0 + x1) / 2, y1 + 8,
+            dash
+          );
         }
       }
     }
   }
 
-  // Overall dimensions.
+  // Overall dimensions. Keep labels readable and outside the part.
   const X0 = f.X(b.u0);
   const X1 = f.X(b.u1);
   const Yt = f.Y(b.v1);
   const Yb = f.Y(b.v0);
 
-  out += hDim(X0, X1, Yb + 30, fmtN(b.u1 - b.u0), Yb);
-  out += vDim(X1 + 34, Yt, Yb, fmtN(b.v1 - b.v0), X1);
+  out += hDim(
+    X0, X1, Yb + 30,
+    fmtN(b.u1 - b.u0), Yb
+  );
 
-  // Diameter labels for visible circular features.
+  out += vDim(
+    X1 + 34, Yt, Yb,
+    fmtN(b.v1 - b.v0), X1
+  );
+
+  // Diameter labels: one label per distinct visible circle size.
   const seen = new Set();
   const dirs = [
     [0.707, -0.707],
@@ -1812,26 +1951,26 @@ function drawFlat(shapes, opts) {
   for (const s of shapes) {
     if (s.kind !== "circ" || n >= 4) continue;
 
-    const key = fmtN(s.r);
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const diameter = fmtN(s.r * 2);
+    if (seen.has(diameter)) continue;
+    seen.add(diameter);
 
     const [dx, dy] = dirs[n % dirs.length];
     const cx = f.X(s.cu);
     const cy = f.Y(s.cv);
     const R = s.r * f.s;
 
-    out += svgLine(
-      cx + dx * R,
-      cy + dy * R,
-      cx + dx * (R + 22),
-      cy + dy * (R + 22)
-    );
+    const x1 = cx + dx * R;
+    const y1 = cy + dy * R;
+    const x2 = cx + dx * (R + 22);
+    const y2 = cy + dy * (R + 22);
+
+    out += svgLine(x1, y1, x2, y2);
 
     out += svgText(
-      cx + dx * (R + 26),
-      cy + dy * (R + 26) + 4,
-      "Ø" + fmtN(s.r * 2),
+      x2 + dx * 4,
+      y2 + dy * 4 + 4,
+      "Ø" + diameter,
       `text-anchor="${dx > 0 ? "start" : "end"}"`
     );
 
@@ -1840,6 +1979,7 @@ function drawFlat(shapes, opts) {
 
   return out;
 }
+
 
 
 function flatViewSvg(model, key, projection) {

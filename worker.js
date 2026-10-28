@@ -1707,12 +1707,27 @@ function drawFlat(shapes, opts) {
 
   let out = "";
 
-  // Thick outline of the combined shape (hides seams between joined solids)
-  out += adds.map(s => el(s, `fill="${DRAW.line}" stroke="${DRAW.line}" stroke-width="3.2"`)).join("");
-  out += adds.map(s => el(s, `fill="${DRAW.bg}"`)).join("");
-  if (opts.hatch) out += adds.map(s => el(s, `fill="url(#hatch)"`)).join("");
-  // Thin lines where separate solids meet
-  out += adds.map(s => el(s, `fill="none" stroke="${DRAW.line}" stroke-width=".8" opacity=".5"`)).join("");
+ 
+  // Draw solid material, then apply section hatching when requested.
+  out += adds.map(s =>
+    el(s, `fill="${DRAW.bg}" stroke="${DRAW.line}" stroke-width="1.6"`)
+  ).join("");
+
+  if (opts.hatch) {
+    out += adds.map(s =>
+      el(s, `fill="url(#hatch)" stroke="none"`)
+    ).join("");
+
+    // Restore the material boundaries over the hatch pattern.
+    out += adds.map(s =>
+      el(s, `fill="none" stroke="${DRAW.line}" stroke-width="1.6"`)
+    ).join("");
+  } else {
+    // Keep ordinary orthographic outlines clean.
+    out += adds.map(s =>
+      el(s, `fill="none" stroke="${DRAW.line}" stroke-width="1.2"`)
+    ).join("");
+  }
 
   // Holes: solid if they go all the way through, dashed (hidden) otherwise
   for (const s of cuts) {

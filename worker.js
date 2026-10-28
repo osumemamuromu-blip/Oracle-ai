@@ -1519,44 +1519,74 @@ function clampNum(value, lo, hi, fallback) {
 
 /* ---------- Check and clean what the AI returned ---------- */
 
+
 function sanitizeModel(raw) {
   const list = Array.isArray(raw?.parts) ? raw.parts.slice(0, 24) : [];
   const adds = [];
   const cuts = [];
 
+  function numberFrom(...values) {
+    for (const value of values) {
+      if (value === undefined || value === null || value === "") continue;
+
+      const n = typeof value === "number" ? value : Number(value);
+      if (Number.isFinite(n)) return n;
+    }
+    return 0;
+  }
+
+  function positive(...values) {
+    const n = numberFrom(...values);
+    return n > 0 && n <= 5000 ? n : 0;
+  }
+
   for (const p of list) {
-    const type = String(p?.type || "").toLowerCase();
-    const op = String(p?.op || "add").toLowerCase() === "cut" ? "cut" : "add";
+    if (!p || typeof p !== "object") continue;
+
+    const type = String(
+      p.type || p.shape || p.primitive || ""
+    ).toLowerCase();
+
+    const op = String(
+      p.op || p.operation || "add"
+    ).toLowerCase() === "cut" ? "cut" : "add";
+
     let part = null;
 
-    if (type === "box") {
-      const w = clampNum(p.w, 0, 5000, 0);
-      const h = clampNum(p.h, 0, 5000, 0);
-      const d = clampNum(p.d, 0, 5000, 0);
+    if (type === "box" || type === "cuboid" || type === "rectangular_prism") {
+      const w = positive(p.w, p.width, p.length_x);
+      const h = positive(p.h, p.height, p.length_y);
+      const d = positive(p.d, p.depth, p.length_z);
 
-      if (w > 0 && h > 0 && d > 0) {
+      if (w && h && d) {
         part = {
           type: "box",
           op,
-          x: clampNum(p.x, -5000, 5000, 0),
-          y: clampNum(p.y, -5000, 5000, 0),
-          z: clampNum(p.z, -5000, 5000, 0),
+          x: numberFrom(p.x, p.minX),
+          y: numberFrom(p.y, p.minY),
+          z: numberFrom(p.z, p.minZ),
           w,
           h,
           d
         };
       }
-    } else if (type === "cyl" || type === "cylinder") {
+    } else if (
+      type === "cyl" ||
+      type === "cylinder" ||
+      type === "circular_cylinder"
+    ) {
       const axis = String(p.axis || "z").toLowerCase();
-      const r = clampNum(
-        p.r ?? Number(p.diameter ?? p.dia) / 2,
-        0,
-        2500,
-        0
-      );
-      const len = clampNum(p.len ?? p.length, 0, 5000, 0);
 
-      if (AXES.includes(axis) && r > 0 && len > 0) {
+      const r = positive(
+        p.r,
+        p.radius,
+        p.diameter ? Number(p.diameter) / 2 : undefined,
+        p.dia ? Number(p.dia) / 2 : undefined
+      );
+
+      const len = positive(p.len, p.length, p.height);
+
+      if (["x", "y", "z"].includes(axis) && r && len) {
         part = {
           type: "cyl",
           op,
@@ -1564,32 +1594,36 @@ function sanitizeModel(raw) {
           r,
           len,
           c: {
-            x: clampNum(p.cx ?? p.x, -5000, 5000, 0),
-            y: clampNum(p.cy ?? p.y, -5000, 5000, 0),
-            z: clampNum(p.cz ?? p.z, -5000, 5000, 0)
+            x: numberFrom(p.cx, p.center?.x, p.x),
+            y: numberFrom(p.cy, p.center?.y, p.y),
+            z: numberFrom(p.cz, p.center?.z, p.z)
           }
         };
       }
     }
 
-    if (part) (op === "cut" ? cuts : adds).push(part);
+    if (part) {
+      (op === "cut" ? cuts : adds).push(part);
+    }
   }
 
   if (!adds.length) {
     const error = new Error(
-      "I could not work out the part's shape from that image. Please try a clearer picture, ideally with the dimensions printed on it."
+      "The image model returned no valid box or cylinder. " +
+      "Check the AI response format, dimensions, and supported shape types."
     );
-    error.status = 400;
+    error.status = 422;
     throw error;
   }
 
   return {
-    title: cleanXml(String(raw?.title || "Machine part")).slice(0, 60),
+    title: cleanXml(String(raw?.title || raw?.name || "Machine part")).slice(0, 60),
     unit: String(raw?.unit || "").toLowerCase() === "in" ? "in" : "mm",
-    estimated: Boolean(raw?.estimated),
+    estimated: raw?.estimated !== false,
     parts: [...adds, ...cuts]
   };
 }
+
 
 function extentsOf(p) {
   if (p.type === "box") {

@@ -4,6 +4,9 @@ import * as XLSX from "xlsx";
 /* Settings                                                            */
 /* ------------------------------------------------------------------ */
 
+// Set to false to switch Drawing, CAD, Video and Advert studios back on.
+const PAUSED_PRO_FEATURES = true;
+
 const TEXT_MODEL = "@cf/google/gemma-4-26b-a4b-it";
 // Used only when the user sends a photo. Check the Cloudflare model page:
 // Llama 3.2 Vision needs a one-time license acceptance.
@@ -3695,6 +3698,17 @@ export default {
 
     const url = new URL(request.url);
     const path = url.pathname;
+
+    if (
+      PAUSED_PRO_FEATURES &&
+      request.method === "POST" &&
+      (path === "/api/drawing" ||
+        path === "/api/cad/generate" ||
+        path.startsWith("/api/video/") ||
+        path.startsWith("/api/advert/"))
+    ) {
+      return respond({ error: "This feature is not available right now." }, 503);
+    }
 
 
     /* ---------------- Published pages (public, sandboxed) ---------------- */

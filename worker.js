@@ -79,85 +79,26 @@ function stripCodeFences(text) {
     .replace(/\s*```$/, "");
 }
 
-
 function parseJsonObject(text, failMessage) {
-  const cleaned = stripCodeFences(String(text || ""))
-    .replace(/,\s*([}\]])/g, "$1")
-    .trim();
+  const cleaned = stripCodeFences(text);
 
   try {
-    const parsed = JSON.parse(cleaned);
-
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error("Expected a JSON object");
-    }
-
-    return parsed;
-  } catch (originalError) {
-    // Find a complete JSON object while respecting quoted strings.
+    return JSON.parse(cleaned);
+  } catch {
     const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
 
-    if (start === -1) {
+    if (start < 0 || end <= start) {
       throw new Error(failMessage);
     }
 
-    let depth = 0;
-    let inString = false;
-    let escaped = false;
-
-    for (let i = start; i < cleaned.length; i++) {
-      const ch = cleaned[i];
-
-      if (inString) {
-        if (escaped) {
-          escaped = false;
-        } else if (ch === "\\") {
-          escaped = true;
-        } else if (ch === '"') {
-          inString = false;
-        }
-        continue;
-      }
-
-      if (ch === '"') {
-        inString = true;
-      } else if (ch === "{") {
-        depth++;
-      } else if (ch === "}") {
-        depth--;
-
-        if (depth === 0) {
-          try {
-            const parsed = JSON.parse(
-              cleaned.slice(start, i + 1)
-                .replace(/,\s*([}\]])/g, "$1")
-            );
-
-            if (
-              !parsed ||
-              typeof parsed !== "object" ||
-              Array.isArray(parsed)
-            ) {
-              throw new Error("Expected a JSON object");
-            }
-
-            return parsed;
-          } catch {
-            break;
-          }
-        }
-      }
+    try {
+      return JSON.parse(cleaned.slice(start, end + 1));
+    } catch {
+      throw new Error(failMessage);
     }
-
-    console.error(
-      "Malie AI drawing JSON parse failed:",
-      cleaned.slice(0, 500)
-    );
-
-    throw new Error(failMessage);
   }
 }
-
 
 function getErrorStatus(error) {
   if ([400, 401, 403, 429, 503].includes(error.status)) {
@@ -1428,88 +1369,31 @@ async function runVideoModel(env, { prompt, duration, aspectRatio }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Engineering Drawing Studio â€” one image in, all views out            */
+/* Engineering Drawing Studio — geometry core                          */
 /* ------------------------------------------------------------------ */
-
-// The AI looks at ONE picture of a part (any view, drawing, sketch or photo),
-// describes the part as simple 3D solids, and this code draws every view
-// from that description as SVG.
 //
-// Coordinates: x = width (left to right in the front view),
-//              y = height (up), z = depth (toward the viewer in the front view).
-
-
-
-const DRAWING_PROMPT = [
-  "You are Malie AI Engineering Drawing Studio, a mechanical engineering drawing interpretation system.",
-  "",
-  "OBJECTIVE:",
-  "Reconstruct the object shown in the uploaded image as a consistent approximate 3D model. The image may be a photograph, hand sketch, dimensioned engineering drawing, orthographic projection, or isometric drawing.",
-  "",
-  "IMAGE INTERPRETATION:",
-  "1. Identify the actual object shown. Never replace it with an unrelated generic object.",
-  "2. Examine every visible view, dimension, extension line, centreline, hidden line, hole, slot, recess, shaft, flange, collar, step, boss and support.",
-  "3. Use printed dimensions when clearly readable. Otherwise estimate proportions and set estimated to true.",
-  "4. When multiple views are supplied, reconcile them into one consistent object. Do not model each view as a separate component.",
-  "5. For a single view, infer depth conservatively and do not invent unsupported hidden details.",
-  "6. Prefer a simple, plausible model over excessive speculative details.",
-  "",
-  "COORDINATE SYSTEM:",
-  "x is width, y is height, and z is depth. Coordinates are measured in the selected unit.",
-  "All dimensions and radii must be positive. Positions may be negative when needed to centre the object.",
-  "",
-  "SUPPORTED GEOMETRY:",
-  "Use only boxes and cylinders. Do not output unsupported primitive types.",
-  "",
-  "BOX SCHEMA:",
-  "{\"type\":\"box\",\"op\":\"add\",\"x\":0,\"y\":0,\"z\":0,\"w\":40,\"h\":20,\"d\":30}",
-  "A box starts at its minimum x, y and z coordinates. w is its x dimension, h is its y dimension, and d is its z dimension.",
-  "",
-  "CYLINDER SCHEMA:",
-  "{\"type\":\"cyl\",\"op\":\"add\",\"axis\":\"z\",\"cx\":20,\"cy\":10,\"cz\":15,\"r\":5,\"len\":20}",
-  "Cylinder coordinates cx, cy and cz specify its centre. axis must be x, y or z. r is its radius and len is its axial length.",
-  "",
-  "MODELLING RULES:",
-  "1. Build the main body first, then add identifiable steps, bosses, shafts, collars and flanges.",
-  "2. Use multiple additive primitives when they represent distinct regions of the same object.",
-  "3. Use op cut for clearly visible holes, bores and recesses. Never represent a hole using an additive cylinder.",
-  "4. For a through-hole, make the cutting cylinder long enough to pass completely through the target body.",
-  "5. Align cylindrical axes with the corresponding hole or shaft direction.",
-  "6. Avoid duplicate, overlapping speculative primitives that distort the overall silhouette.",
-  "7. Keep the model centred near the origin where practical.",
-  "8. Do not claim exact dimensions when they were estimated from a picture.",
-  "",
-  "VALIDATION BEFORE OUTPUT:",
-  "1. Include between 1 and 24 primitives when sufficient image evidence exists.",
-  "2. Include at least one primitive with op add.",
-  "3. Use only type box or cyl and operation add or cut.",
-  "4. Every box must have positive w, h and d.",
-  "5. Every cylinder must have a valid axis, positive radius and positive length.",
-  "6. Use finite numeric values only. Never output NaN, Infinity or null dimensions.",
-  "7. Set estimated to false only when the model dimensions are sufficiently supported by reliable printed dimensions; otherwise set it to true.",
-  "",
-  "OUTPUT:",
-  "Return exactly one valid JSON object, with no Markdown fences, comments or explanatory text.",
-  "Use this schema:",
-  "{\"title\":\"short part name\",\"unit\":\"mm\",\"estimated\":true,\"parts\":[{\"type\":\"box\",\"op\":\"add\",\"x\":0,\"y\":0,\"z\":0,\"w\":40,\"h\":20,\"d\":30}]}",
-  "The unit must be mm or in.",
-  "If the image is unclear, return the best conservative approximation of the identifiable main body rather than inventing an elaborate object."
-].join("\n");
-
-
-
-
-const DRAW = {
-  W: 900,
-  H: 620,
-  bg: "#0b0d10",
-  line: "#d3ec8a",
-  area: { x: 140, y: 70, w: 620, h: 390 }
-};
+// ONE shared solid model drives every view:
+//
+//     solid = (union of "add" primitives) minus (union of "cut" primitives)
+//
+// Primitives are axis-aligned boxes and axis-aligned cylinders.
+// Coordinates: x = width (left to right in the FRONT view),
+//              y = height (up), z = depth (toward the viewer in the FRONT view).
+//
+// Nothing here is a per-view approximation. Every view (front, top, right,
+// isometric, section) asks the same exact question about the same solid:
+//   - "is this point inside the material?"           (membership)
+//   - "which stretches of this ray are material?"    (ray intervals)
+// Edges are found where the material genuinely changes, and hidden-line
+// removal is done by casting rays at the real solid. Cuts are real boolean
+// subtractions, never background-coloured shapes drawn on top.
 
 const AXES = ["x", "y", "z"];
 const rnd = n => Math.round(n * 100) / 100;
-const fmtN = n => String(Math.round(n * 100) / 100);
+const fmtN = n => {
+  const v = Math.round(n * 100) / 100;
+  return String(Object.is(v, -0) ? 0 : v);
+};
 const cleanXml = s => String(s).replace(/[<>&"']/g, "");
 
 function clampNum(value, lo, hi, fallback) {
@@ -1517,123 +1401,18 @@ function clampNum(value, lo, hi, fallback) {
   return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : fallback;
 }
 
-/* ---------- Check and clean what the AI returned ---------- */
-
-
-function sanitizeModel(raw) {
-  const list = Array.isArray(raw?.parts) ? raw.parts.slice(0, 24) : [];
-  const adds = [];
-  const cuts = [];
-
-  function numberFrom(...values) {
-    for (const value of values) {
-      if (value === undefined || value === null || value === "") continue;
-
-      const n = typeof value === "number" ? value : Number(value);
-      if (Number.isFinite(n)) return n;
-    }
-    return 0;
-  }
-
-  function positive(...values) {
-    const n = numberFrom(...values);
-    return n > 0 && n <= 5000 ? n : 0;
-  }
-
-  for (const p of list) {
-    if (!p || typeof p !== "object") continue;
-
-    const type = String(
-      p.type || p.shape || p.primitive || ""
-    ).toLowerCase();
-
-    const op = String(
-      p.op || p.operation || "add"
-    ).toLowerCase() === "cut" ? "cut" : "add";
-
-    let part = null;
-
-    if (type === "box" || type === "cuboid" || type === "rectangular_prism") {
-      const w = positive(p.w, p.width, p.length_x);
-      const h = positive(p.h, p.height, p.length_y);
-      const d = positive(p.d, p.depth, p.length_z);
-
-      if (w && h && d) {
-        part = {
-          type: "box",
-          op,
-          x: numberFrom(p.x, p.minX),
-          y: numberFrom(p.y, p.minY),
-          z: numberFrom(p.z, p.minZ),
-          w,
-          h,
-          d
-        };
-      }
-    } else if (
-      type === "cyl" ||
-      type === "cylinder" ||
-      type === "circular_cylinder"
-    ) {
-      const axis = String(p.axis || "z").toLowerCase();
-
-      const r = positive(
-        p.r,
-        p.radius,
-        p.diameter ? Number(p.diameter) / 2 : undefined,
-        p.dia ? Number(p.dia) / 2 : undefined
-      );
-
-      const len = positive(p.len, p.length, p.height);
-
-      if (["x", "y", "z"].includes(axis) && r && len) {
-        part = {
-          type: "cyl",
-          op,
-          axis,
-          r,
-          len,
-          c: {
-            x: numberFrom(p.cx, p.center?.x, p.x),
-            y: numberFrom(p.cy, p.center?.y, p.y),
-            z: numberFrom(p.cz, p.center?.z, p.z)
-          }
-        };
-      }
-    }
-
-    if (part) {
-      (op === "cut" ? cuts : adds).push(part);
-    }
-  }
-
-  if (!adds.length) {
-    const error = new Error(
-      "The image model returned no valid box or cylinder. " +
-      "Check the AI response format, dimensions, and supported shape types."
-    );
-    error.status = 422;
-    throw error;
-  }
-
-  return {
-    title: cleanXml(String(raw?.title || raw?.name || "Machine part")).slice(0, 60),
-    unit: String(raw?.unit || "").toLowerCase() === "in" ? "in" : "mm",
-    estimated: raw?.estimated !== false,
-    parts: [...adds, ...cuts]
-  };
+function drawingError(message, status = 400) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
 }
 
+/* ---------- Primitive helpers ---------- */
 
 function extentsOf(p) {
   if (p.type === "box") {
-    return {
-      x: [p.x, p.x + p.w],
-      y: [p.y, p.y + p.h],
-      z: [p.z, p.z + p.d]
-    };
+    return { x: [p.x, p.x + p.w], y: [p.y, p.y + p.h], z: [p.z, p.z + p.d] };
   }
-
   const e = {};
   for (const a of AXES) {
     const half = a === p.axis ? p.len / 2 : p.r;
@@ -1642,649 +1421,1508 @@ function extentsOf(p) {
   return e;
 }
 
-/* ---------- Flat views: front, top, right side ---------- */
-
-const VIEWS = {
-  front: { u: "x", v: "y", su: 1, sv: 1, depth: "z", label: "FRONT VIEW" },
-  top: { u: "x", v: "z", su: 1, sv: -1, depth: "y", label: "TOP VIEW" },
-  side: { u: "z", v: "y", su: -1, sv: 1, depth: "x", label: "RIGHT VIEW (FROM RIGHT)" }
-};
-
-function projectPart(p, V, depthRange) {
-  const e = extentsOf(p);
-  const spansDepth =
-    e[V.depth][0] <= depthRange[0] + 1e-6 &&
-    e[V.depth][1] >= depthRange[1] - 1e-6;
-
-  const base = {
-    op: p.op,
-    through: spansDepth,
-    cyl: p.type === "cyl",
-    horiz: p.type === "cyl" && p.axis === V.u
-  };
-
-  if (p.type === "cyl" && p.axis === V.depth) {
-    return {
-      ...base,
-      kind: "circ",
-      cu: V.su * p.c[V.u],
-      cv: V.sv * p.c[V.v],
-      r: p.r
-    };
-  }
-
-  const ua = [V.su * e[V.u][0], V.su * e[V.u][1]].sort((a, b) => a - b);
-  const va = [V.sv * e[V.v][0], V.sv * e[V.v][1]].sort((a, b) => a - b);
-
-  return { ...base, kind: "rect", u0: ua[0], u1: ua[1], v0: va[0], v1: va[1] };
-}
-
-// Cuts the part with a plane through its middle (z = zc) and returns the
-// cut faces, seen from the front.
-function sectionPart(p, zc) {
-  const base = { op: p.op, through: true, cyl: false, horiz: false };
-
-  if (p.type === "box") {
-    if (zc < p.z || zc > p.z + p.d) return null;
-    return {
-      ...base,
-      kind: "rect",
-      u0: p.x,
-      u1: p.x + p.w,
-      v0: p.y,
-      v1: p.y + p.h
-    };
-  }
-
-  const dz = zc - p.c.z;
-
-  if (p.axis === "z") {
-    if (Math.abs(dz) > p.len / 2) return null;
-    return { ...base, kind: "circ", cu: p.c.x, cv: p.c.y, r: p.r };
-  }
-
-  if (Math.abs(dz) >= p.r) return null;
-  const hr = Math.sqrt(p.r * p.r - dz * dz);
-
-  if (p.axis === "x") {
-    return {
-      ...base,
-      kind: "rect",
-      u0: p.c.x - p.len / 2,
-      u1: p.c.x + p.len / 2,
-      v0: p.c.y - hr,
-      v1: p.c.y + hr
-    };
-  }
-
-  return {
-    ...base,
-    kind: "rect",
-    u0: p.c.x - hr,
-    u1: p.c.x + hr,
-    v0: p.c.y - p.len / 2,
-    v1: p.c.y + p.len / 2
-  };
-}
-
-function bounds2D(shapes) {
-  let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity;
-
-  for (const s of shapes) {
-    if (s.kind === "circ") {
-      u0 = Math.min(u0, s.cu - s.r);
-      u1 = Math.max(u1, s.cu + s.r);
-      v0 = Math.min(v0, s.cv - s.r);
-      v1 = Math.max(v1, s.cv + s.r);
-    } else {
-      u0 = Math.min(u0, s.u0);
-      u1 = Math.max(u1, s.u1);
-      v0 = Math.min(v0, s.v0);
-      v1 = Math.max(v1, s.v1);
+function boundsOfParts(parts) {
+  const b = { x: [Infinity, -Infinity], y: [Infinity, -Infinity], z: [Infinity, -Infinity] };
+  for (const p of parts) {
+    const e = extentsOf(p);
+    for (const a of AXES) {
+      b[a][0] = Math.min(b[a][0], e[a][0]);
+      b[a][1] = Math.max(b[a][1], e[a][1]);
     }
   }
-
-  return { u0, u1, v0, v1 };
+  return b;
 }
 
-function fitTo(b) {
-  const a = DRAW.area;
-  const bw = Math.max(b.u1 - b.u0, 1e-6);
-  const bh = Math.max(b.v1 - b.v0, 1e-6);
-  const s = Math.min(a.w / bw, a.h / bh);
-  const ox = a.x + (a.w - bw * s) / 2;
-  const oy = a.y + (a.h - bh * s) / 2;
+function primContains(p, q, tol = 0) {
+  if (p.type === "box") {
+    return (
+      q[0] >= p.x - tol && q[0] <= p.x + p.w + tol &&
+      q[1] >= p.y - tol && q[1] <= p.y + p.h + tol &&
+      q[2] >= p.z - tol && q[2] <= p.z + p.d + tol
+    );
+  }
+  const ai = p.axis === "x" ? 0 : p.axis === "y" ? 1 : 2;
+  if (Math.abs(q[ai] - p.c[p.axis]) > p.len / 2 + tol) return false;
+  let r2 = 0;
+  for (let i = 0; i < 3; i++) {
+    if (i === ai) continue;
+    const dv = q[i] - p.c[AXES[i]];
+    r2 += dv * dv;
+  }
+  const rr = p.r + tol;
+  return r2 <= rr * rr;
+}
+
+/* ---------- The solid: membership ---------- */
+
+// clip (optional) = { axis: "x"|"y"|"z", max: number } keeps coordinate <= max.
+// It is used for sections: the part in front of the cutting plane is removed.
+function makeSolid(parts, clip = null) {
+  const adds = parts.filter(p => p.op === "add");
+  const cuts = parts.filter(p => p.op === "cut");
+  const ci = clip ? AXES.indexOf(clip.axis) : -1;
 
   return {
-    s,
-    X: u => ox + (u - b.u0) * s,
-    Y: v => oy + (b.v1 - v) * s
+    parts, adds, cuts, clip, ci,
+    inside(q) {
+      if (ci >= 0 && q[ci] > clip.max) return false;
+      let ok = false;
+      for (const a of adds) if (primContains(a, q)) { ok = true; break; }
+      if (!ok) return false;
+      for (const c of cuts) if (primContains(c, q)) return false;
+      return true;
+    }
   };
 }
 
-/* ---------- SVG building blocks ---------- */
+/* ---------- Interval arithmetic along a ray ---------- */
 
-const svgLine = (x1, y1, x2, y2, extra = "") =>
-  `<line x1="${rnd(x1)}" y1="${rnd(y1)}" x2="${rnd(x2)}" y2="${rnd(y2)}" stroke="${DRAW.line}" stroke-width="1" ${extra}/>`;
-
-function svgArrow(x, y, dx, dy) {
-  const a = 7;
-  const b = 2.6;
-  const px = -dy;
-  const py = dx;
-
-  return `<polygon points="${rnd(x)},${rnd(y)} ${rnd(x - dx * a + px * b)},${rnd(y - dy * a + py * b)} ${rnd(x - dx * a - px * b)},${rnd(y - dy * a - py * b)}" fill="${DRAW.line}"/>`;
+function mergeIv(list) {
+  const a = list.filter(i => i[1] > i[0]).sort((x, y) => x[0] - y[0]);
+  const out = [];
+  for (const i of a) {
+    const last = out[out.length - 1];
+    if (last && i[0] <= last[1]) last[1] = Math.max(last[1], i[1]);
+    else out.push([i[0], i[1]]);
+  }
+  return out;
 }
 
-function svgText(x, y, text, extra = "") {
-  return `<text x="${rnd(x)}" y="${rnd(y)}" fill="${DRAW.line}" font-family="Arial, Helvetica, sans-serif" font-size="12" ${extra}>${cleanXml(text)}</text>`;
+function subtractIv(a, b) {
+  let cur = a.map(i => [i[0], i[1]]);
+  for (const c of b) {
+    const next = [];
+    for (const i of cur) {
+      if (c[1] <= i[0] || c[0] >= i[1]) { next.push(i); continue; }
+      if (c[0] > i[0]) next.push([i[0], c[0]]);
+      if (c[1] < i[1]) next.push([c[1], i[1]]);
+    }
+    cur = next;
+  }
+  return cur;
 }
 
-function hDim(x1, x2, y, label, refY) {
-  return (
-    svgLine(x1, refY, x1, y + 5) +
-    svgLine(x2, refY, x2, y + 5) +
-    svgLine(x1, y, x2, y) +
-    svgArrow(x1, y, -1, 0) +
-    svgArrow(x2, y, 1, 0) +
-    svgText((x1 + x2) / 2, y - 5, label, 'text-anchor="middle"')
-  );
+function slabIv(o, d, lo, hi, iv) {
+  if (Math.abs(d) < 1e-12) return o >= lo && o <= hi ? iv : null;
+  let t0 = (lo - o) / d;
+  let t1 = (hi - o) / d;
+  if (t0 > t1) [t0, t1] = [t1, t0];
+  return [Math.max(iv[0], t0), Math.min(iv[1], t1)];
 }
 
-function vDim(x, y1, y2, label, refX) {
-  const mid = (y1 + y2) / 2;
+// Interval of the ray o + t*d (t in [-INF, INF]) that lies inside one primitive.
+function primRayIv(p, o, d) {
+  let iv = [-1e9, 1e9];
 
-  return (
-    svgLine(refX, y1, x + 5, y1) +
-    svgLine(refX, y2, x + 5, y2) +
-    svgLine(x, y1, x, y2) +
-    svgArrow(x, y1, 0, -1) +
-    svgArrow(x, y2, 0, 1) +
-    `<text transform="translate(${rnd(x + 14)},${rnd(mid)}) rotate(-90)" text-anchor="middle" fill="${DRAW.line}" font-family="Arial, Helvetica, sans-serif" font-size="12">${cleanXml(label)}</text>`
-  );
+  if (p.type === "box") {
+    const lo = [p.x, p.y, p.z];
+    const hi = [p.x + p.w, p.y + p.h, p.z + p.d];
+    for (let i = 0; i < 3; i++) {
+      iv = slabIv(o[i], d[i], lo[i], hi[i], iv);
+      if (!iv || iv[1] <= iv[0]) return null;
+    }
+    return iv;
+  }
+
+  const ai = p.axis === "x" ? 0 : p.axis === "y" ? 1 : 2;
+  iv = slabIv(o[ai], d[ai], p.c[p.axis] - p.len / 2, p.c[p.axis] + p.len / 2, iv);
+  if (!iv || iv[1] <= iv[0]) return null;
+
+  let A = 0, B = 0, C = -p.r * p.r;
+  for (let i = 0; i < 3; i++) {
+    if (i === ai) continue;
+    const oc = o[i] - p.c[AXES[i]];
+    A += d[i] * d[i];
+    B += 2 * oc * d[i];
+    C += oc * oc;
+  }
+
+  if (A < 1e-12) return C <= 0 ? iv : null;
+  const disc = B * B - 4 * A * C;
+  if (disc <= 0) return null;
+  const s = Math.sqrt(disc);
+  const t0 = (-B - s) / (2 * A);
+  const t1 = (-B + s) / (2 * A);
+  const r = [Math.max(iv[0], t0), Math.min(iv[1], t1)];
+  return r[1] > r[0] ? r : null;
 }
 
-function frameSvg(model, projection, label, body) {
-  const pj = projection === "first" ? "FIRST-ANGLE" : "THIRD-ANGLE";
-  const note =
-    "AI-generated from image" +
-    (model.estimated ? " (dimensions estimated)" : "") +
-    " - verify before use";
+// Material intervals along a ray = (union of adds) - (union of cuts), clipped.
+function rayMaterial(solid, o, d) {
+  const add = [];
+  for (const p of solid.adds) {
+    const iv = primRayIv(p, o, d);
+    if (iv) add.push(iv);
+  }
+  let mat = mergeIv(add);
+  if (!mat.length) return mat;
 
-  return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${DRAW.W} ${DRAW.H}" width="100%" role="img" style="background:${DRAW.bg};border-radius:12px;display:block">` +
-    `<defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="${DRAW.line}" stroke-width="1"/></pattern></defs>` +
-    `<rect x="14" y="14" width="${DRAW.W - 28}" height="${DRAW.H - 28}" fill="none" stroke="${DRAW.line}" stroke-width="1.2"/>` +
-    body +
-    svgText(DRAW.W / 2, 548, label, 'text-anchor="middle" font-weight="bold"') +
-    svgLine(14, 572, DRAW.W - 14, 572) +
-    svgText(24, 592, `${model.title} | Units: ${model.unit} | ${pj} PROJECTION | Fitted scale, not 1:1`, 'font-size="10"') +
-    svgText(DRAW.W - 24, 592, note, 'font-size="10" text-anchor="end"') +
-    `</svg>`
-  );
+  const cut = [];
+  for (const p of solid.cuts) {
+    const iv = primRayIv(p, o, d);
+    if (iv) cut.push(iv);
+  }
+  if (cut.length) mat = subtractIv(mat, mergeIv(cut));
+
+  if (solid.ci >= 0) {
+    const i = solid.ci;
+    const lim = solid.clip.max;
+    const iv = slabIv(o[i], d[i], -1e9, lim, [-1e9, 1e9]);
+    if (!iv) return [];
+    mat = mat
+      .map(m => [Math.max(m[0], iv[0]), Math.min(m[1], iv[1])])
+      .filter(m => m[1] > m[0]);
+  }
+  return mat;
 }
 
-// Draws a set of flat shapes (front/top/side/section) with outlines,
-// holes, centre lines and dimensions.
+/* ---------- Check, repair and normalise what the AI returned ---------- */
 
+const MAX_PARTS = 24;
 
-  
-function drawFlat(shapes, opts = {}) {
-  const adds = shapes.filter(s => s.op === "add");
-  const cuts = shapes.filter(s => s.op === "cut");
+function boxesTouch(a, b, tol) {
+  const ea = extentsOf(a), eb = extentsOf(b);
+  return AXES.every(k => ea[k][0] <= eb[k][1] + tol && eb[k][0] <= ea[k][1] + tol);
+}
 
-  if (!adds.length) {
-    return svgText(
-      DRAW.W / 2,
-      DRAW.H / 2,
-      "No reliable geometry could be reconstructed",
-      'text-anchor="middle"'
+function sanitizeModel(raw) {
+  const warnings = [];
+  const list = Array.isArray(raw?.parts) ? raw.parts.slice(0, MAX_PARTS) : [];
+  if (Array.isArray(raw?.parts) && raw.parts.length > MAX_PARTS) {
+    warnings.push(`Only the first ${MAX_PARTS} features were used.`);
+  }
+
+  if (raw?.recognised === false || raw?.recognized === false || raw?.image_kind === "not_a_part") {
+    throw drawingError(
+      "That image does not appear to show a machine part, engineering drawing or sketch. Please upload a clear picture of the component."
     );
   }
 
-  const b = bounds2D(adds);
-  const f = fitTo(b);
-  const EPS = 1e-6;
+  const confidence = clampNum(raw?.confidence, 0, 1, NaN);
+  if (Number.isFinite(confidence) && confidence < 0.2) {
+    throw drawingError(
+      "I could not identify the part confidently enough to draw it. Please upload a clearer image, ideally with printed dimensions or several views."
+    );
+  }
 
-  const num = n => rnd(Number.isFinite(n) ? n : 0);
+  const parts = [];
+  let dropped = 0;
 
-  const rectBounds = s => ({
-    x0: Math.min(s.u0, s.u1),
-    x1: Math.max(s.u0, s.u1),
-    y0: Math.min(s.v0, s.v1),
-    y1: Math.max(s.v0, s.v1)
-  });
+  for (const p of list) {
+    const type = String(p?.type || "").toLowerCase();
+    const op = String(p?.op || "add").toLowerCase() === "cut" ? "cut" : "add";
 
-  const el = (s, attrs) => {
-    if (s.kind === "circ") {
-      return `<circle cx="${num(f.X(s.cu))}" cy="${num(f.Y(s.cv))}" r="${num(Math.max(0.1, s.r * f.s))}" ${attrs}/>`;
-    }
+    if (type === "box") {
+      const w = clampNum(p.w, 0, 5000, 0);
+      const h = clampNum(p.h, 0, 5000, 0);
+      const d = clampNum(p.d, 0, 5000, 0);
+      if (w > 0 && h > 0 && d > 0) {
+        parts.push({
+          type: "box", op,
+          x: clampNum(p.x, -5000, 5000, 0),
+          y: clampNum(p.y, -5000, 5000, 0),
+          z: clampNum(p.z, -5000, 5000, 0),
+          w, h, d
+        });
+      } else dropped++;
+    } else if (type === "cyl" || type === "cylinder") {
+      const axis = String(p.axis || "z").toLowerCase();
+      const r = clampNum(p.r ?? Number(p.diameter ?? p.dia) / 2, 0, 2500, 0);
+      const len = clampNum(p.len ?? p.length, 0, 5000, 0);
+      if (AXES.includes(axis) && r > 0 && len > 0) {
+        parts.push({
+          type: "cyl", op, axis, r, len,
+          c: {
+            x: clampNum(p.cx ?? p.x, -5000, 5000, 0),
+            y: clampNum(p.cy ?? p.y, -5000, 5000, 0),
+            z: clampNum(p.cz ?? p.z, -5000, 5000, 0)
+          }
+        });
+      } else dropped++;
+    } else dropped++;
+  }
 
-    const r = rectBounds(s);
-    return `<rect x="${num(f.X(r.x0))}" y="${num(f.Y(r.y1))}" width="${num(Math.max(0.1, (r.x1 - r.x0) * f.s))}" height="${num(Math.max(0.1, (r.y1 - r.y0) * f.s))}" ${attrs}/>`;
+  if (dropped) warnings.push(`${dropped} unreadable feature(s) were ignored.`);
+
+  let adds = parts.filter(p => p.op === "add");
+  let cuts = parts.filter(p => p.op === "cut");
+
+  if (!adds.length) {
+    throw drawingError(
+      "I could not work out the part's shape from that image. Please try a clearer picture, ideally with the dimensions printed on it."
+    );
+  }
+
+  // The schema example must never come back as if it were the user's part.
+  if (
+    adds.length === 1 && !cuts.length && adds[0].type === "box" &&
+    adds[0].w === 40 && adds[0].h === 20 && adds[0].d === 30 &&
+    !adds[0].x && !adds[0].y && !adds[0].z
+  ) {
+    throw drawingError(
+      "The AI returned a placeholder instead of the uploaded part. Please try again or upload a clearer image."
+    );
+  }
+
+  // Remove duplicate and fully-enclosed additive solids (they only cause
+  // overlapping outlines and add nothing to the shape).
+  const key = p => JSON.stringify(
+    p.type === "box"
+      ? [p.type, rnd(p.x), rnd(p.y), rnd(p.z), rnd(p.w), rnd(p.h), rnd(p.d)]
+      : [p.type, p.axis, rnd(p.r), rnd(p.len), rnd(p.c.x), rnd(p.c.y), rnd(p.c.z)]
+  );
+  const uniq = (arr) => { const s = new Set(); return arr.filter(p => (s.has(key(p)) ? false : (s.add(key(p)), true))); };
+  adds = uniq(adds);
+  cuts = uniq(cuts);
+
+  const enclosed = (p, q) => {
+    // p fully inside box q ?
+    if (q.type !== "box" || p === q) return false;
+    const e = extentsOf(p);
+    return e.x[0] >= q.x - 1e-6 && e.x[1] <= q.x + q.w + 1e-6 &&
+           e.y[0] >= q.y - 1e-6 && e.y[1] <= q.y + q.h + 1e-6 &&
+           e.z[0] >= q.z - 1e-6 && e.z[1] <= q.z + q.d + 1e-6;
   };
+  const before = adds.length;
+  adds = adds.filter((p, i) => !adds.some((q, j) => j !== i && enclosed(p, q) && !(enclosed(q, p) && j > i)));
+  if (adds.length < before) warnings.push("Redundant overlapping solids were merged.");
 
-  // Find portions of a rectangle edge covered by another additive
-  // rectangle. This prevents false internal seams between touching
-  // or overlapping box primitives.
-  function coveredIntervals(s, edge) {
-    if (s.kind === "circ") return [];
+  // Normalise: move the part so its bounding box starts at the origin.
+  const bb = boundsOfParts(adds);
+  const shift = { x: bb.x[0], y: bb.y[0], z: bb.z[0] };
+  const mv = p => {
+    if (p.type === "box") return { ...p, x: p.x - shift.x, y: p.y - shift.y, z: p.z - shift.z };
+    return { ...p, c: { x: p.c.x - shift.x, y: p.c.y - shift.y, z: p.c.z - shift.z } };
+  };
+  adds = adds.map(mv);
+  cuts = cuts.map(mv);
 
-    const a = rectBounds(s);
-    const horizontal = edge === "top" || edge === "bottom";
-    const fixed = edge === "top" ? a.y1
-      : edge === "bottom" ? a.y0
-      : edge === "left" ? a.x0
-      : a.x1;
+  const body = makeSolid(adds);
 
-    const start = horizontal ? a.x0 : a.y0;
-    const end = horizontal ? a.x1 : a.y1;
-    const intervals = [];
-
-    for (const other of adds) {
-      if (other === s || other.kind === "circ") continue;
-
-      const q = rectBounds(other);
-      const qStart = horizontal ? q.x0 : q.y0;
-      const qEnd = horizontal ? q.x1 : q.y1;
-      const qMin = horizontal ? q.y0 : q.x0;
-      const qMax = horizontal ? q.y1 : q.x1;
-
-      // Only hide an edge if the other rectangle covers the edge
-      // from the material's interior side.
-      const coversInterior = fixed > qMin + EPS && fixed < qMax - EPS;
-
-      if (!coversInterior) continue;
-
-      const lo = Math.max(start, qStart);
-      const hi = Math.min(end, qEnd);
-
-      if (hi - lo > EPS) intervals.push([lo, hi]);
-    }
-
-    intervals.sort((x, y) => x[0] - y[0]);
-
-    const merged = [];
-
-    for (const interval of intervals) {
-      const last = merged[merged.length - 1];
-
-      if (last && interval[0] <= last[1] + EPS) {
-        last[1] = Math.max(last[1], interval[1]);
-      } else {
-        merged.push(interval.slice());
-      }
-    }
-
-    return merged;
+  // A cut that removes nothing is an invented feature: drop it and say so.
+  const keptCuts = [];
+  for (const c of cuts) {
+    const e = extentsOf(c);
+    let hit = false;
+    const N = 6;
+    for (let i = 0; i <= N && !hit; i++)
+      for (let j = 0; j <= N && !hit; j++)
+        for (let k = 0; k <= N && !hit; k++) {
+          const q = [
+            e.x[0] + ((e.x[1] - e.x[0]) * i) / N,
+            e.y[0] + ((e.y[1] - e.y[0]) * j) / N,
+            e.z[0] + ((e.z[1] - e.z[0]) * k) / N
+          ];
+          if (primContains(c, q) && body.inside(q)) hit = true;
+        }
+    if (hit) keptCuts.push(c);
+  }
+  if (keptCuts.length < cuts.length) {
+    warnings.push(`${cuts.length - keptCuts.length} cut(s) did not intersect the body and were ignored.`);
   }
 
-  function exposedEdge(s, edge) {
-    if (s.kind === "circ") return "";
+  const parts2 = [...adds, ...keptCuts];
+  const solid = makeSolid(parts2);
+  const B = boundsOfParts(adds);
 
-    const a = rectBounds(s);
-    const horizontal = edge === "top" || edge === "bottom";
-    const fixed = edge === "top" ? a.y1
-      : edge === "bottom" ? a.y0
-      : edge === "left" ? a.x0
-      : a.x1;
-
-    const start = horizontal ? a.x0 : a.y0;
-    const end = horizontal ? a.x1 : a.y1;
-    const hidden = coveredIntervals(s, edge);
-    const visible = [];
-    let cursor = start;
-
-    for (const interval of hidden) {
-      if (interval[0] > cursor + EPS) {
-        visible.push([cursor, interval[0]]);
-      }
-      cursor = Math.max(cursor, interval[1]);
-    }
-
-    if (cursor < end - EPS) visible.push([cursor, end]);
-
-    return visible.map(([lo, hi]) => {
-      const p1 = horizontal
-        ? [f.X(lo), f.Y(fixed)]
-        : [f.X(fixed), f.Y(lo)];
-
-      const p2 = horizontal
-        ? [f.X(hi), f.Y(fixed)]
-        : [f.X(fixed), f.Y(hi)];
-
-      return svgLine(p1[0], p1[1], p2[0], p2[1]);
-    }).join("");
+  // The material must not be eliminated entirely by the cuts.
+  let inCount = 0, tot = 0;
+  const G = 14;
+  for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) for (let k = 0; k < G; k++) {
+    tot++;
+    if (solid.inside([
+      B.x[0] + ((B.x[1] - B.x[0]) * (i + 0.5)) / G,
+      B.y[0] + ((B.y[1] - B.y[0]) * (j + 0.5)) / G,
+      B.z[0] + ((B.z[1] - B.z[0]) * (k + 0.5)) / G
+    ])) inCount++;
+  }
+  if (inCount / tot < 0.005) {
+    throw drawingError(
+      "The reconstructed cuts remove essentially all of the material, so the shape was rejected as unreliable. Please try a clearer image."
+    );
   }
 
-  let out = "";
-
-  // Establish a clean background and draw the projected material.
-  // Section hatching is clipped to the projected material boundaries.
-  if (opts.hatch) {
-    const clipId = "sectionMaterialClip";
-
-    out += `<defs><clipPath id="${clipId}">`;
-    out += adds.map(s => el(s, 'fill="#fff" stroke="none"')).join("");
-    out += `</clipPath></defs>`;
-
-    out += adds.map(s =>
-      el(s, `fill="${DRAW.bg}" stroke="none"`)
-    ).join("");
-
-    out += `<g clip-path="url(#${clipId})">`;
-    out += `<rect x="${DRAW.area.x}" y="${DRAW.area.y}" width="${DRAW.area.w}" height="${DRAW.area.h}" fill="url(#hatch)"/>`;
-    out += `</g>`;
-  } else {
-    out += adds.map(s =>
-      el(s, `fill="${DRAW.bg}" stroke="none"`)
-    ).join("");
-  }
-
-  // Draw only exposed rectangle edges. Circles retain their outlines.
-  for (const s of adds) {
-    if (s.kind === "circ") {
-      out += el(
-        s,
-        `fill="none" stroke="${DRAW.line}" stroke-width="1.6"`
-      );
-      continue;
+  // Disconnected solids usually mean a mis-placed feature.
+  if (adds.length > 1) {
+    const diag = Math.hypot(B.x[1] - B.x[0], B.y[1] - B.y[0], B.z[1] - B.z[0]);
+    const seen = new Set([0]);
+    const queue = [0];
+    while (queue.length) {
+      const i = queue.pop();
+      adds.forEach((q, j) => { if (!seen.has(j) && boxesTouch(adds[i], q, diag * 1e-4)) { seen.add(j); queue.push(j); } });
     }
-
-    for (const edge of ["top", "bottom", "left", "right"]) {
-      out += exposedEdge(s, edge);
+    if (seen.size < adds.length) {
+      warnings.push("Some solids do not touch the main body; their position is uncertain.");
     }
   }
 
-  // Display cut features. A cut is a drawing convention here, not a
-  // true 3D Boolean operation; see the implementation note below.
-  for (const s of cuts) {
-    if (s.kind === "circ") {
-      out += el(
-        s,
-        `fill="${DRAW.bg}" stroke="${DRAW.line}" stroke-width="1.5"`
-      );
+  const dimsPrinted = String(raw?.dimensions_source || "").toLowerCase() === "printed" && raw?.estimated !== true;
+  const notes = Array.isArray(raw?.notes)
+    ? raw.notes.map(n => cleanXml(String(n)).slice(0, 140)).filter(Boolean).slice(0, 5)
+    : [];
+
+  return {
+    title: cleanXml(String(raw?.title || "Machine part")).slice(0, 60) || "Machine part",
+    unit: String(raw?.unit || "").toLowerCase() === "in" ? "in" : "mm",
+    estimated: !dimsPrinted,
+    confidence: Number.isFinite(confidence) ? confidence : null,
+    notes,
+    warnings,
+    parts: parts2
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Edge extraction and hidden-line removal                             */
+/* ------------------------------------------------------------------ */
+//
+// Candidate edge curves come from the geometry itself (box edges, plane/plane
+// lines, cylinder rims, plane/cylinder lines and cylinder/cylinder
+// intersection curves). A candidate piece is kept only where the FINAL solid
+// really has an edge there, tested by sampling the material in a small ring
+// around the point. So cut-away material, buried faces and flush joints never
+// produce lines, and every intersection is exact.
+
+const v3 = {
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  len: a => Math.hypot(a[0], a[1], a[2]),
+  norm: a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+  add: (a, b, s = 1) => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s]
+};
+
+const VIEW_DEFS = {
+  front: { cam: [0, 0, 1], u: [1, 0, 0], v: [0, 1, 0], label: "FRONT VIEW" },
+  top: { cam: [0, 1, 0], u: [1, 0, 0], v: [0, 0, -1], label: "TOP VIEW" },
+  side: { cam: [1, 0, 0], u: [0, 0, -1], v: [0, 1, 0], label: "RIGHT SIDE VIEW" },
+  iso: {
+    cam: v3.norm([1, 1, 1]),
+    u: [0.70710678, 0, -0.70710678],
+    v: [-0.40824829, 0.81649658, -0.40824829],
+    label: "ISOMETRIC VIEW"
+  }
+};
+
+const TWO_PI = Math.PI * 2;
+const q4 = n => Math.round(n * 1e4);
+
+/* ---------- Solid context: tolerances and counters ---------- */
+
+function makeContext(solidParts, clip) {
+  const adds = solidParts.filter(p => p.op === "add");
+  const B = boundsOfParts(adds);
+  const diag = Math.hypot(B.x[1] - B.x[0], B.y[1] - B.y[0], B.z[1] - B.z[0]) || 1;
+
+  let minDim = Infinity;
+  for (const p of solidParts) {
+    const d = p.type === "box" ? Math.min(p.w, p.h, p.d) : Math.min(2 * p.r, p.len);
+    minDim = Math.min(minDim, d);
+  }
+
+  return {
+    solid: makeSolid(solidParts, clip),
+    B,
+    diag,
+    // ring radius for edge tests: small against the smallest feature
+    eps: Math.max(diag * 1e-4, Math.min(diag * 0.0025, minDim * 0.05)),
+    calls: 0,
+    maxCalls: 900000
+  };
+}
+
+function insideC(ctx, q) {
+  if (++ctx.calls > ctx.maxCalls) {
+    throw drawingError(
+      "This part is too complex to draw reliably. Try an image of a simpler part or fewer features.",
+      400
+    );
+  }
+  return ctx.solid.inside(q);
+}
+
+/* ---------- Is there an edge here? (ring test) ---------- */
+
+const RING_K = 16;
+const RING_ANG = Array.from({ length: RING_K }, (_, k) => ((k + 0.5) * TWO_PI) / RING_K);
+
+function ringBasis(tau) {
+  const a = [Math.abs(tau[0]), Math.abs(tau[1]), Math.abs(tau[2])];
+  const h = a[0] <= a[1] && a[0] <= a[2] ? [1, 0, 0] : a[1] <= a[2] ? [0, 1, 0] : [0, 0, 1];
+  const d = v3.dot(h, tau);
+  const e1 = v3.norm([h[0] - d * tau[0], h[1] - d * tau[1], h[2] - d * tau[2]]);
+  return [e1, v3.cross(tau, e1)];
+}
+
+function ringOccupancy(ctx, P, tau) {
+  const [e1, e2] = ringBasis(tau);
+  const bits = [];
+  let n = 0;
+  for (const phi of RING_ANG) {
+    const c = Math.cos(phi) * ctx.eps;
+    const s = Math.sin(phi) * ctx.eps;
+    const q = [
+      P[0] + e1[0] * c + e2[0] * s,
+      P[1] + e1[1] * c + e2[1] * s,
+      P[2] + e1[2] * c + e2[2] * s
+    ];
+    const b = insideC(ctx, q);
+    bits.push(b);
+    if (b) n++;
+  }
+  let flips = 0;
+  for (let i = 0; i < RING_K; i++) if (bits[i] !== bits[(i + 1) % RING_K]) flips++;
+  return { n, runs: flips / 2 };
+}
+
+// mode "edge": a crease (turn of more than ~30 degrees) or a concave corner.
+// mode "boundary": any point on the surface (used for silhouettes).
+function isEdgePoint(ctx, P, tau, mode) {
+  const { n, runs } = ringOccupancy(ctx, P, tau);
+  if (n === 0 || n === RING_K) return false;
+  if (mode === "boundary") return true;
+  if (runs >= 2) return true;
+  return n <= 6 || n >= 10;
+}
+
+/* ---------- Find the parameter intervals where a test is true ---------- */
+
+function intervalsWhere(fn, t0, t1, breaks, M, iters = 13) {
+  const span = t1 - t0;
+  const base = [t0, t1];
+  for (const b of breaks) if (b > t0 + 1e-9 && b < t1 - 1e-9) base.push(b);
+  base.sort((a, b) => a - b);
+
+  const ts = [base[0]];
+  for (let i = 1; i < base.length; i++) {
+    const gap = base[i] - base[i - 1];
+    if (gap < 1e-9) continue;
+    const k = Math.max(1, Math.ceil((gap / span) * M));
+    for (let j = 1; j <= k; j++) ts.push(base[i - 1] + (gap * j) / k);
+  }
+
+  const mids = [];
+  const st = [];
+  for (let i = 0; i + 1 < ts.length; i++) {
+    mids.push((ts[i] + ts[i + 1]) / 2);
+    st.push(fn(mids[i]));
+  }
+
+  const out = [];
+  let start = st[0] ? ts[0] : null;
+
+  for (let i = 0; i + 1 < st.length; i++) {
+    if (st[i] === st[i + 1]) continue;
+    let lo = mids[i], hi = mids[i + 1];
+    for (let it = 0; it < iters; it++) {
+      const m = (lo + hi) / 2;
+      if (fn(m) === st[i]) lo = m; else hi = m;
+    }
+    const tt = (lo + hi) / 2;
+    if (st[i]) { out.push([start, tt]); start = null; } else start = tt;
+  }
+  if (start !== null) out.push([start, ts[ts.length - 1]]);
+  return out.filter(i => i[1] - i[0] > 1e-9);
+}
+
+/* ---------- Candidate curves ---------- */
+
+function uniqSorted(vals, tol) {
+  const s = [...vals].sort((a, b) => a - b);
+  const out = [];
+  for (const v of s) if (!out.length || v - out[out.length - 1] > tol) out.push(v);
+  return out;
+}
+
+function planeSet(parts, clip, tol) {
+  const P = { x: [], y: [], z: [] };
+  for (const p of parts) {
+    if (p.type === "box") {
+      P.x.push(p.x, p.x + p.w); P.y.push(p.y, p.y + p.h); P.z.push(p.z, p.z + p.d);
     } else {
-      out += el(
-        s,
-        `fill="none" stroke="${DRAW.line}" stroke-width="1.2" stroke-dasharray="5 3"`
-      );
+      P[p.axis].push(p.c[p.axis] - p.len / 2, p.c[p.axis] + p.len / 2);
+    }
+  }
+  if (clip) P[clip.axis].push(clip.max);
+  for (const a of AXES) P[a] = uniqSorted(P[a], tol);
+  return P;
+}
+
+function lineCandidate(axis, o1, o2, t0, t1, breaks, owners) {
+  const others = AXES.filter(a => a !== axis);
+  const dir = [0, 0, 0];
+  dir[AXES.indexOf(axis)] = 1;
+  return {
+    type: "line", axis, c1: o1, c2: o2, t0, t1, breaks, owners, tau: () => dir,
+    key: `${axis}|${q4(o1)}|${q4(o2)}`,
+    at: t => {
+      const p = [0, 0, 0];
+      p[AXES.indexOf(axis)] = t;
+      p[AXES.indexOf(others[0])] = o1;
+      p[AXES.indexOf(others[1])] = o2;
+      return p;
+    }
+  };
+}
+
+function circleCandidate(cyl, idx, v, thetaBreaks) {
+  const a = AXES.indexOf(cyl.axis);
+  const o = AXES.filter(k => k !== cyl.axis).map(k => AXES.indexOf(k));
+  const c = [cyl.c.x, cyl.c.y, cyl.c.z];
+  return {
+    type: "circle", t0: 0, t1: TWO_PI, breaks: thetaBreaks, M: 96, owners: [idx],
+    key: `c|${cyl.axis}|${q4(v)}|${q4(c[o[0]])}|${q4(c[o[1]])}|${q4(cyl.r)}`,
+    at: th => {
+      const p = [0, 0, 0];
+      p[a] = v;
+      p[o[0]] = c[o[0]] + cyl.r * Math.cos(th);
+      p[o[1]] = c[o[1]] + cyl.r * Math.sin(th);
+      return p;
+    },
+    tau: th => {
+      const t = [0, 0, 0];
+      t[o[0]] = -Math.sin(th);
+      t[o[1]] = Math.cos(th);
+      return t;
+    }
+  };
+}
+
+function curveCandidate(at, t0, t1, breaks, M, owners) {
+  const h = (t1 - t0) * 1e-4;
+  return {
+    type: "curve", t0, t1, breaks, M, owners, key: null, at,
+    tau: t => v3.norm([
+      at(t + h)[0] - at(t - h)[0], at(t + h)[1] - at(t - h)[1], at(t + h)[2] - at(t - h)[2]
+    ])
+  };
+}
+
+function genCandidates(ctx) {
+  const parts = ctx.solid.parts;
+  const clip = ctx.solid.clip;
+  const tol = ctx.diag * 1e-6;
+  const planes = planeSet(parts, clip, tol);
+  const cands = [];
+
+  const ext = parts.map(extentsOf);
+  const near = (r, v) => v >= r[0] - tol * 10 && v <= r[1] + tol * 10;
+
+  // (1) Lines where two perpendicular planes meet (includes all box edges).
+  for (const [k1, k2] of [["x", "y"], ["x", "z"], ["y", "z"]]) {
+    const k3 = AXES.find(a => a !== k1 && a !== k2);
+    for (const v1 of planes[k1]) {
+      for (const v2 of planes[k2]) {
+        const rel = [];
+        ext.forEach((e, i) => { if (near(e[k1], v1) && near(e[k2], v2)) rel.push(i); });
+        if (!rel.length) continue;
+        let lo = Infinity, hi = -Infinity;
+        const br = [];
+        for (const i of rel) {
+          lo = Math.min(lo, ext[i][k3][0]); hi = Math.max(hi, ext[i][k3][1]);
+          br.push(ext[i][k3][0], ext[i][k3][1]);
+        }
+        if (clip && clip.axis === k3) hi = Math.min(hi, clip.max);
+        if (hi - lo < tol) continue;
+        // lines are built with the two remaining axes in AXES order
+        const first = AXES.indexOf(k1) < AXES.indexOf(k2) ? v1 : v2;
+        const second = AXES.indexOf(k1) < AXES.indexOf(k2) ? v2 : v1;
+        cands.push(lineCandidate(k3, first, second, lo, hi, br, []));
+      }
     }
   }
 
-  // Centre lines for circles and cylindrical features.
-  if (opts.centre) {
-    const dash = 'stroke-dasharray="14 3 2 3"';
+  const cyls = parts.map((p, i) => ({ p, i })).filter(o => o.p.type === "cyl");
 
-    for (const s of shapes) {
-      if (s.kind === "circ") {
-        const cx = f.X(s.cu);
-        const cy = f.Y(s.cv);
-        const R = Math.max(5, s.r * f.s + 8);
+  for (const { p: cy, i } of cyls) {
+    const a = cy.axis;
+    const o = AXES.filter(k => k !== a);
+    const lo = cy.c[a] - cy.len / 2;
+    const hi = cy.c[a] + cy.len / 2;
 
-        out += svgLine(cx - R, cy, cx + R, cy, dash);
-        out += svgLine(cx, cy - R, cx, cy + R, dash);
-      } else if (s.cyl) {
-        const x0 = f.X(s.u0);
-        const x1 = f.X(s.u1);
-        const y0 = f.Y(s.v1);
-        const y1 = f.Y(s.v0);
+    // (2) Circles: wherever a plane crosses the cylinder at right angles
+    //     (own end faces, and openings in faces of other solids).
+    for (const v of planes[a]) {
+      if (v < lo - tol || v > hi + tol) continue;
+      const br = [];
+      planes[o[0]].forEach(k => { const c = (k - cy.c[o[0]]) / cy.r; if (Math.abs(c) <= 1) { const t = Math.acos(c); br.push(t, TWO_PI - t); } });
+      planes[o[1]].forEach(k => {
+        const s = (k - cy.c[o[1]]) / cy.r;
+        if (Math.abs(s) <= 1) { const t = Math.asin(s); br.push((t + TWO_PI) % TWO_PI, (Math.PI - t + TWO_PI) % TWO_PI); }
+      });
+      cands.push(circleCandidate(cy, i, v, br));
+    }
 
-        if (s.horiz) {
-          out += svgLine(
-            x0 - 8, (y0 + y1) / 2,
-            x1 + 8, (y0 + y1) / 2,
-            dash
-          );
-        } else {
-          out += svgLine(
-            (x0 + x1) / 2, y0 - 8,
-            (x0 + x1) / 2, y1 + 8,
-            dash
-          );
+    // (3) Straight lines where a plane parallel to the axis meets the cylinder.
+    const brA = [];
+    ext.forEach(e => brA.push(e[a][0], e[a][1]));
+    for (const k of o) {
+      const m = o.find(x => x !== k);
+      for (const v of planes[k]) {
+        const dlt = v - cy.c[k];
+        if (Math.abs(dlt) >= cy.r - tol) continue;
+        const h = Math.sqrt(cy.r * cy.r - dlt * dlt);
+        for (const sgn of [1, -1]) {
+          const pos = {};
+          pos[k] = v;
+          pos[m] = cy.c[m] + sgn * h;
+          cands.push(lineCandidate(a, pos[o[0]], pos[o[1]], lo, hi, brA, [i]));
         }
       }
     }
   }
 
-  // Overall dimensions. Keep labels readable and outside the part.
-  const X0 = f.X(b.u0);
-  const X1 = f.X(b.u1);
-  const Yt = f.Y(b.v1);
-  const Yb = f.Y(b.v0);
-
-  out += hDim(
-    X0, X1, Yb + 30,
-    fmtN(b.u1 - b.u0), Yb
-  );
-
-  out += vDim(
-    X1 + 34, Yt, Yb,
-    fmtN(b.v1 - b.v0), X1
-  );
-
-  // Diameter labels: one label per distinct visible circle size.
-  const seen = new Set();
-  const dirs = [
-    [0.707, -0.707],
-    [-0.707, -0.707],
-    [0.707, 0.707],
-    [-0.707, 0.707]
-  ];
-
-  let n = 0;
-
-  for (const s of shapes) {
-    if (s.kind !== "circ" || n >= 4) continue;
-
-    const diameter = fmtN(s.r * 2);
-    if (seen.has(diameter)) continue;
-    seen.add(diameter);
-
-    const [dx, dy] = dirs[n % dirs.length];
-    const cx = f.X(s.cu);
-    const cy = f.Y(s.cv);
-    const R = s.r * f.s;
-
-    const x1 = cx + dx * R;
-    const y1 = cy + dy * R;
-    const x2 = cx + dx * (R + 22);
-    const y2 = cy + dy * (R + 22);
-
-    out += svgLine(x1, y1, x2, y2);
-
-    out += svgText(
-      x2 + dx * 4,
-      y2 + dy * 4 + 4,
-      "Ø" + diameter,
-      `text-anchor="${dx > 0 ? "start" : "end"}"`
-    );
-
-    n++;
+  // (4) Cylinder / cylinder intersections.
+  for (let ii = 0; ii < cyls.length; ii++) {
+    for (let jj = ii + 1; jj < cyls.length; jj++) {
+      const A = cyls[ii].p, B = cyls[jj].p;
+      if (A.axis === B.axis) {
+        const a = A.axis;
+        const o = AXES.filter(k => k !== a);
+        const dx = B.c[o[0]] - A.c[o[0]];
+        const dy = B.c[o[1]] - A.c[o[1]];
+        const D = Math.hypot(dx, dy);
+        if (D < 1e-9 || D >= A.r + B.r || D <= Math.abs(A.r - B.r)) continue;
+        const xa = (D * D + A.r * A.r - B.r * B.r) / (2 * D);
+        const h = Math.sqrt(Math.max(0, A.r * A.r - xa * xa));
+        const ex = dx / D, ey = dy / D;
+        const lo = Math.min(A.c[a] - A.len / 2, B.c[a] - B.len / 2);
+        const hi = Math.max(A.c[a] + A.len / 2, B.c[a] + B.len / 2);
+        const br = [A.c[a] - A.len / 2, A.c[a] + A.len / 2, B.c[a] - B.len / 2, B.c[a] + B.len / 2];
+        for (const sgn of [1, -1]) {
+          cands.push(lineCandidate(
+            a,
+            A.c[o[0]] + ex * xa - sgn * ey * h,
+            A.c[o[1]] + ey * xa + sgn * ex * h,
+            lo, hi, br, [cyls[ii].i, cyls[jj].i]
+          ));
+        }
+      } else {
+        const a = AXES.indexOf(A.axis);
+        const b = AXES.indexOf(B.axis);
+        const m = 3 - a - b;
+        const cA = [A.c.x, A.c.y, A.c.z];
+        const cB = [B.c.x, B.c.y, B.c.z];
+        const br = [];
+        for (const s of [1, -1]) {
+          const sn = (cB[m] + s * B.r - cA[m]) / A.r;
+          if (Math.abs(sn) <= 1) { const t = Math.asin(sn); br.push((t + TWO_PI) % TWO_PI, (Math.PI - t + TWO_PI) % TWO_PI); }
+        }
+        for (const sgn of [1, -1]) {
+          const at = th => {
+            const p = [0, 0, 0];
+            p[b] = cA[b] + A.r * Math.cos(th);
+            p[m] = cA[m] + A.r * Math.sin(th);
+            const rad = Math.max(0, B.r * B.r - (p[m] - cB[m]) * (p[m] - cB[m]));
+            p[a] = cB[a] + sgn * Math.sqrt(rad);
+            return p;
+          };
+          cands.push(curveCandidate(at, 0, TWO_PI, br, 180, [cyls[ii].i, cyls[jj].i]));
+        }
+      }
+    }
   }
 
+  return cands;
+}
+
+/* ---------- Keep only the genuine edge pieces ---------- */
+
+function acceptCandidates(ctx, cands, mode) {
+  const lines = new Map();
+  const curves = [];
+
+  for (const c of cands) {
+    const M = c.M || 24;
+    const iv = intervalsWhere(
+      t => isEdgePoint(ctx, c.at(t), c.tau(t), mode),
+      c.t0, c.t1, c.breaks, M
+    );
+    if (!iv.length) continue;
+
+    if (c.type === "line") {
+      const g = lines.get(c.key);
+      if (g) { g.iv.push(...iv); c.owners.forEach(o => g.owners.add(o)); }
+      else lines.set(c.key, { c, iv: [...iv], owners: new Set(c.owners) });
+    } else {
+      curves.push({ c, iv, owners: new Set(c.owners) });
+    }
+  }
+  return { lines, curves };
+}
+
+// Edges that do not depend on the view (computed once per solid).
+function baseEdges(ctx) {
+  return acceptCandidates(ctx, genCandidates(ctx), "edge");
+}
+
+// Silhouette generators of cylinders seen from the side (view dependent).
+function silhouetteEdges(ctx, V) {
+  const cands = [];
+  ctx.solid.parts.forEach((cy, i) => {
+    if (cy.type !== "cyl") return;
+    const ea = [0, 0, 0];
+    ea[AXES.indexOf(cy.axis)] = 1;
+    const n = v3.cross(ea, V.cam);
+    if (v3.len(n) < 1e-6) return;
+    const nn = v3.norm(n);
+    const o = AXES.filter(k => k !== cy.axis);
+    const lo = cy.c[cy.axis] - cy.len / 2;
+    const hi = cy.c[cy.axis] + cy.len / 2;
+    const br = [];
+    ctx.solid.parts.forEach(p => { const e = extentsOf(p)[cy.axis]; br.push(e[0], e[1]); });
+    for (const s of [1, -1]) {
+      const pos = o.map(k => cy.c[k] + s * cy.r * nn[AXES.indexOf(k)]);
+      cands.push(lineCandidate(cy.axis, pos[0], pos[1], lo, hi, br, [i]));
+    }
+  });
+  return acceptCandidates(ctx, cands, "boundary");
+}
+
+function mergeIntervals(iv) {
+  const a = iv.map(i => [i[0], i[1]]).sort((x, y) => x[0] - y[0]);
+  const out = [];
+  for (const i of a) {
+    const last = out[out.length - 1];
+    if (last && i[0] <= last[1] + 1e-7) last[1] = Math.max(last[1], i[1]);
+    else out.push(i);
+  }
   return out;
 }
 
+/* ---------- Visibility ---------- */
 
+function makeVisibility(ctx, V, solidForRays) {
+  const dly = ctx.diag * 2e-4;
+  const tmin = dly * 6;
+  const offs = [[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([a, b]) => [
+    (V.u[0] * a + V.v[0] * b) * dly,
+    (V.u[1] * a + V.v[1] * b) * dly,
+    (V.u[2] * a + V.v[2] * b) * dly
+  ]);
 
-function flatViewSvg(model, key, projection) {
-  const V = VIEWS[key];
-  const adds3 = model.parts.filter(p => p.op === "add");
-  const depthRange = [
-    Math.min(...adds3.map(p => extentsOf(p)[V.depth][0])),
-    Math.max(...adds3.map(p => extentsOf(p)[V.depth][1]))
-  ];
-
-  const shapes = model.parts.map(p => projectPart(p, V, depthRange));
-
-  return frameSvg(
-    model,
-    projection,
-    V.label,
-    drawFlat(shapes, { hatch: false, centre: true })
-  );
+  // true when the point can be seen from the viewer
+  return P => {
+    for (const d of offs) {
+      const o = [P[0] + d[0], P[1] + d[1], P[2] + d[2]];
+      let blocked = false;
+      for (const iv of rayMaterial(solidForRays, o, V.cam)) {
+        if (iv[1] > tmin && iv[1] - Math.max(iv[0], tmin) > tmin) { blocked = true; break; }
+      }
+      if (!blocked) return true;
+    }
+    return false;
+  };
 }
 
-function sectionViewSvg(model, projection) {
-  const adds3 = model.parts.filter(p => p.op === "add");
-  const zc =
-    (Math.min(...adds3.map(p => extentsOf(p).z[0])) +
-      Math.max(...adds3.map(p => extentsOf(p).z[1]))) / 2;
-
-  const shapes = model.parts.map(p => sectionPart(p, zc)).filter(Boolean);
-
-  if (!shapes.some(s => s.op === "add")) {
-    return flatViewSvg(model, "front", projection);
-  }
-
-  return frameSvg(
-    model,
-    projection,
-    "SECTION A-A (FULL SECTION)",
-    drawFlat(shapes, { hatch: true, centre: false })
-  );
-}
-
-/* ---------- Isometric view ---------- */
-
-// Viewer looks from the +x, +y, +z corner. x runs right-down, z runs left-down.
-const isoPt = (x, y, z) => [(x - z) * 0.866025, y - (x + z) * 0.5];
-
-function convexHull(points) {
-  const pts = points
-    .map(p => [p[0], p[1]])
-    .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-
-  if (pts.length < 3) return pts;
-
-  const cross = (o, a, b) =>
-    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-
-  const lower = [];
-  for (const p of pts) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
-    lower.push(p);
-  }
-
-  const upper = [];
-  for (let i = pts.length - 1; i >= 0; i--) {
-    const p = pts[i];
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
-    upper.push(p);
-  }
-
-  lower.pop();
-  upper.pop();
-  return lower.concat(upper);
-}
-
-function ringPoints(p, endSign) {
-  const others = AXES.filter(a => a !== p.axis);
+function tessellate(c, a, b) {
+  let n = 1;
+  if (c.type === "circle") n = Math.max(2, Math.ceil(((b - a) / TWO_PI) * 120));
+  else if (c.type === "curve") n = Math.max(2, Math.ceil(((b - a) / (c.t1 - c.t0)) * 160));
   const pts = [];
-  const N = 40;
-
-  for (let i = 0; i < N; i++) {
-    const t = (2 * Math.PI * i) / N;
-    const q = { x: 0, y: 0, z: 0 };
-    q[p.axis] = p.c[p.axis] + (endSign * p.len) / 2;
-    q[others[0]] = p.c[others[0]] + p.r * Math.cos(t);
-    q[others[1]] = p.c[others[1]] + p.r * Math.sin(t);
-    pts.push(isoPt(q.x, q.y, q.z));
-  }
-
+  for (let i = 0; i <= n; i++) pts.push(c.at(a + ((b - a) * i) / n));
   return pts;
 }
 
-function isoGeometry(p) {
-  if (p.type === "box") {
-    const x0 = p.x, x1 = p.x + p.w;
-    const y0 = p.y, y1 = p.y + p.h;
-    const z0 = p.z, z1 = p.z + p.d;
-    const P = (x, y, z) => isoPt(x, y, z);
+// Splits every accepted edge into visible and hidden pieces and projects
+// them to the drawing plane.
+function projectEdges(ctx, V, edges, isVisible) {
+  const vis = [];
+  const hid = [];
+  const owners = new Set();
+  const proj = P => [v3.dot(P, V.u), v3.dot(P, V.v)];
+  const minLen = ctx.diag * 2e-3;
 
-    const corners = [
-      P(x0, y0, z0), P(x1, y0, z0), P(x1, y0, z1), P(x0, y0, z1),
-      P(x0, y1, z0), P(x1, y1, z0), P(x1, y1, z1), P(x0, y1, z1)
-    ];
+  const emit = (c, a, b, visible) => {
+    const pts = tessellate(c, a, b).map(proj);
+    let L = 0;
+    for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    if (L < minLen) return;
+    (visible ? vis : hid).push(pts);
+  };
 
-    return {
-      hull: convexHull(corners),
-      faces: [
-        { pts: [P(x0, y1, z0), P(x1, y1, z0), P(x1, y1, z1), P(x0, y1, z1)], alpha: 0.24 },
-        { pts: [P(x0, y0, z1), P(x1, y0, z1), P(x1, y1, z1), P(x0, y1, z1)], alpha: 0.1 },
-        { pts: [P(x1, y0, z0), P(x1, y0, z1), P(x1, y1, z1), P(x1, y1, z0)], alpha: 0.17 }
-      ],
-      top: [P(x0, y1, z0), P(x1, y1, z0), P(x1, y1, z1), P(x0, y1, z1)]
-    };
+  const process = (c, ivs, own) => {
+    for (const [a, b] of ivs) {
+      const M = c.type === "line" ? 20 : 60;
+      const br = c.type === "line" ? c.breaks : [];
+      const pieces = intervalsWhere(t => isVisible(c.at(t)), a, b, br, M, 11);
+      // visible pieces
+      for (const [x, y] of pieces) emit(c, x, y, true);
+      // hidden pieces = complement
+      let cur = a;
+      for (const [x, y] of pieces) {
+        if (x > cur + 1e-9) emit(c, cur, x, false);
+        cur = y;
+      }
+      if (b > cur + 1e-9) emit(c, cur, b, false);
+    }
+    if (own) own.forEach(o => owners.add(o));
+  };
+
+  for (const g of edges.lines.values()) process(g.c, mergeIntervals(g.iv), g.owners);
+  for (const g of edges.curves) process(g.c, mergeIntervals(g.iv), g.owners);
+
+  return { visible: vis, hidden: hid, owners };
+}
+
+function combineEdges(a, b) {
+  const lines = new Map();
+  for (const src of [a, b]) {
+    for (const [k, g] of src.lines) {
+      const t = lines.get(k);
+      if (t) { t.iv.push(...g.iv); g.owners.forEach(o => t.owners.add(o)); }
+      else lines.set(k, { c: g.c, iv: [...g.iv], owners: new Set(g.owners) });
+    }
   }
+  return { lines, curves: [...a.curves, ...b.curves] };
+}
 
-  const near = ringPoints(p, 1);
-  const far = ringPoints(p, -1);
+/* ---------- Centre lines (2D, in drawing coordinates) ---------- */
 
+function centreLines(ctx, V, owners) {
+  const out = [];
+  const seen = new Set();
+  const proj = P => [v3.dot(P, V.u), v3.dot(P, V.v)];
+
+  ctx.solid.parts.forEach((cy, i) => {
+    if (cy.type !== "cyl" || !owners.has(i)) return;
+    const ea = [0, 0, 0];
+    ea[AXES.indexOf(cy.axis)] = 1;
+    const along = Math.abs(v3.dot(ea, V.cam));
+    const c = [cy.c.x, cy.c.y, cy.c.z];
+    const ext = Math.max(cy.r * 0.15, ctx.diag * 0.012);
+
+    if (along > 0.999) {
+      // axis points at the viewer: a cross through the circle
+      const p = proj(c);
+      const key = `x|${q4(p[0])}|${q4(p[1])}|${q4(cy.r)}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const R = cy.r + ext;
+      out.push([[p[0] - R, p[1]], [p[0] + R, p[1]]], [[p[0], p[1] - R], [p[0], p[1] + R]]);
+    } else if (along < 1e-3) {
+      const lo = cy.c[cy.axis] - cy.len / 2 - ext;
+      const hi = cy.c[cy.axis] + cy.len / 2 + ext;
+      const a = c.slice(); a[AXES.indexOf(cy.axis)] = lo;
+      const b = c.slice(); b[AXES.indexOf(cy.axis)] = hi;
+      const pa = proj(a), pb = proj(b);
+      const key = `l|${q4(pa[0])}|${q4(pa[1])}|${q4(pb[0])}|${q4(pb[1])}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push([pa, pb]);
+    }
+  });
+  return out;
+}
+
+/* ---------- Public: all edges of one view ---------- */
+
+function computeView(ctx, base, V, withHidden) {
+  const sil = silhouetteEdges(ctx, V);
+  const all = combineEdges(base, sil);
+  const isVisible = makeVisibility(ctx, V, ctx.solid);
+  const e = projectEdges(ctx, V, all, isVisible);
   return {
-    hull: convexHull(near.concat(far)),
-    faces: [{ pts: near, alpha: 0.2 }],
-    cap: near
+    visible: e.visible,
+    hidden: withHidden ? e.hidden : [],
+    centres: centreLines(ctx, V, e.owners),
+    owners: e.owners
   };
 }
 
-function isoViewSvg(model, projection) {
-  const adds = model.parts
-    .filter(p => p.op === "add")
-    .sort((a, b) => depthKey(a) - depthKey(b));
-  const cuts = model.parts.filter(p => p.op === "cut");
+/* ------------------------------------------------------------------ */
+/* Drawing renderer: line weights, dimensions, hatching, sheet layout  */
+/* ------------------------------------------------------------------ */
 
-  function depthKey(p) {
-    const e = extentsOf(p);
-    return (e.x[0] + e.x[1] + e.y[0] + e.y[1] + e.z[0] + e.z[1]) / 2;
+const THEMES = {
+  // clean white drawing sheet (default; also exports well)
+  paper: { bg: "#ffffff", ink: "#111111" },
+  // the original dark look, kept for the existing UI if it asks for it
+  dark: { bg: "#0b0d10", ink: "#d3ec8a" }
+};
+
+const LW = { visible: 1.7, hidden: 0.9, centre: 0.7, dim: 0.7, hatch: 0.6, frame: 1.4, section: 1.9 };
+const FONT = 'font-family="Arial, Helvetica, sans-serif"';
+
+/* ---------- Choose the section plane ---------- */
+
+function chooseSection(model) {
+  const parts = model.parts;
+  const B = boundsOfParts(parts.filter(p => p.op === "add"));
+  const cyls = parts.filter(p => p.type === "cyl");
+  let best = null;
+
+  for (const cy of cyls) {
+    for (const k of AXES) {
+      if (k === cy.axis) continue;
+      const val = cy.c[k];
+      if (val <= B[k][0] + 1e-6 || val >= B[k][1] - 1e-6) continue;
+      let score = 0;
+      for (const o of cyls) {
+        if (o.axis === k) continue;
+        const tol = Math.max(o.r * 0.05, 1e-6);
+        if (Math.abs(o.c[k] - val) <= tol) score += (o.op === "cut" ? 2 : 1) * 2 * o.r;
+      }
+      score += k === "z" ? 0.002 : k === "x" ? 0.001 : 0;
+      if (!best || score > best.score) best = { axis: k, value: val, score };
+    }
+  }
+  if (best) return { axis: best.axis, value: best.value };
+  return { axis: "z", value: (B.z[0] + B.z[1]) / 2 };
+}
+
+const SECTION_VIEW = {
+  z: { cam: [0, 0, 1], u: [1, 0, 0], v: [0, 1, 0] },
+  x: { cam: [1, 0, 0], u: [0, 0, -1], v: [0, 1, 0] },
+  y: { cam: [0, 1, 0], u: [1, 0, 0], v: [0, 0, -1] }
+};
+
+/* ---------- Hatching of the cut face ---------- */
+
+function hatchSegments(fullSolid, V, planeVal, spacing, b2, diag) {
+  const out = [];
+  const s2 = Math.SQRT1_2;
+  const d2 = [s2, s2];
+  const n2 = [-s2, s2];
+  const ks = [[b2.u0, b2.v0], [b2.u1, b2.v0], [b2.u0, b2.v1], [b2.u1, b2.v1]].map(p => n2[0] * p[0] + n2[1] * p[1]);
+  const kmin = Math.floor(Math.min(...ks) / spacing) * spacing;
+  const kmax = Math.max(...ks);
+  const w = planeVal - diag * 1e-6;
+  const R = diag * 4;
+
+  const to3 = (u, v) => [
+    V.u[0] * u + V.v[0] * v + V.cam[0] * w,
+    V.u[1] * u + V.v[1] * v + V.cam[1] * w,
+    V.u[2] * u + V.v[2] * v + V.cam[2] * w
+  ];
+  const dir3 = [
+    V.u[0] * d2[0] + V.v[0] * d2[1],
+    V.u[1] * d2[0] + V.v[1] * d2[1],
+    V.u[2] * d2[0] + V.v[2] * d2[1]
+  ];
+
+  for (let k = kmin; k <= kmax + 1e-9; k += spacing) {
+    const bu = n2[0] * k, bv = n2[1] * k;
+    const o = to3(bu - d2[0] * R, bv - d2[1] * R);
+    for (const iv of rayMaterial(fullSolid, o, dir3)) {
+      const t0 = iv[0] - R, t1 = iv[1] - R;
+      if (t1 - t0 < spacing * 0.15) continue;
+      out.push([[bu + d2[0] * t0, bv + d2[1] * t0], [bu + d2[0] * t1, bv + d2[1] * t1]]);
+    }
+  }
+  return out;
+}
+
+/* ---------- Small SVG helpers ---------- */
+
+function boundsOfView(vd) {
+  let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity;
+  for (const pl of [...vd.visible, ...vd.hidden]) {
+    for (const p of pl) {
+      u0 = Math.min(u0, p[0]); u1 = Math.max(u1, p[0]);
+      v0 = Math.min(v0, p[1]); v1 = Math.max(v1, p[1]);
+    }
+  }
+  return Number.isFinite(u0) ? { u0, u1, v0, v1 } : null;
+}
+
+function pathData(polys, T) {
+  let d = "";
+  for (const pl of polys) {
+    if (pl.length < 2) continue;
+    d += "M" + pl.map(p => `${rnd(T.X(p[0]))} ${rnd(T.Y(p[1]))}`).join("L");
+  }
+  return d;
+}
+
+function pathEl(polys, T, th, w, extra = "") {
+  const d = pathData(polys, T);
+  return d
+    ? `<path d="${d}" fill="none" stroke="${th.ink}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" ${extra}/>`
+    : "";
+}
+
+function txt(th, x, y, s, size = 12, extra = "") {
+  return `<text x="${rnd(x)}" y="${rnd(y)}" fill="${th.ink}" ${FONT} font-size="${size}" paint-order="stroke" stroke="${th.bg}" stroke-width="3" stroke-linejoin="round" ${extra}>${cleanXml(s)}</text>`;
+}
+
+function ln(th, x1, y1, x2, y2, w = LW.dim, extra = "") {
+  return `<line x1="${rnd(x1)}" y1="${rnd(y1)}" x2="${rnd(x2)}" y2="${rnd(y2)}" stroke="${th.ink}" stroke-width="${w}" ${extra}/>`;
+}
+
+function arrow(th, x, y, dx, dy) {
+  const a = 8, b = 2.8, px = -dy, py = dx;
+  return `<polygon points="${rnd(x)},${rnd(y)} ${rnd(x - dx * a + px * b)},${rnd(y - dy * a + py * b)} ${rnd(x - dx * a - px * b)},${rnd(y - dy * a - py * b)}" fill="${th.ink}"/>`;
+}
+
+function hDimSvg(th, x1, x2, y, label, refY1, refY2 = refY1) {
+  const sgn = y >= refY1 ? 1 : -1;
+  const inside = x2 - x1 > 34;
+  let o = ln(th, x1, refY1 + sgn * 3, x1, y + sgn * 5) + ln(th, x2, refY2 + sgn * 3, x2, y + sgn * 5);
+  if (inside) {
+    o += ln(th, x1, y, x2, y) + arrow(th, x1, y, -1, 0) + arrow(th, x2, y, 1, 0);
+    o += txt(th, (x1 + x2) / 2, y - 4, label, 12, 'text-anchor="middle"');
+  } else {
+    o += ln(th, x1 - 14, y, x2 + 14, y) + arrow(th, x1, y, 1, 0) + arrow(th, x2, y, -1, 0);
+    o += txt(th, x2 + 18, y + 4, label, 12);
+  }
+  return o;
+}
+
+function vDimSvg(th, y1, y2, x, label, refX1, refX2 = refX1) {
+  const sgn = x >= refX1 ? 1 : -1;
+  const mid = (y1 + y2) / 2;
+  const inside = Math.abs(y2 - y1) > 34;
+  const top = Math.min(y1, y2), bot = Math.max(y1, y2);
+  let o = ln(th, refX1 + sgn * 3, y1, x + sgn * 5, y1) + ln(th, refX2 + sgn * 3, y2, x + sgn * 5, y2);
+  if (inside) {
+    o += ln(th, x, top, x, bot) + arrow(th, x, top, 0, -1) + arrow(th, x, bot, 0, 1);
+  } else {
+    o += ln(th, x, top - 14, x, bot + 14) + arrow(th, x, top, 0, 1) + arrow(th, x, bot, 0, -1);
+  }
+  o += txt(th, 0, 0, label, 12, `text-anchor="middle" transform="translate(${rnd(x - 5)},${rnd(mid)}) rotate(-90)"`);
+  return o;
+}
+
+/* ---------- Feature dimensions (diameters) ---------- */
+
+function featureList(ctx, V, owners) {
+  const proj = P => [v3.dot(P, V.u), v3.dot(P, V.v)];
+  const seen = new Map();
+  const list = [];
+
+  ctx.solid.parts.forEach((cy, i) => {
+    if (cy.type !== "cyl" || !owners.has(i)) return;
+    const ea = [0, 0, 0];
+    ea[AXES.indexOf(cy.axis)] = 1;
+    const c = [cy.c.x, cy.c.y, cy.c.z];
+    const along = Math.abs(v3.dot(ea, V.cam));
+
+    if (along > 0.999) {
+      const p = proj(c);
+      const key = `o|${q4(p[0])}|${q4(p[1])}|${q4(cy.r)}`;
+      if (seen.has(key)) return;
+      seen.set(key, true);
+      list.push({ kind: "circle", c: p, r: cy.r, op: cy.op });
+    } else if (along < 1e-3) {
+      const lo = c.slice(); lo[AXES.indexOf(cy.axis)] -= cy.len / 2;
+      const hi = c.slice(); hi[AXES.indexOf(cy.axis)] += cy.len / 2;
+      const a = proj(lo), b = proj(hi), m = proj(c);
+      const horiz = Math.abs(v3.dot(ea, V.u)) > 0.999;
+      const key = `s|${horiz}|${q4(m[0])}|${q4(m[1])}|${q4(cy.r)}|${q4(cy.len)}`;
+      if (seen.has(key)) return;
+      seen.set(key, true);
+      list.push({
+        kind: "side", horiz, c: m, r: cy.r, op: cy.op,
+        e0: horiz ? Math.min(a[0], b[0]) : Math.min(a[1], b[1]),
+        e1: horiz ? Math.max(a[0], b[0]) : Math.max(a[1], b[1])
+      });
+    }
+  });
+  return list;
+}
+
+function drawFeatureDims(th, feats, T, b, est, label) {
+  let out = "";
+  const tol = 1e-6 * (Math.abs(b.u1 - b.u0) + Math.abs(b.v1 - b.v0) + 1);
+  const pre = est ? "~" : "";
+  const lead = [[0.7071, -0.7071], [-0.7071, -0.7071], [0.7071, 0.7071], [-0.7071, 0.7071]];
+  let li = 0, shown = 0;
+  const used = { right: 0, left: 0 };
+
+  // equal circles are dimensioned once with a count
+  const groups = new Map();
+  for (const f of feats) {
+    if (f.kind !== "circle") continue;
+    const k = q4(f.r);
+    if (!groups.has(k)) groups.set(k, { f, n: 0 });
+    groups.get(k).n++;
   }
 
-  const addGeo = adds.map(isoGeometry);
-  const cutGeo = cuts.map(isoGeometry);
+  for (const { f, n } of groups.values()) {
+    if (shown >= 6) break;
+    const [dx, dy] = lead[li++ % 4];
+    const cx = T.X(f.c[0]), cy = T.Y(f.c[1]), R = f.r * T.s;
+    const tail = 22;
+    out += ln(th, cx + dx * R, cy + dy * R, cx + dx * (R + tail), cy + dy * (R + tail));
+    out += arrow(th, cx + dx * R, cy + dy * R, -dx, -dy);
+    out += ln(th, cx + dx * (R + tail), cy + dy * (R + tail), cx + dx * (R + tail) + (dx > 0 ? 14 : -14), cy + dy * (R + tail));
+    out += txt(th, cx + dx * (R + tail) + (dx > 0 ? 16 : -16), cy + dy * (R + tail) + 4,
+      `${n > 1 ? n + "x " : ""}${pre}Ø${fmtDim(f.r * 2)}`, 12, `text-anchor="${dx > 0 ? "start" : "end"}"`);
+    shown++;
+  }
 
-  const all = addGeo.flatMap(g => g.hull);
-  const b = {
-    u0: Math.min(...all.map(p => p[0])),
-    u1: Math.max(...all.map(p => p[0])),
-    v0: Math.min(...all.map(p => p[1])),
-    v1: Math.max(...all.map(p => p[1]))
-  };
-  const f = fitTo(b);
+  const sides = new Map();
+  for (const f of feats) {
+    if (f.kind !== "side") continue;
+    const k = `${f.horiz}|${q4(f.r)}`;
+    if (!sides.has(k)) sides.set(k, f);
+  }
 
-  const poly = (pts, attrs) =>
-    `<polygon points="${pts.map(p => `${rnd(f.X(p[0]))},${rnd(f.Y(p[1]))}`).join(" ")}" ${attrs}/>`;
+  for (const f of sides.values()) {
+    if (shown >= 6) break;
+    if (f.horiz) {
+      const y1 = T.Y(f.c[1] + f.r), y2 = T.Y(f.c[1] - f.r);
+      let x, ref;
+      if (f.e1 >= b.u1 - tol) { x = T.X(b.u1) + 62 + 30 * used.right++; ref = T.X(f.e1); }
+      else if (f.e0 <= b.u0 + tol) { x = T.X(b.u0) - 62 - 30 * used.left++; ref = T.X(f.e0); }
+      else continue;
+      out += vDimSvg(th, y1, y2, x, `${pre}Ø${fmtDim(f.r * 2)}`, ref);
+      shown++;
+    }
+  }
+  return out;
+}
 
+const fmtDim = n => {
+  const v = Math.round(n * 10) / 10;
+  return String(Object.is(v, -0) ? 0 : v);
+};
+
+/* ---------- Cutting-plane line ---------- */
+
+function cutLineSvg(th, cl, T, b) {
+  // cl = { orient: "v"|"h", pos } in drawing coordinates
+  const ext = 18;
+  let out = "";
+  const dash = 'stroke-dasharray="16 3 3 3"';
+  if (cl.orient === "v") {
+    const x = T.X(cl.pos), y0 = T.Y(b.v1) - ext, y1 = T.Y(b.v0) + ext;
+    out += ln(th, x, y0, x, y1, 1.0, dash);
+    out += ln(th, x, y0, x, y0 + 10, 2.4) + ln(th, x, y1 - 10, x, y1, 2.4);
+    out += arrow(th, x + 12 * cl.dir, y0 + 5, cl.dir, 0) + arrow(th, x + 12 * cl.dir, y1 - 5, cl.dir, 0);
+    out += txt(th, x, y0 - 6, "A", 13, 'text-anchor="middle" font-weight="bold"');
+    out += txt(th, x, y1 + 16, "A", 13, 'text-anchor="middle" font-weight="bold"');
+  } else {
+    const y = T.Y(cl.pos), x0 = T.X(b.u0) - ext, x1 = T.X(b.u1) + ext;
+    out += ln(th, x0, y, x1, y, 1.0, dash);
+    out += ln(th, x0, y, x0 + 10, y, 2.4) + ln(th, x1 - 10, y, x1, y, 2.4);
+    out += arrow(th, x0 + 5, y + 12 * cl.dir, 0, cl.dir) + arrow(th, x1 - 5, y + 12 * cl.dir, 0, cl.dir);
+    out += txt(th, x0 - 10, y + 4, "A", 13, 'text-anchor="middle" font-weight="bold"');
+    out += txt(th, x1 + 10, y + 4, "A", 13, 'text-anchor="middle" font-weight="bold"');
+  }
+  return out;
+}
+
+/* ---------- Draw one view into a group ---------- */
+
+function drawView(vd, T, th, o) {
+  const b = vd.bounds;
   let out = "";
 
-  for (const g of addGeo) {
-    out += poly(g.hull, `fill="${DRAW.bg}"`);
-    for (const face of g.faces) {
-      out += poly(face.pts, `fill="${DRAW.line}" fill-opacity="${face.alpha}" stroke="${DRAW.line}" stroke-width="1"`);
-    }
-    out += poly(g.hull, `fill="none" stroke="${DRAW.line}" stroke-width="1.5" stroke-linejoin="round"`);
-  }
+  if (vd.hatch && vd.hatch.length) out += pathEl(vd.hatch, T, th, LW.hatch);
+  if (vd.hidden.length) out += pathEl(vd.hidden, T, th, LW.hidden, 'stroke-dasharray="6 3.2" stroke-linecap="butt"');
+  if (vd.centres.length) out += pathEl(vd.centres, T, th, LW.centre, 'stroke-dasharray="15 3 2.5 3" stroke-linecap="butt"');
+  out += pathEl(vd.visible, T, th, o.section ? LW.section : LW.visible);
 
-  for (const g of cutGeo) {
-    const shape = g.cap || g.top;
-    out += poly(shape, `fill="${DRAW.bg}" stroke="${DRAW.line}" stroke-width="1.4"`);
-  }
+  if (o.cutLine) out += cutLineSvg(th, o.cutLine, T, b);
 
-  return frameSvg(model, projection, "ISOMETRIC VIEW (APPROXIMATE)", out);
+  if (o.dims) {
+    const X0 = T.X(b.u0), X1 = T.X(b.u1), Yt = T.Y(b.v1), Yb = T.Y(b.v0);
+    const pre = o.estimated ? "~" : "";
+    out += hDimSvg(th, X0, X1, Yb + 30, pre + fmtDim(b.u1 - b.u0), Yb);
+    out += vDimSvg(th, Yt, Yb, X1 + 30, pre + fmtDim(b.v1 - b.v0), X1);
+    out += drawFeatureDims(th, vd.feats || [], T, b, o.estimated);
+  }
+  return out;
 }
 
-/* ---------- All views at once ---------- */
+/* ---------- Frame and title block for single views ---------- */
 
-function buildAllViews(model, projection) {
-  return {
-    front: flatViewSvg(model, "front", projection),
-    top: flatViewSvg(model, "top", projection),
-    side: flatViewSvg(model, "side", projection),
-    iso: isoViewSvg(model, projection),
-    section: sectionViewSvg(model, projection),
-    aux: null
+function noteLines(model) {
+  const n = [];
+  if (model.estimated) n.push("DIMENSIONS ESTIMATED FROM IMAGE PROPORTIONS - NOT FOR MANUFACTURE");
+  else n.push("DIMENSIONS TAKEN FROM THE UPLOADED IMAGE - VERIFY BEFORE USE");
+  for (const w of model.warnings || []) n.push(w);
+  for (const w of model.notes || []) n.push(w);
+  return n.slice(0, 4);
+}
+
+function frameSvg(model, projection, label, body, themeName = "paper") {
+  const th = THEMES[themeName] || THEMES.paper;
+  const pj = projection === "first" ? "FIRST-ANGLE" : "THIRD-ANGLE";
+  const notes = noteLines(model);
+  const conf = model.confidence != null ? ` | Confidence ${Math.round(model.confidence * 100)}%` : "";
+
+  let noteSvg = "";
+  notes.slice(0, 2).forEach((t, i) => {
+    noteSvg += txt(th, 24, 506 + i * 14, t.length > 120 ? t.slice(0, 117) + "..." : t, 10);
+  });
+
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${DRAW.W} ${DRAW.H}" width="100%" role="img" aria-label="${cleanXml(model.title)} - ${cleanXml(label)}" style="background:${th.bg};border-radius:12px;display:block">` +
+    `<rect x="14" y="14" width="${DRAW.W - 28}" height="${DRAW.H - 28}" fill="none" stroke="${th.ink}" stroke-width="${LW.frame}"/>` +
+    body +
+    txt(th, DRAW.W / 2, 540, label, 14, 'text-anchor="middle" font-weight="bold"') +
+    noteSvg +
+    ln(th, 14, 562, DRAW.W - 14, 562, 1) +
+    txt(th, 24, 584, `${model.title} | Units: ${model.unit} | ${pj} PROJECTION | Fitted scale, not 1:1${conf}`, 10) +
+    txt(th, DRAW.W - 24, 584, "AI-generated from image" + (model.estimated ? " (dimensions estimated)" : "") + " - verify before use", 10, 'text-anchor="end"') +
+    `</svg>`
+  );
+}
+
+const DRAW = {
+  W: 900,
+  H: 600,
+  area: { x: 120, y: 60, w: 600, h: 400 }
+};
+
+function fitTransform(b, area, scaleOverride) {
+  const bw = Math.max(b.u1 - b.u0, 1e-6);
+  const bh = Math.max(b.v1 - b.v0, 1e-6);
+  const s = scaleOverride || Math.min(area.w / bw, area.h / bh);
+  const ox = area.x + (area.w - bw * s) / 2;
+  const oy = area.y + (area.h - bh * s) / 2;
+  return { s, X: u => ox + (u - b.u0) * s, Y: v => oy + (b.v1 - v) * s, w: bw * s, h: bh * s };
+}
+
+function singleViewSvg(model, projection, label, vd, o, themeName) {
+  const th = THEMES[themeName] || THEMES.paper;
+  if (!vd || !vd.bounds) {
+    return frameSvg(model, projection, label,
+      txt(th, DRAW.W / 2, DRAW.H / 2, "No reliable geometry could be reconstructed", 14, 'text-anchor="middle"'), themeName);
+  }
+  const T = fitTransform(vd.bounds, DRAW.area);
+  return frameSvg(model, projection, label, drawView(vd, T, th, { ...o, estimated: model.estimated }), themeName);
+}
+
+/* ---------- Multi-view sheet ---------- */
+
+function sheetSvg(model, projection, views, sec, themeName) {
+  const th = THEMES[themeName] || THEMES.paper;
+  const W = 1400, H = 990, M = 30, GAP = 96, TB = 120;
+  const first = projection === "first";
+  const bF = views.front.bounds, bT = views.top.bounds, bS = views.side.bounds, bI = views.iso.bounds, bX = sec.vd.bounds;
+  const dim = b => [b.u1 - b.u0, b.v1 - b.v0];
+  const [wF, hF] = dim(bF), [wT, dT] = dim(bT), [wS] = dim(bS), [wX, hX] = dim(bX);
+
+  const availW = W - 2 * M - 4 * GAP + GAP * 0.2;
+  const availH = H - 2 * M - TB - 50 - GAP - 90;
+  const s = Math.min(availW / (Math.max(wF, wT) + wS + wX), availH / (hF + dT));
+
+  const colF = Math.max(wF, wT) * s, colS = wS * s;
+  const colX = Math.max(wX * s, 300);
+  const rowTop = (first ? hF : dT) * s;
+  const rowBot = (first ? dT : hF) * s;
+
+  // grid origin so the whole thing is centred
+  const totalW = colF + colS + colX + 2 * GAP;
+  const x0 = (W - totalW) / 2;
+  const y0 = M + 50;
+
+  const cols = first
+    ? { s: x0, f: x0 + colS + GAP, x: x0 + colS + colF + 2 * GAP }
+    : { f: x0, s: x0 + colF + GAP, x: x0 + colF + colS + 2 * GAP };
+  const rows = { r0: y0, r1: y0 + rowTop + GAP };
+
+  const place = (b, cx, cy, cw, ch, scale) => {
+    const w = (b.u1 - b.u0) * scale, h = (b.v1 - b.v0) * scale;
+    const ox = cx + (cw - w) / 2, oy = cy + (ch - h) / 2;
+    return { s: scale, X: u => ox + (u - b.u0) * scale, Y: v => oy + (b.v1 - v) * scale };
   };
+
+  let body = "";
+  const lab = (t, T, b, below) => {
+    const cx = T.X((b.u0 + b.u1) / 2);
+    const y = below ? T.Y(b.v0) + 62 : T.Y(b.v1) - 28;
+    return txt(th, cx, y, t, 13, 'text-anchor="middle" font-weight="bold"');
+  };
+
+  const rowF = first ? rows.r0 : rows.r1;           // front row
+  const rowH = first ? rowTop : rowBot;
+  const rowT = first ? rows.r1 : rows.r0;           // top-view row
+  const rowTh = first ? rowBot : rowTop;
+
+  const TF = place(bF, cols.f, rowF, colF, rowH, s);
+  const TT = place(bT, cols.f, rowT, colF, rowTh, s);
+  const TS = place(bS, cols.s, rowF, colS, rowH, s);
+  const isoS = Math.min(colX / (bI.u1 - bI.u0), (rowTop + 0) / (bI.v1 - bI.v0), s * 1.1) * 0.9;
+  const TI = place(bI, cols.x, rows.r0, colX, rowTop, isoS);
+  const sX = Math.min(s, colX / wX, rowBot / hX);
+  const TX = place(bX, cols.x, rows.r1, colX, rowBot, sX);
+
+  body += drawView(views.front, TF, th, { dims: true, estimated: model.estimated, cutLine: sec.cut && sec.cut.view === "front" ? sec.cut.line : null });
+  body += drawView(views.top, TT, th, { dims: true, estimated: model.estimated, cutLine: sec.cut && sec.cut.view === "top" ? sec.cut.line : null });
+  body += drawView(views.side, TS, th, { dims: true, estimated: model.estimated });
+  body += drawView(views.iso, TI, th, { dims: false });
+  const secV = { ...sec.vd, hatch: sec.vd.hatchFn ? sec.vd.hatchFn(sX) : sec.vd.hatch };
+  body += drawView(secV, TX, th, { dims: false, section: true });
+
+  body += lab("FRONT VIEW", TF, bF, true);
+  body += lab("TOP VIEW", TT, bT, true);
+  body += lab("RIGHT SIDE VIEW", TS, bS, true);
+  body += lab("ISOMETRIC (NOT TO SCALE)", TI, bI, true);
+  body += lab("SECTION A-A", TX, bX, true);
+
+  // title block
+  const tbY = H - M - TB;
+  const pj = first ? "FIRST-ANGLE" : "THIRD-ANGLE";
+  const notes = noteLines(model);
+  let tb = `<rect x="${M}" y="${tbY}" width="${W - 2 * M}" height="${TB}" fill="none" stroke="${th.ink}" stroke-width="1.2"/>`;
+  tb += ln(th, W - M - 420, tbY, W - M - 420, H - M, 1.2);
+  tb += ln(th, W - M - 420, tbY + 40, W - M, tbY + 40, 1);
+  tb += txt(th, W - M - 408, tbY + 27, model.title, 18, 'font-weight="bold"');
+  tb += txt(th, W - M - 408, tbY + 62, `Units: ${model.unit}   |   ${pj} PROJECTION   |   Scale: fitted (not 1:1)`, 11);
+  tb += txt(th, W - M - 408, tbY + 82, "AI-generated from uploaded image" + (model.confidence != null ? `   |   Confidence ${Math.round(model.confidence * 100)}%` : ""), 11);
+  tb += txt(th, W - M - 408, tbY + 102, model.estimated ? "Dimensions ESTIMATED (~) - verify before use" : "Dimensions from image - verify before use", 11);
+  notes.forEach((t, i) => { tb += txt(th, M + 14, tbY + 24 + i * 18, (i === 0 ? "" : "- ") + (t.length > 110 ? t.slice(0, 107) + "..." : t), 11); });
+
+  // projection symbol
+  const sx = W - M - 520, sy = tbY + TB / 2;
+  const g = first ? 1 : -1;
+  tb += `<g transform="translate(${sx},${sy}) scale(${g},1)" fill="none" stroke="${th.ink}" stroke-width="1.2">` +
+    `<path d="M-30 -14 L10 -22 L10 22 L-30 14 Z"/><line x1="-34" y1="0" x2="16" y2="0" stroke-dasharray="8 2 2 2" stroke-width="0.7"/>` +
+    `<circle cx="42" cy="0" r="22"/><circle cx="42" cy="0" r="12"/><line x1="14" y1="0" x2="72" y2="0" stroke-dasharray="8 2 2 2" stroke-width="0.7"/><line x1="42" y1="-28" x2="42" y2="28" stroke-dasharray="8 2 2 2" stroke-width="0.7"/></g>`;
+
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${cleanXml(model.title)} - engineering drawing sheet" style="background:${th.bg};border-radius:12px;display:block">` +
+    `<rect x="${M - 14}" y="${M - 14}" width="${W - 2 * M + 28}" height="${H - 2 * M + 28}" fill="none" stroke="${th.ink}" stroke-width="${LW.frame}"/>` +
+    body + tb + `</svg>`
+  );
 }
+
+/* ---------- Build every view from the one shared model ---------- */
+
+function buildAllViews(model, projection, themeName = "paper") {
+  const ctx = makeContext(model.parts, null);
+  const base = baseEdges(ctx);
+
+  const mk = key => {
+    const V = VIEW_DEFS[key];
+    const r = computeView(ctx, base, V, key !== "iso");
+    const vd = { ...r, V };
+    vd.bounds = boundsOfView(vd);
+    vd.feats = key === "iso" ? [] : featureList(ctx, V, r.owners);
+    return vd;
+  };
+
+  const views = { front: mk("front"), top: mk("top"), side: mk("side"), iso: mk("iso") };
+  for (const k of Object.keys(views)) {
+    if (!views[k].bounds) {
+      throw drawingError("No reliable geometry could be reconstructed from that image. Please try a clearer picture.");
+    }
+  }
+
+  /* section */
+  const plane = chooseSection(model);
+  const SV = { ...SECTION_VIEW[plane.axis], label: "SECTION A-A" };
+  const ctxS = makeContext(model.parts, { axis: plane.axis, max: plane.value });
+  const baseS = baseEdges(ctxS);
+  const rs = computeView(ctxS, baseS, SV, false);
+  const secVd = { ...rs, V: SV };
+  secVd.bounds = boundsOfView(secVd);
+
+  if (secVd.bounds) {
+    const T0 = fitTransform(secVd.bounds, DRAW.area);
+    const sectionBounds = secVd.bounds;
+    // hatch spacing is set in drawing units from a fixed on-paper spacing
+    secVd.hatchFn = scale => hatchSegments(ctx.solid, SV, plane.value, 5.2 / scale, sectionBounds, ctx.diag);
+    secVd.hatch = secVd.hatchFn(T0.s);
+  }
+  secVd.centres = []; // centre lines are omitted in the section for clarity
+
+  // where the cutting plane is shown
+  let cut = null;
+  const Bm = ctx.B;
+  if (plane.axis === "z") cut = { view: "top", line: { orient: "h", pos: -plane.value, dir: 1 } };
+  else if (plane.axis === "x") cut = { view: "front", line: { orient: "v", pos: plane.value, dir: 1 } };
+  else cut = { view: "front", line: { orient: "h", pos: plane.value, dir: 1 } };
+  void Bm;
+
+  const out = {};
+  out.front = singleViewSvg(model, projection, VIEW_DEFS.front.label, views.front, { dims: true, cutLine: cut.view === "front" ? cut.line : null }, themeName);
+  out.top = singleViewSvg(model, projection, VIEW_DEFS.top.label, views.top, { dims: true, cutLine: cut.view === "top" ? cut.line : null }, themeName);
+  out.side = singleViewSvg(model, projection, VIEW_DEFS.side.label, views.side, { dims: true }, themeName);
+  out.iso = singleViewSvg(model, projection, "ISOMETRIC VIEW (NOT TO SCALE)", views.iso, { dims: false }, themeName);
+
+  if (secVd.bounds) {
+    const label = "SECTION A-A  (cut through " + plane.axis.toUpperCase() + " = " + (model.estimated ? "~" : "") + fmtDim(plane.value) + ")";
+    out.section = singleViewSvg(model, projection, label, { ...secVd, feats: [] }, { dims: true, section: true }, themeName);
+    out.sheet = sheetSvg(model, projection, views, { vd: { ...secVd, feats: [] }, cut }, themeName);
+  } else {
+    out.section = out.front;
+    out.sheet = null;
+  }
+  out.aux = null;
+  out.sectionPlane = { axis: plane.axis, value: rnd(plane.value) };
+  return out;
+}
+
+/* ------------------------------------------------------------------ */
+/* Engineering Drawing Studio — AI prompt and image validation         */
+/* ------------------------------------------------------------------ */
+
+const DRAWING_PROMPT = [
+  "You are Malie AI Engineering Drawing Studio, a mechanical engineering drawing interpretation system.",
+  "Look carefully at the ATTACHED image. It may be a photograph, hand sketch, orthographic drawing, dimensioned drawing, or isometric drawing of ONE machine part.",
+  "Reconstruct the specific object that is actually shown. Never substitute a generic or example object, and never copy the example values in this prompt.",
+  "If the image is not a machine part, drawing or sketch (or is blank/unreadable), set recognised to false and parts to an empty array.",
+  "Step 1: decide image_kind (orthographic, isometric, sketch, photo, other, not_a_part). Step 2: list the views you can see and any printed dimension text in notes. Step 3: model the part.",
+  "Model the part as ONE solid made of axis-aligned primitives. Coordinates: x = width (left to right in the front view), y = height (up), z = depth (toward the viewer in the front view). Use one consistent origin and unit for every primitive.",
+  "Box: {\"type\":\"box\",\"op\":\"add\",\"x\":<min x>,\"y\":<min y>,\"z\":<min z>,\"w\":<size along x>,\"h\":<size along y>,\"d\":<size along z>}.",
+  "Cylinder: {\"type\":\"cyl\",\"op\":\"add\",\"axis\":\"x|y|z\",\"cx\":<centre x>,\"cy\":<centre y>,\"cz\":<centre z>,\"r\":<radius>,\"len\":<length along its axis>}.",
+  "op is \"add\" for material and \"cut\" for holes, bores, slots, pockets and recesses. List all additive parts first, then cuts. A hole is a cut, never an additive cylinder. A boss or shaft is an add, never a cut.",
+  "Use several boxes for stepped or L/T-shaped bodies; make touching solids share faces exactly so they join. Make a through-hole's cut longer than the material it passes through.",
+  "Use multiple views of the same object together to get one consistent 3D shape. If only one view exists, infer depth conservatively.",
+  "Dimensions: if numbers are printed and readable, use them and set dimensions_source to \"printed\". Otherwise estimate from proportions, set dimensions_source to \"estimated\", and do not pretend the numbers are exact. Never invent features that are not visible or strongly implied.",
+  "If something is ambiguous, choose the simplest conservative shape and describe the uncertainty in notes (max 4 short strings).",
+  "Set confidence from 0 to 1 for how well the model matches the image. Use at most 24 primitives.",
+  "Return ONLY valid JSON with double quotes, no Markdown and no text outside the JSON, in this shape:",
+  "{\"recognised\":true,\"image_kind\":\"...\",\"title\":\"short part name\",\"unit\":\"mm\",\"dimensions_source\":\"printed|estimated\",\"confidence\":0.0,\"notes\":[\"...\"],\"parts\":[ ...primitives as described above... ]}"
+].join("\n");
+
+// Checks the uploaded file really is a decodable PNG, JPEG or WebP of usable size.
+function validateDrawingImage(image) {
+  const bad = msg => { throw drawingError(msg, 400); };
+  const m = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/=\s]+)$/.exec(image);
+  if (image.length > 5_000_000 || !m) {
+    bad("Please upload a PNG, JPG or WebP image under about 3.5 MB.");
+  }
+
+  let bytes;
+  try {
+    const bin = atob(m[2].replace(/\s/g, ""));
+    bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  } catch {
+    bad("That image file appears to be corrupted. Please upload it again.");
+  }
+  if (bytes.length < 1024) bad("That image is too small or empty to read. Please upload a clearer picture.");
+
+  const kind = m[1];
+  let w = 0, h = 0;
+  const u16 = (i) => (bytes[i] << 8) | bytes[i + 1];
+
+  if (kind === "png") {
+    if (!(bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47)) bad("That file is not a valid PNG image.");
+    w = ((bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19]) >>> 0;
+    h = ((bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23]) >>> 0;
+  } else if (kind === "jpeg") {
+    if (!(bytes[0] === 0xff && bytes[1] === 0xd8)) bad("That file is not a valid JPEG image.");
+    let i = 2;
+    while (i + 9 < bytes.length) {
+      if (bytes[i] !== 0xff) { i++; continue; }
+      const mk = bytes[i + 1];
+      if (mk >= 0xc0 && mk <= 0xcf && mk !== 0xc4 && mk !== 0xc8 && mk !== 0xcc) {
+        h = u16(i + 5); w = u16(i + 7); break;
+      }
+      i += 2 + u16(i + 2);
+    }
+  } else {
+    const tag = String.fromCharCode(...bytes.slice(0, 4)) + String.fromCharCode(...bytes.slice(8, 12));
+    if (tag !== "RIFFWEBP") bad("That file is not a valid WebP image.");
+    const t = String.fromCharCode(...bytes.slice(12, 16));
+    if (t === "VP8X") { w = 1 + (bytes[24] | (bytes[25] << 8) | (bytes[26] << 16)); h = 1 + (bytes[27] | (bytes[28] << 8) | (bytes[29] << 16)); }
+    else if (t === "VP8 ") { w = (bytes[26] | (bytes[27] << 8)) & 0x3fff; h = (bytes[28] | (bytes[29] << 8)) & 0x3fff; }
+    else if (t === "VP8L") { const b = bytes[21] | (bytes[22] << 8) | (bytes[23] << 16) | (bytes[24] << 24); w = (b & 0x3fff) + 1; h = ((b >> 14) & 0x3fff) + 1; }
+  }
+
+  if (!w || !h) bad("I could not read that image. Please upload a standard PNG, JPG or WebP file.");
+  if (w < 64 || h < 64) bad("That image is too small (under 64 px). Please upload a larger, clearer picture.");
+  if (w > 12000 || h > 12000) bad("That image is extremely large. Please upload one under about 4000 px wide.");
+  return { width: w, height: h, type: kind };
+}
+
 
 /* ------------------------------------------------------------------ */
 /* CAD code validation                                                 */
@@ -4314,32 +4952,25 @@ console.error(
         try { body = await request.json(); }
         catch { return respond({ error: "Please send valid JSON." }, 400); }
 
-        /* ----- NEW: upload one image, get every view back ----- */
+        /* ----- Upload one image, get every view back ----- */
         if (body.action === "image") {
           const image = String(body.image || "");
-
-          if (
-            image.length > 5_000_000 ||
-            !/^data:image\/(png|jpeg|webp);base64,/.test(image)
-          ) {
-            return respond(
-              { error: "Please upload a PNG, JPG or WebP image under about 3.5 MB." },
-              400
-            );
-          }
+          validateDrawingImage(image);
 
           const projection = body.projection === "first" ? "first" : "third";
+          const theme = body.theme === "dark" ? "dark" : "paper";
           const usage = await reserveDailyUsage(env, userId, plan);
 
           try {
-            const text = await callAI(env, DRAWING_PROMPT, true, image);
+            const text = await callAI(env, DRAWING_PROMPT, true, image, { maxTokens: 4096 });
             const model = sanitizeModel(
               parseJsonObject(
                 text,
                 "The AI could not describe that part. Please try a clearer image."
               )
             );
-            const views = buildAllViews(model, projection);
+            const views = buildAllViews(model, projection, theme);
+            const { sectionPlane, ...viewSvgs } = views;
 
             return respond({
               ok: true,
@@ -4348,8 +4979,12 @@ console.error(
               title: model.title,
               unit: model.unit,
               estimated: model.estimated,
+              confidence: model.confidence,
+              notes: model.notes,
+              warnings: model.warnings,
               projection,
-              views,
+              sectionPlane,
+              views: viewSvgs,
               auxMessage:
                 "An auxiliary view is only needed for inclined surfaces, so none is generated.",
               model,

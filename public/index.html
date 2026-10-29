@@ -5814,13 +5814,19 @@ document.getElementById("knowledgeAsk")?.addEventListener(
     $("csLockUp").classList.toggle("kn-hidden", !upgrade);
     console.warn("Code Studio access check failed:", e && e.status, e && e.message);
     }
-  async function checkAccess() {
-    try {
-      await api("/api/code/access", {});
-      $("csLock").classList.add("kn-hidden");
-      return true;
-    } catch (e) { showLock(e); return false; }
+
+async function checkAccess() {
+  try {
+    await api("/api/code/access", {});
+    $("csLock").classList.add("kn-hidden");
+    return true;
+  } catch (e) {
+    console.error("Malie Code Studio access check failed:", e);
+    showLock(e);
+    return false;
   }
+}
+
   $("csLockRetry").addEventListener("click", checkAccess);
 
   /* ---------- AI request ---------- */

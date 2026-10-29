@@ -5797,16 +5797,23 @@ document.getElementById("knowledgeAsk")?.addEventListener(
   });
 
   /* ---------- Pro gate ---------- */
-  function showLock(e) {
-    const upgrade = e && e.status === 403;
+    function showLock(e) {
+    const upgrade = !!e && e.status === 403;
+    const notDeployed = !!e && (e.status === 404 || e.status === 405);
     $("csLock").classList.remove("kn-hidden");
     $("csLockT").textContent = upgrade ? "Code Studio is a Pro feature" : "Couldn't open Code Studio";
-    $("csLockP").textContent = upgrade
-      ? "Upgrade to Pro to build, save and publish websites with Malie AI."
-      : ((e && e.message) || "Please sign in and try again.");
+    let msg;
+    if (upgrade) {
+      msg = "Your account isn't on an active Pro plan right now. If you just paid, your payment may still need approval, or your plan may have expired.";
+    } else if (notDeployed) {
+      msg = "The server doesn't have Code Studio yet. Deploy the latest worker.js, then try again.";
+    } else {
+      msg = (e && e.message) || "Please sign in and try again.";
+    }
+    $("csLockP").textContent = msg + (e && e.status ? `  (error ${e.status}${e.message ? ": " + e.message : ""})` : "");
     $("csLockUp").classList.toggle("kn-hidden", !upgrade);
-    $("csLockRetry").classList.toggle("kn-hidden", upgrade && false);
-  }
+    console.warn("Code Studio access check failed:", e && e.status, e && e.message);
+    }
   async function checkAccess() {
     try {
       await api("/api/code/access", {});

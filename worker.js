@@ -3779,27 +3779,43 @@ export default {
       ["/api/code/access", "/api/code/generate", "/api/code/publish", "/api/code/unpublish"].includes(path)
     ) {
       try {
-        const userId = await authenticateFirebase(request, env);
-        const debugSub = await env.DB.prepare(
-  `SELECT plan, status, current_period_end
-   FROM subscriptions
-   WHERE user_id = ?
-   LIMIT 1`
-).bind(userId).first();
+        
+const userId = await authenticateFirebase(request, env);
+const plan = await getActivePlan(env, userId);
 
-console.log("CODE_STUDIO_ACCESS_CHECK", JSON.stringify({
-  subscriptionFound: !!debugSub,
-  plan: debugSub?.plan ?? null,
-  status: debugSub?.status ?? null,
-  expiry: debugSub?.current_period_end ?? null,
-  now: new Date().toISOString(),
-  databaseConnected: !!env.DB
-}));
-        const plan = await getActivePlan(env, userId);
+// Temporary diagnostic: check the subscription seen by this Worker.
+if (path === "/api/code/access") {
+  const subscription = await env.DB.prepare(
+    `SELECT plan, status, current_period_end
+     FROM subscriptions
+     WHERE user_id = ?
+     LIMIT 1`
+  ).bind(userId).first();
 
-        if (plan !== "pro") {
-          return respond({ error: "Code Studio is available on the Pro plan only." }, 403);
-        }
+  const storedPlan = String(subscription?.plan ?? "").trim().toLowerCase();
+  const storedStatus = String(subscription?.status ?? "").trim().toLowerCase();
+  const expiryText = subscription?.current_period_end ?? null;
+  const expiryMs = expiryText ? Date.parse(expiryText) : NaN;
+
+  return respond({
+    ok: plan === "pro",
+    diagnostic: {
+      subscriptionFound: Boolean(subscription),
+      storedPlan: storedPlan || null,
+      storedStatus: storedStatus || null,
+      expiryPresent: Boolean(expiryText),
+      expiryParseable: Number.isFinite(expiryMs),
+      expiryInFuture: Number.isFinite(expiryMs) && expiryMs > Date.now(),
+      workerComputedPlan: plan
+    }
+  }, plan === "pro" ? 200 : 403);
+}
+
+if (plan !== "pro") {
+  return respond({
+    error: "Code Studio is available on the Pro plan only."
+  }, 403);
+}
 
         if (!env.DB || !env.AI) {
           return respond({ error: "Code Studio is temporarily unavailable." }, 503);

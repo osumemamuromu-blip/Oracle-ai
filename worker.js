@@ -3780,6 +3780,21 @@ export default {
     ) {
       try {
         const userId = await authenticateFirebase(request, env);
+        const debugSub = await env.DB.prepare(
+  `SELECT plan, status, current_period_end
+   FROM subscriptions
+   WHERE user_id = ?
+   LIMIT 1`
+).bind(userId).first();
+
+console.log("CODE_STUDIO_ACCESS_CHECK", JSON.stringify({
+  subscriptionFound: !!debugSub,
+  plan: debugSub?.plan ?? null,
+  status: debugSub?.status ?? null,
+  expiry: debugSub?.current_period_end ?? null,
+  now: new Date().toISOString(),
+  databaseConnected: !!env.DB
+}));
         const plan = await getActivePlan(env, userId);
 
         if (plan !== "pro") {

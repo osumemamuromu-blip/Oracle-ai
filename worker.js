@@ -23,6 +23,9 @@ const DAILY_LIMITS = {
   pro: 300
 };
 
+// Answer length (max output tokens) per plan, so paid plans get fuller answers.
+const CHAT_MAX_TOKENS = { free: 2048, premium: 4096, pro: 6144 };
+
 const PRICES = {
   premium: { monthly: 2500, annual: 25000 },
   pro: { monthly: 7500, annual: 82500 }
@@ -198,8 +201,21 @@ function parseQuiz(text) {
 // Blocks formulas that can reach outside the workbook.
 const UNSAFE_FORMULA = /WEBSERVICE|HYPERLINK|\bCALL\b|EXEC|DDE|\||\bREGISTER\b/i;
 
-function buildWorkbook(spec) {
-  const sheets = Array.isArray(spec?.sheets) ? spec.sheets.slice(0, 10) : [];
+const EXCEL_LIMITS = {
+  premium: { sheets: 3, rows: 500, preview: 10, maxTokens: 4096 },
+  pro: { sheets: 10, rows: 2000, preview: 25, maxTokens: 8192 }
+};
+
+const NUMBER_FORMATS = {
+  currency: "#,##0.00",
+  integer: "#,##0",
+  number: "#,##0.00",
+  percent: "0.0%",
+  date: "yyyy-mm-dd"
+};
+
+function buildWorkbook(spec, limits = EXCEL_LIMITS.pro) {
+  const sheets = Array.isArray(spec?.sheets) ? spec.sheets.slice(0, limits.sheets) : [];
 
   if (!sheets.length) {
     throw new Error("No spreadsheet data was returned. Please try again.");
@@ -220,7 +236,7 @@ function buildWorkbook(spec) {
     usedNames.add(name.toLowerCase());
 
     const rows = (Array.isArray(sheet?.rows) ? sheet.rows : [])
-      .slice(0, 2000)
+      .slice(0, limits.rows)
       .map(row =>
         (Array.isArray(row) ? row : [row]).slice(0, 50).map(cell => {
           if (cell === null || cell === undefined) return "";
@@ -255,6 +271,22 @@ function buildWorkbook(spec) {
       })
     );
     ws["!cols"] = widths.map(wch => ({ wch }));
+
+    // Number formats per column (optional "formats" array from the AI), skipping the header row.
+    const formats = Array.isArray(sheet?.formats) ? sheet.formats : [];
+    formats.forEach((f, c) => {
+      const z = NUMBER_FORMATS[String(f || "").toLowerCase()];
+      if (!z) return;
+      for (let r = 1; r < rows.length; r++) {
+        const cell = ws[XLSX.utils.encode_cell({ r, c })];
+        if (cell && (cell.t === "n")) cell.z = z;
+      }
+    });
+
+    // Filter buttons on the header row when there is a table to filter.
+    if (rows.length > 2 && rows[0].length > 1 && ws["!ref"]) {
+      ws["!autofilter"] = { ref: ws["!ref"] };
+    }
 
     XLSX.utils.book_append_sheet(wb, ws, name);
   });
@@ -3651,10 +3683,13 @@ const CODE_SYSTEM = [
   "You build complete, working, responsive, accessible and visually polished websites and small web apps using plain HTML, CSS and JavaScript.",
   "Follow the output format given in the user's message exactly.",
   "Never stop mid-file: always finish every file you start, and keep the code compact enough to fit.",
-  "Do not use external images or libraries that need an API key. Use CSS, inline SVG or emoji for visuals."
+  "Do not use external images or libraries that need an API key. Use CSS, inline SVG or emoji for visuals.",
+  "Design quality: use a clear visual hierarchy, a consistent colour palette with CSS variables, generous spacing, a modern font stack, smooth hover states and subtle transitions.",
+  "Always include the viewport meta tag, a descriptive title and meta description, semantic HTML, sufficient colour contrast, visible focus states and a mobile-first responsive layout.",
+  "When the user asks for a change, edit the existing code and keep everything else working. Never remove features they did not ask to remove."
 ].join(" ");
 
-const CODE_LIMITS = { maxPromptChars: 80000, maxOutputTokens: 8192, maxPublishChars: 400000, maxPublished: 20 };
+const CODE_LIMITS = { maxPromptChars: 80000, maxOutputTokens: 8192, maxPublishChars: 400000, maxPublished: 50 };
 
 async function ensurePublishedTable(env) {
   await env.DB.prepare(
@@ -4547,6 +4582,11 @@ Give a clear, useful answer and identify which document supports it.
                 "For calculations, show the working and explain how the result was obtained.",
                 "For school subjects, use simple explanations and examples appropriate to the question.",
                 "If the user asks for a direct answer, give it first and then explain it briefly.",
+                ...(plan === "pro"
+                  ? ["This user is on the Pro plan: give thorough, expert-level answers with worked examples, edge cases, and a short summary at the end."]
+                  : plan === "premium"
+                    ? ["This user is on the Premium plan: give detailed answers with a clear worked example where useful."]
+                    : []),
                 ...languageLine(body.language),
 
                 ...(requestedMode === "excel"
@@ -4565,7 +4605,10 @@ Give a clear, useful answer and identify which document supports it.
                 "",
                 "User message:",
                 message
-              ].join("\n")
+              ].join("\n"),
+              false,
+              null,
+              { maxTokens: CHAT_MAX_TOKENS[plan] || CHAT_MAX_TOKENS.free }
             );
           } catch (error) {
             await refundDailyUsage(env, userId, usage.date);
@@ -4722,7 +4765,11 @@ Give a clear, useful answer and identify which document supports it.
             "Put headers in row 1. Use real numbers (not strings) for numeric values.",
             "Where the user asks for totals, averages or calculations, use Excel formulas as strings starting with '=' (for example \"=SUM(B2:B10)\").",
             "Return ONLY valid JSON in this exact structure:",
-            '{"filename":"short_name","sheets":[{"name":"Sheet1","rows":[["Header A","Header B"],["x",1]]}]}',
+            '{"filename":"short_name","sheets":[{"name":"Sheet1","rows":[["Header A","Header B"],["x",1]],"formats":["text","currency"]}]}',
+            "\"formats\" is optional: one entry per column, each one of text, integer, number, currency, percent or date. Use percent only when the numbers are fractions such as 0.15.",
+            plan === "pro"
+              ? "You may use several sheets. When the data has numbers, add a second sheet named Summary with totals, averages, minimum and maximum using formulas that refer to the data sheet."
+              : "Use one sheet unless the user clearly asks for more.",
             "",
             "User instructions/data:",
             message || "(see image)"
@@ -4730,14 +4777,15 @@ Give a clear, useful answer and identify which document supports it.
 
           let fileBase64;
           let spec;
+          const excelLimits = EXCEL_LIMITS[plan] || EXCEL_LIMITS.premium;
 
           try {
-            const text = await callAI(env, prompt, true, image);
+            const text = await callAI(env, prompt, true, image, { maxTokens: excelLimits.maxTokens });
             spec = parseJsonObject(
               text,
               "The AI did not return a valid spreadsheet. Please try again."
             );
-            fileBase64 = buildWorkbook(spec);
+            fileBase64 = buildWorkbook(spec, excelLimits);
           } catch (error) {
             await refundDailyUsage(env, userId, usage.date);
             throw error;
@@ -4752,7 +4800,7 @@ Give a clear, useful answer and identify which document supports it.
             ok: true,
             filename,
             fileBase64,
-            preview: spec.sheets?.[0]?.rows?.slice(0, 10) || [],
+            preview: spec.sheets?.[0]?.rows?.slice(0, excelLimits.preview) || [],
             usage
           });
         }

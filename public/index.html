@@ -5815,17 +5815,25 @@ document.getElementById("knowledgeAsk")?.addEventListener(
     console.warn("Code Studio access check failed:", e && e.status, e && e.message);
     }
 
+
 async function checkAccess() {
   try {
-    await api("/api/code/access", {});
+    const result = await api("/api/code/access", {});
+    console.log("Malie Code Studio access result:", result);
+
     $("csLock").classList.add("kn-hidden");
     return true;
   } catch (e) {
-    console.error("Malie Code Studio access check failed:", e);
+    console.error("Malie Code Studio access error:", {
+      message: e.message,
+      status: e.status
+    });
+
     showLock(e);
     return false;
   }
 }
+
 
   $("csLockRetry").addEventListener("click", checkAccess);
 

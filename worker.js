@@ -8,6 +8,10 @@ const TEXT_MODEL = "@cf/google/gemma-4-26b-a4b-it";
 // Used only when the user sends a photo. Check the Cloudflare model page:
 // Llama 3.2 Vision needs a one-time license acceptance.
 const VISION_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
+// Engineering Drawing Studio uses a stronger vision model (falls back to VISION_MODEL if unavailable).
+const DRAWING_VISION_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
+// Drawing uploads allowed per user per day (on top of the normal daily request limit).
+const DRAWING_DAILY_LIMIT = 2;
 
 // Daily request limits per plan. Change the numbers here only.
 const DAILY_LIMITS = {
@@ -601,7 +605,7 @@ async function callAI(env, prompt, jsonMode = false, imageDataUrl = null, option
   }
 
   const hasImage = Boolean(imageDataUrl);
-  const model = hasImage ? VISION_MODEL : TEXT_MODEL;
+  const model = options.model || (hasImage ? VISION_MODEL : TEXT_MODEL);
 
   const identityRules = [
     "You are Malie AI, the AI assistant created and developed by Campus Creative, founded by Osume Prosper.",
@@ -1368,6 +1372,43 @@ async function runVideoModel(env, { prompt, duration, aspectRatio }) {
   return extractVideoUrl(result);
 }
 
+/* ---------- Drawing upload limit (per user, per day) ---------- */
+
+async function reserveDrawingUpload(env, userId) {
+  const date = getUsageDate();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS drawing_usage (
+       user_id TEXT NOT NULL, usage_date TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0,
+       PRIMARY KEY (user_id, usage_date))`
+  ).run();
+
+  const row = await env.DB.prepare(
+    `INSERT INTO drawing_usage (user_id, usage_date, used) VALUES (?, ?, 1)
+     ON CONFLICT(user_id, usage_date) DO UPDATE SET used = used + 1 WHERE used < ?
+     RETURNING used`
+  ).bind(userId, date, DRAWING_DAILY_LIMIT).first();
+
+  if (!row) {
+    const error = new Error(
+      `You've used your ${DRAWING_DAILY_LIMIT} drawing uploads for today. The limit resets tomorrow.`
+    );
+    error.status = 429;
+    throw error;
+  }
+  return { used: row.used, limit: DRAWING_DAILY_LIMIT, remaining: DRAWING_DAILY_LIMIT - row.used, date };
+}
+
+async function refundDrawingUpload(env, userId, date) {
+  try {
+    await env.DB.prepare(
+      `UPDATE drawing_usage SET used = CASE WHEN used > 0 THEN used - 1 ELSE 0 END
+       WHERE user_id = ? AND usage_date = ?`
+    ).bind(userId, date).run();
+  } catch (error) {
+    console.error("Drawing refund failed:", String(error));
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Engineering Drawing Studio — geometry core                          */
 /* ------------------------------------------------------------------ */
@@ -1409,17 +1450,48 @@ function drawingError(message, status = 400) {
 
 /* ---------- Primitive helpers ---------- */
 
+const otherAxes = a => AXES.filter(k => k !== a);
+const axI = a => AXES.indexOf(a);
+
 function extentsOf(p) {
   if (p.type === "box") {
     return { x: [p.x, p.x + p.w], y: [p.y, p.y + p.h], z: [p.z, p.z + p.d] };
   }
+  if (p.type === "prism") {
+    const o = otherAxes(p.axis);
+    const e = {};
+    e[p.axis] = [p.start, p.start + p.len];
+    e[o[0]] = [Math.min(...p.profile.map(q => q[0])), Math.max(...p.profile.map(q => q[0]))];
+    e[o[1]] = [Math.min(...p.profile.map(q => q[1])), Math.max(...p.profile.map(q => q[1]))];
+    return e;
+  }
+  const R = p.type === "cone" ? Math.max(p.r1, p.r2) : p.r;
   const e = {};
   for (const a of AXES) {
-    const half = a === p.axis ? p.len / 2 : p.r;
+    const half = a === p.axis ? p.len / 2 : R;
     e[a] = [p.c[a] - half, p.c[a] + half];
   }
   return e;
 }
+
+function minDimOf(p) {
+  if (p.type === "box") return Math.min(p.w, p.h, p.d);
+  if (p.type === "cyl") return Math.min(2 * p.r, p.len);
+  if (p.type === "cone") return Math.min(p.len, 2 * Math.max(p.r1, p.r2));
+  const e = extentsOf(p);
+  return Math.min(...AXES.map(a => e[a][1] - e[a][0]));
+}
+
+function pointInPoly(poly, x, y) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i], b = poly[j];
+    if ((a[1] > y) !== (b[1] > y) && x < ((b[0] - a[0]) * (y - a[1])) / (b[1] - a[1]) + a[0]) inside = !inside;
+  }
+  return inside;
+}
+
+const coneR = (p, x) => p.r1 + ((p.r2 - p.r1) * (x - (p.c[p.axis] - p.len / 2))) / p.len;
 
 function boundsOfParts(parts) {
   const b = { x: [Infinity, -Infinity], y: [Infinity, -Infinity], z: [Infinity, -Infinity] };
@@ -1441,8 +1513,20 @@ function primContains(p, q, tol = 0) {
       q[2] >= p.z - tol && q[2] <= p.z + p.d + tol
     );
   }
+  if (p.type === "prism") {
+    const a = axI(p.axis);
+    if (q[a] < p.start - tol || q[a] > p.start + p.len + tol) return false;
+    const o = otherAxes(p.axis).map(axI);
+    return pointInPoly(p.profile, q[o[0]], q[o[1]]);
+  }
   const ai = p.axis === "x" ? 0 : p.axis === "y" ? 1 : 2;
   if (Math.abs(q[ai] - p.c[p.axis]) > p.len / 2 + tol) return false;
+  if (p.type === "cone") {
+    let rr2 = 0;
+    for (let i = 0; i < 3; i++) { if (i === ai) continue; const dv = q[i] - p.c[AXES[i]]; rr2 += dv * dv; }
+    const R = coneR(p, q[ai]) + tol;
+    return rr2 <= R * R;
+  }
   let r2 = 0;
   for (let i = 0; i < 3; i++) {
     if (i === ai) continue;
@@ -1511,7 +1595,7 @@ function slabIv(o, d, lo, hi, iv) {
 }
 
 // Interval of the ray o + t*d (t in [-INF, INF]) that lies inside one primitive.
-function primRayIv(p, o, d) {
+function simpleRayIv(p, o, d) {
   let iv = [-1e9, 1e9];
 
   if (p.type === "box") {
@@ -1547,21 +1631,94 @@ function primRayIv(p, o, d) {
   return r[1] > r[0] ? r : null;
 }
 
+function solveQuadLE(A, B, C, lo, hi) {
+  const pts = [lo, hi];
+  if (Math.abs(A) < 1e-12) {
+    if (Math.abs(B) > 1e-12) pts.push(-C / B);
+  } else {
+    const disc = B * B - 4 * A * C;
+    if (disc >= 0) {
+      const s = Math.sqrt(disc);
+      pts.push((-B - s) / (2 * A), (-B + s) / (2 * A));
+    }
+  }
+  const ts = pts.filter(t => t >= lo && t <= hi).sort((a, b) => a - b);
+  const out = [];
+  for (let i = 0; i + 1 < ts.length; i++) {
+    if (ts[i + 1] - ts[i] < 1e-12) continue;
+    const m = (ts[i] + ts[i + 1]) / 2;
+    if (A * m * m + B * m + C <= 0) {
+      if (out.length && Math.abs(out[out.length - 1][1] - ts[i]) < 1e-12) out[out.length - 1][1] = ts[i + 1];
+      else out.push([ts[i], ts[i + 1]]);
+    }
+  }
+  return out;
+}
+
+function coneRayIvs(p, o, d) {
+  const a = axI(p.axis);
+  const lo = p.c[p.axis] - p.len / 2;
+  const iv = slabIv(o[a], d[a], lo, lo + p.len, [-1e9, 1e9]);
+  if (!iv || iv[1] <= iv[0]) return [];
+  let A = 0, B = 0, C = 0;
+  for (let i = 0; i < 3; i++) {
+    if (i === a) continue;
+    const oc = o[i] - p.c[AXES[i]];
+    A += d[i] * d[i]; B += 2 * oc * d[i]; C += oc * oc;
+  }
+  const R0 = coneR(p, o[a]);
+  const k = ((p.r2 - p.r1) * d[a]) / p.len;
+  return solveQuadLE(A - k * k, B - 2 * R0 * k, C - R0 * R0, iv[0], iv[1]);
+}
+
+function prismRayIvs(p, o, d) {
+  const a = axI(p.axis);
+  const iv = slabIv(o[a], d[a], p.start, p.start + p.len, [-1e9, 1e9]);
+  if (!iv || iv[1] <= iv[0]) return [];
+  const [i1, i2] = otherAxes(p.axis).map(axI);
+  const o1 = o[i1], o2 = o[i2], d1 = d[i1], d2 = d[i2];
+  const poly = p.profile;
+  if (Math.abs(d1) < 1e-12 && Math.abs(d2) < 1e-12) return pointInPoly(poly, o1, o2) ? [iv] : [];
+  const ts = [iv[0], iv[1]];
+  for (let i = 0; i < poly.length; i++) {
+    const P = poly[i], Q = poly[(i + 1) % poly.length];
+    const e0 = Q[0] - P[0], e1 = Q[1] - P[1];
+    const den = d1 * e1 - d2 * e0;
+    if (Math.abs(den) < 1e-12) continue;
+    const w0 = P[0] - o1, w1 = P[1] - o2;
+    const t = (w0 * e1 - w1 * e0) / den;
+    const s = (w0 * d2 - w1 * d1) / den;
+    if (s >= -1e-9 && s <= 1 + 1e-9 && t > iv[0] && t < iv[1]) ts.push(t);
+  }
+  ts.sort((x, y) => x - y);
+  const out = [];
+  for (let i = 0; i + 1 < ts.length; i++) {
+    if (ts[i + 1] - ts[i] < 1e-12) continue;
+    const m = (ts[i] + ts[i + 1]) / 2;
+    if (pointInPoly(poly, o1 + d1 * m, o2 + d2 * m)) {
+      if (out.length && Math.abs(out[out.length - 1][1] - ts[i]) < 1e-12) out[out.length - 1][1] = ts[i + 1];
+      else out.push([ts[i], ts[i + 1]]);
+    }
+  }
+  return out;
+}
+
+function primRayIvs(p, o, d) {
+  if (p.type === "prism") return prismRayIvs(p, o, d);
+  if (p.type === "cone") return coneRayIvs(p, o, d);
+  const iv = simpleRayIv(p, o, d);
+  return iv ? [iv] : [];
+}
+
 // Material intervals along a ray = (union of adds) - (union of cuts), clipped.
 function rayMaterial(solid, o, d) {
   const add = [];
-  for (const p of solid.adds) {
-    const iv = primRayIv(p, o, d);
-    if (iv) add.push(iv);
-  }
+  for (const p of solid.adds) add.push(...primRayIvs(p, o, d));
   let mat = mergeIv(add);
   if (!mat.length) return mat;
 
   const cut = [];
-  for (const p of solid.cuts) {
-    const iv = primRayIv(p, o, d);
-    if (iv) cut.push(iv);
-  }
+  for (const p of solid.cuts) cut.push(...primRayIvs(p, o, d));
   if (cut.length) mat = subtractIv(mat, mergeIv(cut));
 
   if (solid.ci >= 0) {
@@ -1583,6 +1740,22 @@ const MAX_PARTS = 24;
 function boxesTouch(a, b, tol) {
   const ea = extentsOf(a), eb = extentsOf(b);
   return AXES.every(k => ea[k][0] <= eb[k][1] + tol && eb[k][0] <= ea[k][1] + tol);
+}
+
+function polyIntersectSeg(a, b, c, d) {
+  const o = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+  return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0;
+}
+
+function polySelfIntersects(pts) {
+  const n = pts.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 2; j < n; j++) {
+      if (i === 0 && j === n - 1) continue;
+      if (polyIntersectSeg(pts[i], pts[(i + 1) % n], pts[j], pts[(j + 1) % n])) return true;
+    }
+  }
+  return false;
 }
 
 function sanitizeModel(raw) {
@@ -1639,6 +1812,32 @@ function sanitizeModel(raw) {
           }
         });
       } else dropped++;
+    } else if (type === "prism" || type === "extrude" || type === "profile") {
+      const axis = String(p.axis || "z").toLowerCase();
+      const raw = Array.isArray(p.profile) ? p.profile : Array.isArray(p.pts) ? p.pts : Array.isArray(p.points) ? p.points : [];
+      let pts = raw
+        .map(q => (Array.isArray(q) ? [Number(q[0]), Number(q[1])] : [Number(q?.x ?? q?.a), Number(q?.y ?? q?.b)]))
+        .filter(q => Number.isFinite(q[0]) && Number.isFinite(q[1]))
+        .map(q => [clampNum(q[0], -5000, 5000, 0), clampNum(q[1], -5000, 5000, 0)]);
+      pts = pts.filter((q, i) => i === 0 || Math.hypot(q[0] - pts[i - 1][0], q[1] - pts[i - 1][1]) > 1e-6);
+      if (pts.length > 1 && Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]) < 1e-6) pts.pop();
+      const len = clampNum(p.len ?? p.length ?? p.thickness, 0, 5000, 0);
+      const start = clampNum(p.start ?? p.s ?? p.from, -5000, 5000, 0);
+      const area = pts.reduce((s, q, i) => { const n = pts[(i + 1) % pts.length]; return s + (q[0] * n[1] - n[0] * q[1]); }, 0) / 2;
+      if (AXES.includes(axis) && pts.length >= 3 && pts.length <= 48 && len > 0 && Math.abs(area) > 1e-6 && !polySelfIntersects(pts)) {
+        parts.push({ type: "prism", op, axis, start, len, profile: area < 0 ? pts.reverse() : pts });
+      } else dropped++;
+    } else if (type === "cone" || type === "taper" || type === "chamfer") {
+      const axis = String(p.axis || "z").toLowerCase();
+      const r1 = clampNum(p.r1 ?? p.r_start ?? Number(p.d1) / 2, 0, 2500, NaN);
+      const r2 = clampNum(p.r2 ?? p.r_end ?? Number(p.d2) / 2, 0, 2500, NaN);
+      const len = clampNum(p.len ?? p.length, 0, 5000, 0);
+      if (AXES.includes(axis) && Number.isFinite(r1) && Number.isFinite(r2) && Math.max(r1, r2) > 0 && len > 0) {
+        parts.push({
+          type: "cone", op, axis, r1, r2, len,
+          c: { x: clampNum(p.cx ?? p.x, -5000, 5000, 0), y: clampNum(p.cy ?? p.y, -5000, 5000, 0), z: clampNum(p.cz ?? p.z, -5000, 5000, 0) }
+        });
+      } else dropped++;
     } else dropped++;
   }
 
@@ -1669,6 +1868,10 @@ function sanitizeModel(raw) {
   const key = p => JSON.stringify(
     p.type === "box"
       ? [p.type, rnd(p.x), rnd(p.y), rnd(p.z), rnd(p.w), rnd(p.h), rnd(p.d)]
+      : p.type === "prism"
+      ? [p.type, p.axis, rnd(p.start), rnd(p.len), p.profile.map(q => [rnd(q[0]), rnd(q[1])])]
+      : p.type === "cone"
+      ? [p.type, p.axis, rnd(p.r1), rnd(p.r2), rnd(p.len), rnd(p.c.x), rnd(p.c.y), rnd(p.c.z)]
       : [p.type, p.axis, rnd(p.r), rnd(p.len), rnd(p.c.x), rnd(p.c.y), rnd(p.c.z)]
   );
   const uniq = (arr) => { const s = new Set(); return arr.filter(p => (s.has(key(p)) ? false : (s.add(key(p)), true))); };
@@ -1692,6 +1895,10 @@ function sanitizeModel(raw) {
   const shift = { x: bb.x[0], y: bb.y[0], z: bb.z[0] };
   const mv = p => {
     if (p.type === "box") return { ...p, x: p.x - shift.x, y: p.y - shift.y, z: p.z - shift.z };
+    if (p.type === "prism") {
+      const o = otherAxes(p.axis);
+      return { ...p, start: p.start - shift[p.axis], profile: p.profile.map(q => [q[0] - shift[o[0]], q[1] - shift[o[1]]]) };
+    }
     return { ...p, c: { x: p.c.x - shift.x, y: p.c.y - shift.y, z: p.c.z - shift.z } };
   };
   adds = adds.map(mv);
@@ -1815,8 +2022,7 @@ function makeContext(solidParts, clip) {
 
   let minDim = Infinity;
   for (const p of solidParts) {
-    const d = p.type === "box" ? Math.min(p.w, p.h, p.d) : Math.min(2 * p.r, p.len);
-    minDim = Math.min(minDim, d);
+    minDim = Math.min(minDim, minDimOf(p));
   }
 
   return {
@@ -1853,13 +2059,13 @@ function ringBasis(tau) {
   return [e1, v3.cross(tau, e1)];
 }
 
-function ringOccupancy(ctx, P, tau) {
+function ringOccupancy(ctx, P, tau, eps) {
   const [e1, e2] = ringBasis(tau);
   const bits = [];
   let n = 0;
   for (const phi of RING_ANG) {
-    const c = Math.cos(phi) * ctx.eps;
-    const s = Math.sin(phi) * ctx.eps;
+    const c = Math.cos(phi) * eps;
+    const s = Math.sin(phi) * eps;
     const q = [
       P[0] + e1[0] * c + e2[0] * s,
       P[1] + e1[1] * c + e2[1] * s,
@@ -1877,11 +2083,15 @@ function ringOccupancy(ctx, P, tau) {
 // mode "edge": a crease (turn of more than ~30 degrees) or a concave corner.
 // mode "boundary": any point on the surface (used for silhouettes).
 function isEdgePoint(ctx, P, tau, mode) {
-  const { n, runs } = ringOccupancy(ctx, P, tau);
-  if (n === 0 || n === RING_K) return false;
-  if (mode === "boundary") return true;
-  if (runs >= 2) return true;
-  return n <= 6 || n >= 10;
+  // the test must hold at three ring sizes, so a line stops exactly where the
+  // edge stops (a coarse ring would extend it past tangent joins)
+  for (const k of [1, 1 / 12, 1 / 150]) {
+    const { n, runs } = ringOccupancy(ctx, P, tau, ctx.eps * k);
+    if (n === 0 || n === RING_K) return false;
+    if (mode === "boundary") continue;
+    if (!(runs >= 2 || n <= 6 || n >= 10)) return false;
+  }
+  return true;
 }
 
 /* ---------- Find the parameter intervals where a test is true ---------- */
@@ -1938,6 +2148,14 @@ function planeSet(parts, clip, tol) {
   for (const p of parts) {
     if (p.type === "box") {
       P.x.push(p.x, p.x + p.w); P.y.push(p.y, p.y + p.h); P.z.push(p.z, p.z + p.d);
+    } else if (p.type === "prism") {
+      const o = otherAxes(p.axis);
+      P[p.axis].push(p.start, p.start + p.len);
+      p.profile.forEach((A, i) => {
+        const B = p.profile[(i + 1) % p.profile.length];
+        if (Math.abs(A[0] - B[0]) < 1e-9) P[o[0]].push(A[0]);
+        if (Math.abs(A[1] - B[1]) < 1e-9) P[o[1]].push(A[1]);
+      });
     } else {
       P[p.axis].push(p.c[p.axis] - p.len / 2, p.c[p.axis] + p.len / 2);
     }
@@ -1991,10 +2209,131 @@ function curveCandidate(at, t0, t1, breaks, M, owners) {
   const h = (t1 - t0) * 1e-4;
   return {
     type: "curve", t0, t1, breaks, M, owners, key: null, at,
-    tau: t => v3.norm([
-      at(t + h)[0] - at(t - h)[0], at(t + h)[1] - at(t - h)[1], at(t + h)[2] - at(t - h)[2]
-    ])
+    tau: t => {
+      const A = at(t + h), B = at(t - h);
+      return A && B ? v3.norm([A[0] - B[0], A[1] - B[1], A[2] - B[2]]) : null;
+    }
   };
+}
+
+function circleBreaks(cy, planes, o) {
+  const br = [];
+  planes[o[0]].forEach(k => { const c = (k - cy.c[o[0]]) / cy.r; if (Math.abs(c) <= 1) { const t = Math.acos(c); br.push(t, TWO_PI - t); } });
+  planes[o[1]].forEach(k => {
+    const s = (k - cy.c[o[1]]) / cy.r;
+    if (Math.abs(s) <= 1) { const t = Math.asin(s); br.push((t + TWO_PI) % TWO_PI, (Math.PI - t + TWO_PI) % TWO_PI); }
+  });
+  return br;
+}
+
+function linearCandidate(A, B, breaks, owners) {
+  const c = curveCandidate(
+    t => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t],
+    0, 1, breaks, 10, owners
+  );
+  c.linear = true;
+  return c;
+}
+
+// slanted plane (unit normal n, n.x = d) meeting a cylinder
+function planeCylCandidates(n, d, cy, j, out, tol) {
+  const a = AXES.indexOf(cy.axis);
+  const ec = [0, 0, 0]; ec[a] = 1;
+  const c = [cy.c.x, cy.c.y, cy.c.z];
+  const nd = v3.dot(n, ec);
+  const lo = cy.c[cy.axis] - cy.len / 2, hi = cy.c[cy.axis] + cy.len / 2;
+  if (Math.abs(nd) < 1e-9) {
+    const dl = v3.dot(n, c) - d;
+    if (Math.abs(dl) >= cy.r - tol) return;
+    const h = Math.sqrt(cy.r * cy.r - dl * dl);
+    const perp = v3.norm(v3.cross(ec, n));
+    const o = AXES.filter(k => k !== cy.axis);
+    for (const s of [1, -1]) {
+      const pt = [c[0] - dl * n[0] + s * h * perp[0], c[1] - dl * n[1] + s * h * perp[1], c[2] - dl * n[2] + s * h * perp[2]];
+      out.push(lineCandidate(cy.axis, pt[AXES.indexOf(o[0])], pt[AXES.indexOf(o[1])], lo, hi, [], [j]));
+    }
+  } else {
+    const o = AXES.filter(k => k !== cy.axis).map(k => AXES.indexOf(k));
+    const at = th => {
+      const p = c.slice();
+      p[o[0]] += cy.r * Math.cos(th);
+      p[o[1]] += cy.r * Math.sin(th);
+      const t = (d - v3.dot(n, p)) / nd;
+      if (Math.abs(t) > cy.len / 2 + tol) return null;
+      p[a] += t;
+      return p;
+    };
+    out.push(curveCandidate(at, 0, TWO_PI, [], 144, [j]));
+  }
+}
+
+function prismCandidates(ctx, pr, idx, planes, cands, tol) {
+  const a = AXES.indexOf(pr.axis);
+  const o = otherAxes(pr.axis).map(axI);
+  const a0 = pr.start, a1 = pr.start + pr.len;
+  const prof = pr.profile;
+  const pt3 = (P, lv) => { const q = [0, 0, 0]; q[a] = lv; q[o[0]] = P[0]; q[o[1]] = P[1]; return q; };
+  const levels = [a0, ...planes[pr.axis].filter(v => v > a0 + tol && v < a1 - tol), a1];
+  const brAx = planes[pr.axis].filter(v => v > a0 && v < a1);
+  const parts = ctx.solid.parts;
+
+  const coord = (i, v) => (i === 0 ? [v, null] : [null, v]);
+  prof.forEach((A, i) => {
+    const B = prof[(i + 1) % prof.length];
+    // axial line at the vertex (keeps the line's two other coordinates in axis order)
+    cands.push(lineCandidate(pr.axis, A[0], A[1], a0, a1, brAx, [idx]));
+
+    // outline edge at every level
+    const brE = [];
+    for (const [k, ax] of [[0, o[0]], [1, o[1]]]) {
+      const dv = B[k] - A[k];
+      if (Math.abs(dv) < 1e-12) continue;
+      for (const v of planes[AXES[ax]]) { const t = (v - A[k]) / dv; if (t > 0 && t < 1) brE.push(t); }
+    }
+    if (Math.abs(B[0] - A[0]) > 1e-9 && Math.abs(B[1] - A[1]) > 1e-9) {
+      for (const lv of levels) cands.push(linearCandidate(pt3(A, lv), pt3(B, lv), brE, [idx]));
+    }
+
+    // slanted face against axis-parallel planes: axial lines
+    for (const [k, ax] of [[0, o[0]], [1, o[1]]]) {
+      const dv = B[k] - A[k];
+      if (Math.abs(dv) < 1e-12) continue;
+      for (const v of planes[AXES[ax]]) {
+        const t = (v - A[k]) / dv;
+        if (t <= 1e-9 || t >= 1 - 1e-9) continue;
+        const P = [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t];
+        cands.push(lineCandidate(pr.axis, P[0], P[1], a0, a1, brAx, [idx]));
+      }
+    }
+
+    // slanted face against cylinders
+    const ex = B[0] - A[0], ey = B[1] - A[1];
+    const L = Math.hypot(ex, ey);
+    if (L < 1e-9 || Math.abs(ex) < 1e-9 || Math.abs(ey) < 1e-9) {
+      // axis-aligned face: its plane is already in the plane set; same-axis cylinders meet it in axial lines
+    }
+    const n = [0, 0, 0];
+    n[o[0]] = ey / L; n[o[1]] = -ex / L;
+    const dd = n[o[0]] * A[0] + n[o[1]] * A[1];
+    parts.forEach((cy, j) => {
+      if (cy.type !== "cyl") return;
+      if (cy.axis === pr.axis) {
+        // axial lines where the face crosses the cylinder circle
+        const cc = [cy.c[AXES[o[0]]], cy.c[AXES[o[1]]]];
+        const fx = A[0] - cc[0], fy = A[1] - cc[1];
+        const qa = ex * ex + ey * ey, qb = 2 * (fx * ex + fy * ey), qc = fx * fx + fy * fy - cy.r * cy.r;
+        const disc = qb * qb - 4 * qa * qc;
+        if (qa < 1e-12 || disc <= 0) return;
+        for (const s of [-1, 1]) {
+          const t = (-qb + s * Math.sqrt(disc)) / (2 * qa);
+          if (t > 1e-9 && t < 1 - 1e-9) cands.push(lineCandidate(pr.axis, A[0] + ex * t, A[1] + ey * t, a0, a1, brAx, [idx, j]));
+        }
+      } else if (Math.abs(ex) > 1e-9 && Math.abs(ey) > 1e-9) {
+        planeCylCandidates(n, dd, cy, j, cands, tol);
+      }
+    });
+  });
+  void coord;
 }
 
 function genCandidates(ctx) {
@@ -2043,13 +2382,7 @@ function genCandidates(ctx) {
     //     (own end faces, and openings in faces of other solids).
     for (const v of planes[a]) {
       if (v < lo - tol || v > hi + tol) continue;
-      const br = [];
-      planes[o[0]].forEach(k => { const c = (k - cy.c[o[0]]) / cy.r; if (Math.abs(c) <= 1) { const t = Math.acos(c); br.push(t, TWO_PI - t); } });
-      planes[o[1]].forEach(k => {
-        const s = (k - cy.c[o[1]]) / cy.r;
-        if (Math.abs(s) <= 1) { const t = Math.asin(s); br.push((t + TWO_PI) % TWO_PI, (Math.PI - t + TWO_PI) % TWO_PI); }
-      });
-      cands.push(circleCandidate(cy, i, v, br));
+      cands.push(circleCandidate(cy, i, v, circleBreaks(cy, planes, o)));
     }
 
     // (3) Straight lines where a plane parallel to the axis meets the cylinder.
@@ -2070,6 +2403,28 @@ function genCandidates(ctx) {
       }
     }
   }
+
+  // (5) Extruded outlines (prisms): vertex lines, outline edges at every
+  //     level, slanted faces against planes and cylinders.
+  ctx.solid.parts.forEach((pr, idx) => {
+    if (pr.type !== "prism") return;
+    prismCandidates(ctx, pr, idx, planes, cands, tol);
+  });
+
+  // (6) Cones: rim circles at every plane crossing the axis.
+  ctx.solid.parts.forEach((co, idx) => {
+    if (co.type !== "cone") return;
+    const a = co.axis;
+    const o = AXES.filter(k => k !== a);
+    const lo = co.c[a] - co.len / 2, hi = co.c[a] + co.len / 2;
+    for (const v of planes[a]) {
+      if (v < lo - tol || v > hi + tol) continue;
+      const r = coneR(co, Math.min(hi, Math.max(lo, v)));
+      if (r < 1e-9) continue;
+      const cy = { axis: a, c: co.c, r };
+      cands.push(circleCandidate(cy, idx, v, circleBreaks(cy, planes, o)));
+    }
+  });
 
   // (4) Cylinder / cylinder intersections.
   for (let ii = 0; ii < cyls.length; ii++) {
@@ -2134,7 +2489,10 @@ function acceptCandidates(ctx, cands, mode) {
   for (const c of cands) {
     const M = c.M || 24;
     const iv = intervalsWhere(
-      t => isEdgePoint(ctx, c.at(t), c.tau(t), mode),
+      t => {
+        const P = c.at(t);
+        return P ? isEdgePoint(ctx, P, c.tau(t) || [1, 0, 0], mode) : false;
+      },
       c.t0, c.t1, c.breaks, M
     );
     if (!iv.length) continue;
@@ -2159,20 +2517,61 @@ function baseEdges(ctx) {
 function silhouetteEdges(ctx, V) {
   const cands = [];
   ctx.solid.parts.forEach((cy, i) => {
-    if (cy.type !== "cyl") return;
-    const ea = [0, 0, 0];
-    ea[AXES.indexOf(cy.axis)] = 1;
-    const n = v3.cross(ea, V.cam);
-    if (v3.len(n) < 1e-6) return;
-    const nn = v3.norm(n);
-    const o = AXES.filter(k => k !== cy.axis);
-    const lo = cy.c[cy.axis] - cy.len / 2;
-    const hi = cy.c[cy.axis] + cy.len / 2;
     const br = [];
-    ctx.solid.parts.forEach(p => { const e = extentsOf(p)[cy.axis]; br.push(e[0], e[1]); });
-    for (const s of [1, -1]) {
-      const pos = o.map(k => cy.c[k] + s * cy.r * nn[AXES.indexOf(k)]);
-      cands.push(lineCandidate(cy.axis, pos[0], pos[1], lo, hi, br, [i]));
+    const addBr = ax => ctx.solid.parts.forEach(p => { const e = extentsOf(p)[ax]; br.push(e[0], e[1]); });
+
+    if (cy.type === "cyl") {
+      const ea = [0, 0, 0];
+      ea[AXES.indexOf(cy.axis)] = 1;
+      const n = v3.cross(ea, V.cam);
+      if (v3.len(n) < 1e-6) return;
+      const nn = v3.norm(n);
+      const o = AXES.filter(k => k !== cy.axis);
+      const lo = cy.c[cy.axis] - cy.len / 2;
+      const hi = cy.c[cy.axis] + cy.len / 2;
+      addBr(cy.axis);
+      for (const s of [1, -1]) {
+        const pos = o.map(k => cy.c[k] + s * cy.r * nn[AXES.indexOf(k)]);
+        cands.push(lineCandidate(cy.axis, pos[0], pos[1], lo, hi, br, [i]));
+      }
+    } else if (cy.type === "cone") {
+      const a = AXES.indexOf(cy.axis);
+      const ea = [0, 0, 0]; ea[a] = 1;
+      const m = v3.cross(v3.cross(ea, V.cam), ea); // camera direction perpendicular to the axis
+      const mm = v3.len(m);
+      if (mm < 1e-6) return;
+      const slope = (cy.r2 - cy.r1) / cy.len;
+      const cs = (slope * V.cam[a]) / mm;
+      if (Math.abs(cs) > 1) return;
+      const phi = Math.atan2(m[AXES.indexOf(otherAxes(cy.axis)[1])], m[AXES.indexOf(otherAxes(cy.axis)[0])]);
+      const lo = cy.c[cy.axis] - cy.len / 2, hi = cy.c[cy.axis] + cy.len / 2;
+      const o = otherAxes(cy.axis).map(axI);
+      for (const s of [1, -1]) {
+        const th = phi + s * Math.acos(cs);
+        const mk = x => {
+          const R = coneR(cy, x);
+          const p = [cy.c.x, cy.c.y, cy.c.z];
+          p[a] = x;
+          p[o[0]] += R * Math.cos(th);
+          p[o[1]] += R * Math.sin(th);
+          return p;
+        };
+        cands.push(linearCandidate(mk(lo), mk(hi), [], [i]));
+      }
+    } else if (cy.type === "prism") {
+      const o = otherAxes(cy.axis);
+      const a0 = cy.start, a1 = cy.start + cy.len;
+      const prof = cy.profile;
+      addBr(cy.axis);
+      const faceDot = (A, B) => {
+        const ex = B[0] - A[0], ey = B[1] - A[1], L = Math.hypot(ex, ey) || 1;
+        return (ey / L) * V.cam[axI(o[0])] + (-ex / L) * V.cam[axI(o[1])];
+      };
+      prof.forEach((P, k) => {
+        const prev = prof[(k + prof.length - 1) % prof.length], next = prof[(k + 1) % prof.length];
+        const d1 = faceDot(prev, P), d2 = faceDot(P, next);
+        if (d1 * d2 <= 1e-12) cands.push(lineCandidate(cy.axis, P[0], P[1], a0, a1, br, [i]));
+      });
     }
   });
   return acceptCandidates(ctx, cands, "boundary");
@@ -2217,7 +2616,7 @@ function makeVisibility(ctx, V, solidForRays) {
 function tessellate(c, a, b) {
   let n = 1;
   if (c.type === "circle") n = Math.max(2, Math.ceil(((b - a) / TWO_PI) * 120));
-  else if (c.type === "curve") n = Math.max(2, Math.ceil(((b - a) / (c.t1 - c.t0)) * 160));
+  else if (c.type === "curve" && !c.linear) n = Math.max(2, Math.ceil(((b - a) / (c.t1 - c.t0)) * 160));
   const pts = [];
   for (let i = 0; i <= n; i++) pts.push(c.at(a + ((b - a) * i) / n));
   return pts;
@@ -2231,12 +2630,20 @@ function projectEdges(ctx, V, edges, isVisible) {
   const owners = new Set();
   const proj = P => [v3.dot(P, V.u), v3.dot(P, V.v)];
   const minLen = ctx.diag * 2e-3;
+  const seenV = new Set();
+  const seenH = new Set();
 
   const emit = (c, a, b, visible) => {
     const pts = tessellate(c, a, b).map(proj);
     let L = 0;
     for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
     if (L < minLen) return;
+    const k = pl => pl.map(q => `${Math.round(q[0] * 200)},${Math.round(q[1] * 200)}`);
+    const kk = k([pts[0], pts[pts.length >> 1], pts[pts.length - 1]]);
+    const key = (kk[0] < kk[2] ? kk : [kk[2], kk[1], kk[0]]).join("|");
+    const seenSet = visible ? seenV : seenH;
+    if (seenSet.has(key)) return;
+    seenSet.add(key);
     (visible ? vis : hid).push(pts);
   };
 
@@ -2855,20 +3262,22 @@ function buildAllViews(model, projection, themeName = "paper") {
 const DRAWING_PROMPT = [
   "You are Malie AI Engineering Drawing Studio, a mechanical engineering drawing interpretation system.",
   "Look carefully at the ATTACHED image. It may be a photograph, hand sketch, orthographic drawing, dimensioned drawing, or isometric drawing of ONE machine part.",
-  "Reconstruct the specific object that is actually shown. Never substitute a generic or example object, and never copy the example values in this prompt.",
+  "Reconstruct the specific object that is actually shown, following its real outline. Never substitute a generic or example object, and never copy placeholder values from this prompt.",
   "If the image is not a machine part, drawing or sketch (or is blank/unreadable), set recognised to false and parts to an empty array.",
-  "Step 1: decide image_kind (orthographic, isometric, sketch, photo, other, not_a_part). Step 2: list the views you can see and any printed dimension text in notes. Step 3: model the part.",
-  "Model the part as ONE solid made of axis-aligned primitives. Coordinates: x = width (left to right in the front view), y = height (up), z = depth (toward the viewer in the front view). Use one consistent origin and unit for every primitive.",
-  "Box: {\"type\":\"box\",\"op\":\"add\",\"x\":<min x>,\"y\":<min y>,\"z\":<min z>,\"w\":<size along x>,\"h\":<size along y>,\"d\":<size along z>}.",
-  "Cylinder: {\"type\":\"cyl\",\"op\":\"add\",\"axis\":\"x|y|z\",\"cx\":<centre x>,\"cy\":<centre y>,\"cz\":<centre z>,\"r\":<radius>,\"len\":<length along its axis>}.",
-  "op is \"add\" for material and \"cut\" for holes, bores, slots, pockets and recesses. List all additive parts first, then cuts. A hole is a cut, never an additive cylinder. A boss or shaft is an add, never a cut.",
-  "Use several boxes for stepped or L/T-shaped bodies; make touching solids share faces exactly so they join. Make a through-hole's cut longer than the material it passes through.",
-  "Use multiple views of the same object together to get one consistent 3D shape. If only one view exists, infer depth conservatively.",
-  "Dimensions: if numbers are printed and readable, use them and set dimensions_source to \"printed\". Otherwise estimate from proportions, set dimensions_source to \"estimated\", and do not pretend the numbers are exact. Never invent features that are not visible or strongly implied.",
-  "If something is ambiguous, choose the simplest conservative shape and describe the uncertainty in notes (max 4 short strings).",
-  "Set confidence from 0 to 1 for how well the model matches the image. Use at most 24 primitives.",
-  "Return ONLY valid JSON with double quotes, no Markdown and no text outside the JSON, in this shape:",
-  "{\"recognised\":true,\"image_kind\":\"...\",\"title\":\"short part name\",\"unit\":\"mm\",\"dimensions_source\":\"printed|estimated\",\"confidence\":0.0,\"notes\":[\"...\"],\"parts\":[ ...primitives as described above... ]}"
+  "Step 1: decide image_kind (orthographic, isometric, sketch, photo, other, not_a_part). Step 2: note the views you can see and any printed dimension text. Step 3: trace the part's true outline and model it.",
+  "Coordinates: x = width (left to right in the FRONT view), y = height (up), z = depth (toward the viewer in the front view). Use one origin and one unit for every primitive.",
+  "SHAPE TYPES (all are solids; op is \"add\" for material, \"cut\" for holes, bores, slots, pockets, grooves; list adds first, then cuts):",
+  "1. prism = an OUTLINE EXTRUDED along an axis. Use it for any plate, bracket, lug, gusset, flange, wedge, rounded or angled shape. {\"type\":\"prism\",\"op\":\"add\",\"axis\":\"x|y|z\",\"start\":<where it begins along the axis>,\"len\":<extrusion length>,\"profile\":[[a,b],[a,b],...]}. The profile is the closed outline, in order, as 3 to 40 points. Profile coordinates are [x,y] when axis is z, [x,z] when axis is y, and [y,z] when axis is x. Trace slanted edges with their end points. Approximate rounded corners with 3-6 points per corner.",
+  "2. box = {\"type\":\"box\",\"op\":\"add\",\"x\":<min x>,\"y\":<min y>,\"z\":<min z>,\"w\":<size x>,\"h\":<size y>,\"d\":<size z>}. Use only for plain rectangular blocks.",
+  "3. cyl = straight cylinder (shaft, boss, bore, drilled hole): {\"type\":\"cyl\",\"op\":\"add|cut\",\"axis\":\"x|y|z\",\"cx\":<centre x>,\"cy\":<centre y>,\"cz\":<centre z>,\"r\":<radius>,\"len\":<length>}.",
+  "4. cone = tapered or chamfered round segment (taper, chamfer, countersink): {\"type\":\"cone\",\"op\":\"add|cut\",\"axis\":\"x|y|z\",\"cx\":<centre x>,\"cy\":<centre y>,\"cz\":<centre z>,\"r1\":<radius at the low end>,\"r2\":<radius at the high end>,\"len\":<length>}.",
+  "Build a stepped turned part (shaft, bush, pulley) from coaxial cyl and cone segments that touch end to end. Build a flat part by extruding its outline with prism, then add cylinder cuts for holes (make the cut longer than the material).",
+  "A hole is a cut, never an additive cylinder. A boss is an add, never a cut. Touching solids must share faces exactly so they join. Do not add hidden or invented features.",
+  "Use all views in the image together to build ONE consistent 3D shape. If only one view exists, use it as the outline and infer depth conservatively, saying so in notes.",
+  "Dimensions: if numbers are printed and readable, use them and set dimensions_source to \"printed\". Otherwise estimate from proportions, set dimensions_source to \"estimated\", and never pretend estimates are exact.",
+  "Describe any ambiguity in notes (max 4 short strings). Set confidence 0 to 1 for how well your model matches the image. Use at most 24 shapes.",
+  "Return ONLY valid JSON with double quotes, no Markdown, no text outside the JSON, in this shape:",
+  "{\"recognised\":true,\"image_kind\":\"...\",\"title\":\"short part name\",\"unit\":\"mm\",\"dimensions_source\":\"printed|estimated\",\"confidence\":0.0,\"notes\":[\"...\"],\"parts\":[ ...shapes as described above... ]}"
 ].join("\n");
 
 // Checks the uploaded file really is a decodable PNG, JPEG or WebP of usable size.
@@ -2922,7 +3331,6 @@ function validateDrawingImage(image) {
   if (w > 12000 || h > 12000) bad("That image is extremely large. Please upload one under about 4000 px wide.");
   return { width: w, height: h, type: kind };
 }
-
 
 /* ------------------------------------------------------------------ */
 /* CAD code validation                                                 */
@@ -4959,10 +5367,23 @@ console.error(
 
           const projection = body.projection === "first" ? "first" : "third";
           const theme = body.theme === "dark" ? "dark" : "paper";
-          const usage = await reserveDailyUsage(env, userId, plan);
+          const drawUsage = await reserveDrawingUpload(env, userId);
+          let usage;
+          try {
+            usage = await reserveDailyUsage(env, userId, plan);
+          } catch (error) {
+            await refundDrawingUpload(env, userId, drawUsage.date);
+            throw error;
+          }
 
           try {
-            const text = await callAI(env, DRAWING_PROMPT, true, image, { maxTokens: 4096 });
+            let text;
+            try {
+              text = await callAI(env, DRAWING_PROMPT, true, image, { maxTokens: 4096, model: DRAWING_VISION_MODEL });
+            } catch (primaryError) {
+              console.error("Drawing vision model failed, using fallback:", String(primaryError?.message || primaryError));
+              text = await callAI(env, DRAWING_PROMPT, true, image, { maxTokens: 4096, model: VISION_MODEL });
+            }
             const model = sanitizeModel(
               parseJsonObject(
                 text,
@@ -4988,10 +5409,12 @@ console.error(
               auxMessage:
                 "An auxiliary view is only needed for inclined surfaces, so none is generated.",
               model,
-              usage
+              usage,
+              drawingUsage: drawUsage
             });
           } catch (error) {
             await refundDailyUsage(env, userId, usage.date);
+            await refundDrawingUpload(env, userId, drawUsage.date);
             throw error;
           }
         }

@@ -556,6 +556,9 @@ button:disabled{opacity:.55;cursor:not-allowed}
 /* Code Studio v2 + voice */
 .cs-wrap{position:relative}
 .cs-lock{position:absolute;inset:0;z-index:20;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:grid;place-items:center;border-radius:16px;padding:16px}
+.cs-lock.kn-hidden {
+  display: none !important;
+}
 .cs-lock-box{max-width:360px;text-align:center;border:1px solid var(--border);background:var(--panel);border-radius:18px;padding:26px 22px}
 .cs-lock-box h3{margin:10px 0 6px;font-size:16px}
 .cs-lock-box p{margin:0 0 16px;font-size:12.5px;color:var(--muted);line-height:1.7}

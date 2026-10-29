@@ -649,6 +649,7 @@ async function callAI(env, prompt, jsonMode = false, imageDataUrl = null, option
     ],
     max_tokens: options.maxTokens || (jsonMode ? 4096 : 2048)
   };
+  if (typeof options.temperature === "number") payload.temperature = options.temperature;
 
   // These options are only sent to the Gemma text model.
   if (!hasImage) {
@@ -3280,6 +3281,19 @@ const DRAWING_PROMPT = [
   "{\"recognised\":true,\"image_kind\":\"...\",\"title\":\"short part name\",\"unit\":\"mm\",\"dimensions_source\":\"printed|estimated\",\"confidence\":0.0,\"notes\":[\"...\"],\"parts\":[ ...shapes as described above... ]}"
 ].join("\n");
 
+
+const DRAWING_REFINE_PROMPT = [
+  "You are checking and correcting a 3D reconstruction of the part shown in the ATTACHED image.",
+  "Below is a first attempt as JSON. Compare it carefully with the image and fix every mistake:",
+  "- the overall outline and proportions (width : height : depth) must match the image;",
+  "- slanted, curved, stepped or notched edges must follow the image (use prism outlines, not plain boxes, when the outline is not rectangular);",
+  "- every visible hole, bore, slot and groove must be present, in the right place and size, and no feature may be invented;",
+  "- additive shapes must touch and join; cuts must pass through the material.",
+  "If the first attempt is already correct, return it unchanged. Keep the same schema and the same coordinate rules (x = width, y = height, z = depth).",
+  "Lower your confidence if you are unsure, and put any doubts in notes. Return ONLY the corrected JSON, nothing else.",
+  "FIRST ATTEMPT:"
+].join("\n");
+
 // Checks the uploaded file really is a decodable PNG, JPEG or WebP of usable size.
 function validateDrawingImage(image) {
   const bad = msg => { throw drawingError(msg, 400); };
@@ -5377,19 +5391,29 @@ console.error(
           }
 
           try {
-            let text;
+            const ask = async (prompt) => {
+              try {
+                return await callAI(env, prompt, true, image, { maxTokens: 4096, model: DRAWING_VISION_MODEL, temperature: 0.1 });
+              } catch (primaryError) {
+                console.error("Drawing vision model failed, using fallback:", String(primaryError?.message || primaryError));
+                return await callAI(env, prompt, true, image, { maxTokens: 4096, model: VISION_MODEL, temperature: 0.1 });
+              }
+            };
+
+            const failMsg = "The AI could not describe that part. Please try a clearer image.";
+            const firstText = await ask(DRAWING_PROMPT);
+            const firstRaw = parseJsonObject(firstText, failMsg);
+            let model = sanitizeModel(firstRaw);
+
+            // Second pass: the AI checks its own result against the image.
             try {
-              text = await callAI(env, DRAWING_PROMPT, true, image, { maxTokens: 4096, model: DRAWING_VISION_MODEL });
-            } catch (primaryError) {
-              console.error("Drawing vision model failed, using fallback:", String(primaryError?.message || primaryError));
-              text = await callAI(env, DRAWING_PROMPT, true, image, { maxTokens: 4096, model: VISION_MODEL });
+              const secondText = await ask(DRAWING_REFINE_PROMPT + "\n" + JSON.stringify(firstRaw).slice(0, 6000));
+              const refined = sanitizeModel(parseJsonObject(secondText, failMsg));
+              model = refined;
+            } catch (refineError) {
+              console.error("Drawing refine pass skipped:", String(refineError?.message || refineError));
             }
-            const model = sanitizeModel(
-              parseJsonObject(
-                text,
-                "The AI could not describe that part. Please try a clearer image."
-              )
-            );
+
             const views = buildAllViews(model, projection, theme);
             const { sectionPlane, ...viewSvgs } = views;
 

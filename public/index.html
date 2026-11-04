@@ -7299,7 +7299,14 @@ async function checkAccess() {
   function run() {
     if (running) return;
     var src = code.value;
-    if (!src.trim()) { toast("Write some Python code first.", true); return; }
+if (!src.trim()) { toast("Write some Python code first.", true); return; }
+if (/\binput\s*\(/.test(src) && !stdinEl.value.trim()) {
+  var det = stdinEl.closest("details");
+  if (det) det.open = true;
+  stdinEl.focus();
+  toast("Your code asks for input. Type the answers here (one per line), then tap Run.", true);
+  return;
+}
     clearOut();
     try { if (!worker) spawn(); }
     catch (er) { append(((er && er.message) || "Python could not start.") + "\n", "e"); flush(); setStatus("Python unavailable"); return; }

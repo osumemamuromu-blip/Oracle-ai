@@ -19,7 +19,7 @@ const DRAWING_DAILY_LIMIT = 2;
 
 // Daily request limits per plan. Change the numbers here only.
 const DAILY_LIMITS = {
-  free: 8,
+  free: 10,
   premium: 100,
   pro: 300
 };
